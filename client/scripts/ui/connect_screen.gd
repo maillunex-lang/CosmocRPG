@@ -126,7 +126,10 @@ func _build_start_screen() -> void:
 	add_child(_content)
 	_content.progress.connect(func(_id: String, f: float) -> void: _splash.set_content_note("Загрузка контента… %d%%" % int(f * 100.0)))
 	_content.finished.connect(func(res: Dictionary) -> void: _splash.set_content_note(_content_note(res)))
-	_content.check.call_deferred()   # докачка файлов игры в фоне, без переустановки APK
+	# докачка файлов игры в фоне, без переустановки APK; через 3 с после запуска, чтобы не совпадать с проверкой обновлений
+	get_tree().create_timer(3.0).timeout.connect(func() -> void:
+		if is_instance_valid(_content):
+			_content.check())
 	_splash.update_check_requested.connect(func() -> void:
 		_update_manual = true
 		_splash.begin_update_check()

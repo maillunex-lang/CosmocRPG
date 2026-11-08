@@ -34,6 +34,9 @@ timeout 120 godot --headless --path "$ROOT/client" --script res://tests/server_g
 
 [ -n "${COSMOC_TEST_WS_URL:-}" ] && "$ROOT/tools/cleanup_test_players.sh"
 
+echo "== аккаунт на экране подключения"
+timeout 120 xvfb-run -a -s "-screen 0 1920x1080x24" godot --path "$ROOT/client" --resolution 1280x720 --script res://tests/account_ui_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|COSMOC_TEST)" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+
 echo "== экран подключения"
 [ -n "${1:-}" ] && mkdir -p "$1" && export SHOT_DIR="$(realpath "$1")"
 timeout 120 xvfb-run -a -s "-screen 0 1920x1080x24" \

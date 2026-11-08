@@ -43,25 +43,30 @@ theme_type_variation = &"TitleLabel"
 text = "Звёздные рубежи"
 horizontal_alignment = 1
 
-[node name="ConnectionCard" type="PanelContainer" parent="SafeArea/Column"]
+[node name="TopRow" type="HBoxContainer" parent="SafeArea/Column"]
+layout_mode = 2
+
+[node name="ConnectionCard" type="PanelContainer" parent="SafeArea/Column/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
 layout_mode = 2
 script = ExtResource("3")
 title = "Сервер"
 
-[node name="Box" type="VBoxContainer" parent="SafeArea/Column/ConnectionCard"]
+[node name="Box" type="VBoxContainer" parent="SafeArea/Column/TopRow/ConnectionCard"]
 layout_mode = 2
 
-[node name="UrlEdit" type="LineEdit" parent="SafeArea/Column/ConnectionCard/Box"]
+[node name="UrlEdit" type="LineEdit" parent="SafeArea/Column/TopRow/ConnectionCard/Box"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 placeholder_text = "ws://адрес:порт/ws"
 virtual_keyboard_type = 7
 
-[node name="Buttons" type="HBoxContainer" parent="SafeArea/Column/ConnectionCard/Box"]
+[node name="Buttons" type="HBoxContainer" parent="SafeArea/Column/TopRow/ConnectionCard/Box"]
 layout_mode = 2
 
-[node name="ConnectButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/Buttons"]
+[node name="ConnectButton" type="Button" parent="SafeArea/Column/TopRow/ConnectionCard/Box/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -69,7 +74,7 @@ text = "Подключиться"
 script = ExtResource("4")
 variant = 1
 
-[node name="DisconnectButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/Buttons"]
+[node name="DisconnectButton" type="Button" parent="SafeArea/Column/TopRow/ConnectionCard/Box/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -77,7 +82,7 @@ disabled = true
 text = "Отключиться"
 script = ExtResource("4")
 
-[node name="PingButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/Buttons"]
+[node name="PingButton" type="Button" parent="SafeArea/Column/TopRow/ConnectionCard/Box/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -85,17 +90,17 @@ disabled = true
 text = "Пинг"
 script = ExtResource("4")
 
-[node name="SpaceButtons" type="HBoxContainer" parent="SafeArea/Column/ConnectionCard/Box"]
+[node name="SpaceButtons" type="HBoxContainer" parent="SafeArea/Column/TopRow/ConnectionCard/Box"]
 layout_mode = 2
 
-[node name="DemoSpaceButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/SpaceButtons"]
+[node name="DemoSpaceButton" type="Button" parent="SafeArea/Column/TopRow/ConnectionCard/Box/SpaceButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Космос (демо)"
 script = ExtResource("4")
 
-[node name="WorldButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/SpaceButtons"]
+[node name="WorldButton" type="Button" parent="SafeArea/Column/TopRow/ConnectionCard/Box/SpaceButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -103,10 +108,76 @@ text = "Войти в космос"
 script = ExtResource("4")
 disabled = true
 
-[node name="StatusLabel" type="Label" parent="SafeArea/Column/ConnectionCard/Box"]
+[node name="StatusLabel" type="Label" parent="SafeArea/Column/TopRow/ConnectionCard/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Не подключено"
+
+[node name="AccountCard" type="PanelContainer" parent="SafeArea/Column/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("3")
+title = "Аккаунт"
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Column/TopRow/AccountCard"]
+layout_mode = 2
+
+[node name="Fields" type="HBoxContainer" parent="SafeArea/Column/TopRow/AccountCard/Box"]
+layout_mode = 2
+
+[node name="LoginEdit" type="LineEdit" parent="SafeArea/Column/TopRow/AccountCard/Box/Fields"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Логин"
+max_length = 32
+virtual_keyboard_type = 7
+
+[node name="PasswordEdit" type="LineEdit" parent="SafeArea/Column/TopRow/AccountCard/Box/Fields"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Пароль, от 8 знаков"
+max_length = 128
+secret = true
+
+[node name="AccountButtons" type="HBoxContainer" parent="SafeArea/Column/TopRow/AccountCard/Box"]
+layout_mode = 2
+
+[node name="LoginButton" type="Button" parent="SafeArea/Column/TopRow/AccountCard/Box/AccountButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Войти"
+script = ExtResource("4")
+
+[node name="RegisterButton" type="Button" parent="SafeArea/Column/TopRow/AccountCard/Box/AccountButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Создать"
+tooltip_text = "Создать аккаунт для этого игрока: прогресс можно будет вернуть на новом телефоне"
+script = ExtResource("4")
+
+[node name="LogoutButton" type="Button" parent="SafeArea/Column/TopRow/AccountCard/Box/AccountButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Выйти"
+tooltip_text = "Выйти из аккаунта: этот телефон станет новым игроком, прогресс вернётся входом по логину и паролю"
+script = ExtResource("4")
+
+[node name="AccountStatus" type="Label" parent="SafeArea/Column/TopRow/AccountCard/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "Аккаунта нет."
+autowrap_mode = 3
 
 [node name="LogCard" type="PanelContainer" parent="SafeArea/Column"]
 layout_mode = 2

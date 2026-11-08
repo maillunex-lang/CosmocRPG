@@ -53,4 +53,6 @@
 
 Корабль «Стриж» (FTR-001), подробности и коды ошибок: `docs/design/FTR-001.md`. Клиент → сервер: `attack {on}`, `ability {id}`, `set_skin {value}`, `set_spec {value}`. Сервер → клиент: расширенные `state.ship` и объекты, `combat_events`.
 
+Аккаунты (до `join`): `register {token, login, password}`, `login {token, login, password}` → `account {login, created}`; подробности и коды ошибок: `docs/design/ACCOUNTS.md`.
+
 Параметры мира: скорость 14 ед/с, радиус системы 400 ед., автопилот останавливается в 10 ед. от цели, максимум 50 игроков, корабль остаётся в мире 10 с после обрыва связи, позиции сохраняются раз в 5 с и при отключении.

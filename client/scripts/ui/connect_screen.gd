@@ -9,11 +9,13 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 const Session := preload("res://ui/session.gd")
 const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 const ServerGateway := preload("res://ui/gateway/server_gateway.gd")
+const PlayerIdentity := preload("res://ui/player_identity.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "ws://78.17.214.25:8080/ws"  # тестовый сервер; позже будет настраиваться при сборке
 
 var _client: Node
+var _account_pending := false
 
 @onready var _url_edit: LineEdit = %UrlEdit
 @onready var _connect_button: ActionButton = %ConnectButton
@@ -21,6 +23,12 @@ var _client: Node
 @onready var _ping_button: ActionButton = %PingButton
 @onready var _demo_space_button: ActionButton = %DemoSpaceButton
 @onready var _world_button: ActionButton = %WorldButton
+@onready var _login_edit: LineEdit = %LoginEdit
+@onready var _password_edit: LineEdit = %PasswordEdit
+@onready var _login_button: ActionButton = %LoginButton
+@onready var _register_button: ActionButton = %RegisterButton
+@onready var _logout_button: ActionButton = %LogoutButton
+@onready var _account_status: Label = %AccountStatus
 @onready var _status_label: Label = %StatusLabel
 @onready var _log: RichTextLabel = %Log
 
@@ -42,9 +50,51 @@ func _ready() -> void:
 	_url_edit.text_submitted.connect(func(_t: String) -> void: _on_connect_pressed())
 	_demo_space_button.pressed.connect(_open_demo_space)
 	_world_button.pressed.connect(_enter_world)
+	_login_button.pressed.connect(func() -> void: _account_action("login"))
+	_register_button.pressed.connect(func() -> void: _account_action("register"))
+	_logout_button.pressed.connect(_logout)
+	_refresh_account()
 
 	_url_edit.text = _load_url()
 	_set_idle("Не подключено")
+
+
+## Регистрация или вход по логину и паролю (соединение уже открыто). Пароль нигде не сохраняется и не пишется в журнал.
+func _account_action(kind: String) -> void:
+	if _client.state != WsClientScript.State.OPEN or _account_pending:
+		return
+	var login := _login_edit.text.strip_edges()
+	var password := _password_edit.text
+	if login == "" or password == "":
+		_account_status.text = "Введите логин и пароль."
+		return
+	_account_pending = true
+	_acct_busy(true)
+	_account_status.text = "Проверка…"
+	_client.send_message(kind, {"token": PlayerIdentity.token(), "login": login, "password": password})
+	_append("Запрос: %s (логин %s)" % ["создание аккаунта" if kind == "register" else "вход по аккаунту", login])
+
+
+func _acct_busy(on: bool) -> void:
+	_login_button.disabled = on or _client.state != WsClientScript.State.OPEN
+	_register_button.disabled = _login_button.disabled
+	if not on:
+		_account_pending = false
+
+
+func _logout() -> void:
+	PlayerIdentity.reset_device()
+	_append("Вы вышли из аккаунта: этот телефон теперь новый игрок. Прогресс вернётся входом по логину и паролю.")
+	_refresh_account()
+
+
+func _refresh_account() -> void:
+	var login := PlayerIdentity.login()
+	var open: bool = _client != null and _client.state == WsClientScript.State.OPEN
+	_login_button.disabled = not open or _account_pending
+	_register_button.disabled = _login_button.disabled or login != ""
+	_logout_button.disabled = login == ""
+	_account_status.text = ("Аккаунт: %s. Прогресс можно вернуть на новом телефоне входом по логину и паролю." % login) if login != "" else "Аккаунта нет: прогресс хранится только на этом телефоне. Создайте аккаунт, чтобы не потерять его при удалении игры. Восстановления пароля нет."
 
 
 ## Вход в общий космос: соединение передаётся серверному шлюзу, который выполняет join.
@@ -97,6 +147,7 @@ func _on_connected(session_id: String, server_version: String) -> void:
 	_disconnect_button.disabled = false
 	_ping_button.disabled = false
 	_world_button.disabled = false
+	_refresh_account()
 
 
 func _on_failed(reason: String) -> void:
@@ -114,8 +165,19 @@ func _on_latency(rtt_ms: int) -> void:
 
 
 func _on_message(type: String, payload: Dictionary, _id: String) -> void:
-	if type == "error":
-		_append(_danger("Сервер: %s" % str(payload.get("message", "ошибка"))))
+	if type == "account":
+		PlayerIdentity.set_login(str(payload.get("login", "")))
+		_password_edit.text = ""   # пароль не хранится и не остаётся в поле
+		_append("Аккаунт «%s»: %s" % [str(payload.get("login", "")), "создан, прогресс сохранён" if payload.get("created", false) else "вход выполнен"])
+		_acct_busy(false)
+		_refresh_account()
+	elif type == "error":
+		var text := str(payload.get("message", "ошибка"))
+		if _account_pending:
+			_account_pending = false
+			_acct_busy(false)
+			_account_status.text = text
+		_append(_danger("Сервер: %s" % text))
 	else:
 		_append("Сообщение: %s" % type)
 
@@ -128,6 +190,7 @@ func _set_idle(text: String, variation: StringName = &"Label") -> void:
 	_ping_button.disabled = true
 	_world_button.disabled = true
 	_url_edit.editable = true
+	_refresh_account()
 
 
 func _status(text: String, variation: StringName) -> void:

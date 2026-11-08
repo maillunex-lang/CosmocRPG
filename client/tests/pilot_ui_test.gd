@@ -49,6 +49,16 @@ func _run() -> void:
 	_c(pil.size() == 1 and notes.size() == 1 and notes[0] == "+12 опыта", "уведомление о полученном опыте")
 	gw._on_message("xp", {"gained": 50, "source": "kill", "level_up": true, "pilot": _pilot(4, 0, 150, 6)}, "")
 	_c(notes.size() == 2 and notes[1].contains("Новый уровень 4") and notes[1].contains("6"), "уведомление о новом уровне и очках")
+	var cnt := notes.size()
+	gw._on_message("xp", {"source": "kill", "ship": {"ship": "FTR-001", "level": 7}, "ship_level_up": true}, "")
+	_c(gw.has_pilot() and notes.size() == cnt + 1 and notes[cnt] == "Корабль достиг уровня 7", "опыт только корабля: пилот не затёрт, уведомление об уровне корабля")
+	gw._apply_state({"time": 2.0, "ship": {"name": "К", "pos": [0, 0], "dir": [1, 0], "speed": 0.0, "level": 4}, "objects": []})
+	_c(got[got.size() - 1]["ship"]["level"] == 4, "уровень корабля из состояния сервера")
+	var fl: Array = [{"id": "FTR-001", "name": "Стриж"}, {"id": "TMP-MINE", "name": "Шахтёр"}]
+	var seen: Array = []
+	gw.ships_updated.connect(func(f: Array) -> void: seen.assign(f))
+	gw._on_message("ships", {"ships": fl, "levels": {"FTR-001": {"level": 9}}}, "")
+	_c(seen[0]["level"] == 9 and seen[1]["level"] == 1, "ангар: уровень корабля от сервера, без записи — первый")
 	gw._on_message("pilot", _pilot(4, 0, 150, 5, {"piloting": 1}), "")
 	_c(got[got.size() - 1]["pilot"]["attributes"]["piloting"] == 1 and got[got.size() - 1]["player"]["attr_free"] == 5, "ответ pilot обновляет состояние")
 	gw.queue_free()
@@ -76,6 +86,10 @@ func _run() -> void:
 	hud.apply_state(st)
 	_c(bar.visible and absf(bar.value - 40.0 / 120.0) < 0.001, "полоса опыта показывает долю уровня")
 	_c((hud.get_node("%PlayerLevel") as Label).text == "Ур. 3 · +4", "уровень и свободные очки в карточке пилота")
+	st["player"] = {"name": "Пилот", "level": 60, "xp_into": 0, "xp_to_next": 0, "xp_level": 0, "attr_free": 0}
+	st["ship"]["level"] = 6
+	hud.apply_state(st)
+	_c((hud.get_node("%ShipName") as Label).text.ends_with(" · ур. 6"), "уровень корабля в карточке пилота")
 	st["player"] = {"name": "Пилот", "level": 60, "xp_into": 0, "xp_to_next": 0, "xp_level": 0, "attr_free": 0}
 	hud.apply_state(st)
 	_c(bar.value == 1.0 and (hud.get_node("%PlayerLevel") as Label).text == "Ур. 60", "максимальный уровень: полная полоса, без очков")

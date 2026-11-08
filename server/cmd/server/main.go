@@ -24,6 +24,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shipxp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/worldcfg"
@@ -283,7 +284,7 @@ func run() error {
 	}()
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)),
+		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	worldDone := make(chan struct{})
 	go func() {

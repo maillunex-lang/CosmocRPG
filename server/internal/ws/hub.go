@@ -21,6 +21,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shipxp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
@@ -53,6 +54,7 @@ type Options struct {
 	Shop       *shop.Service      // VIP и магазин косметики; nil: функция выключена
 	Chat       *chat.Service      // чат (общий и личные сообщения); nil: функция выключена
 	Pilot      *pilot.Service     // опыт, уровень и характеристики пилота; nil: функция выключена
+	Ships      *shipxp.Service    // опыт и уровни экземпляров кораблей; nil: функция выключена
 	OnChat     func(chat.Message) // наблюдатель отправленных сообщений (ответы ИИ-капитанов); может быть nil
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
 	RequireCharacter bool
@@ -363,7 +365,15 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			fail(err)
 		}
 	case "ships":
-		reply(Message{Type: "ships", ID: m.ID, Payload: mustJSON(map[string]any{"ships": w.Fleet()})})
+		out := map[string]any{"ships": w.Fleet()}
+		if h.opts.Ships != nil {
+			sctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			if lv, err := h.opts.Ships.All(sctx, ss.pid); err == nil {
+				out["levels"] = lv // тип корабля -> прогресс; нет записи — уровень 1
+			}
+			cancel()
+		}
+		reply(Message{Type: "ships", ID: m.ID, Payload: mustJSON(out)})
 	case "set_ship":
 		var p struct {
 			Ship string `json:"ship"`
@@ -377,7 +387,8 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			fail(err)
 			return
 		}
-		h.save(rec) // смена корабля сохраняется сразу
+		h.applyShipLevel(ctx, ss.pid, rec.ShipType) // у каждого корабля свой уровень: он восстанавливается при смене
+		h.save(rec)                                 // смена корабля сохраняется сразу
 	case "sell":
 		if _, err := w.SellCargo(ss.pid); err != nil {
 			fail(err)
@@ -618,17 +629,56 @@ func (h *Handler) evaluateQuests(ss *session, pid string, st world.State) {
 	}
 }
 
-// grantXP начисляет опыт пилота за событие (идемпотентно по ключу) и сообщает игроку, если он в сети.
-func (h *Handler) grantXP(ctx context.Context, pid, key, source string, amount int64) {
-	if h.opts.Pilot == nil || amount <= 0 {
-		return
+// applyShipLevel читает уровень корабля игрока из хранилища и применяет его в мире; возвращает прогресс (nil: функция выключена).
+func (h *Handler) applyShipLevel(ctx context.Context, pid, ship string) *shipxp.State {
+	if h.opts.Ships == nil || h.opts.World == nil {
+		return nil
 	}
-	g, err := h.opts.Pilot.Grant(ctx, pid, key, source, amount)
+	sctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	st, err := h.opts.Ships.State(sctx, pid, ship)
 	if err != nil {
-		h.log.Error("опыт пилота", "player", pid, "key", key, "err", err)
+		h.log.Error("уровень корабля", "player", pid, "ship", ship, "err", err)
+		return nil
+	}
+	h.opts.World.SetShipLevel(pid, st.Level)
+	return &st
+}
+
+// shipXPSources — события, за которые опыт получает и корабль (контракты — только пилоту).
+var shipXPSources = map[string]bool{"kill": true, "discover": true, "sell": true}
+
+// grantXP начисляет опыт пилоту и текущему кораблю за событие (идемпотентно по ключу) и сообщает игроку, если он в сети.
+func (h *Handler) grantXP(ctx context.Context, pid, key, source string, amount int64) {
+	if amount <= 0 || (h.opts.Pilot == nil && h.opts.Ships == nil) {
 		return
 	}
-	if !g.Granted {
+	payload := map[string]any{"source": source}
+	anyGrant := false
+	if h.opts.Pilot != nil {
+		g, err := h.opts.Pilot.Grant(ctx, pid, key, source, amount)
+		if err != nil {
+			h.log.Error("опыт пилота", "player", pid, "key", key, "err", err)
+		} else if g.Granted {
+			anyGrant = true
+			payload["gained"], payload["level_up"], payload["pilot"] = g.Amount, g.LevelUp, g.State
+		}
+	}
+	if h.opts.Ships != nil && h.opts.World != nil && shipXPSources[source] {
+		if typ, ok := h.opts.World.ShipTypeOf(pid); ok {
+			g, err := h.opts.Ships.Grant(ctx, pid, typ, "s"+key, source, amount)
+			if err != nil {
+				h.log.Error("опыт корабля", "player", pid, "ship", typ, "key", key, "err", err)
+			} else if g.Granted {
+				anyGrant = true
+				if g.LevelUp {
+					h.opts.World.SetShipLevel(pid, g.State.Level)
+				}
+				payload["ship"], payload["ship_level_up"] = g.State, g.LevelUp
+			}
+		}
+	}
+	if !anyGrant {
 		return
 	}
 	h.mu.Lock()
@@ -638,7 +688,7 @@ func (h *Handler) grantXP(ctx context.Context, pid, key, source string, amount i
 		return
 	}
 	select {
-	case ss.events <- Message{Type: "xp", Payload: mustJSON(map[string]any{"gained": g.Amount, "source": source, "level_up": g.LevelUp, "pilot": g.State})}:
+	case ss.events <- Message{Type: "xp", Payload: mustJSON(payload)}:
 	default:
 	}
 }
@@ -847,6 +897,9 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 			welcome["pilot"] = ps
 		}
 		pcancel()
+	}
+	if sp := h.applyShipLevel(ctx, rec.ID, rec.ShipType); sp != nil {
+		welcome["ship_progress"] = sp
 	}
 	reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(welcome)})
 	go h.pump(ctx, ss)

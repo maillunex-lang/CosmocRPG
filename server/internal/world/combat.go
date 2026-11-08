@@ -41,6 +41,7 @@ func (w *World) initShip(p *Player, shipType, skin, spec string) {
 		}
 	}
 	p.Hull, p.Shield, p.Energy = sp.Hull, sp.Shield, sp.Energy
+	p.shipLevel = 1 // уровень экземпляра выставляет SetShipLevel (хаб читает его из хранилища)
 	p.cooldowns = map[string]float64{}
 	p.revealed = map[string]float64{}
 }

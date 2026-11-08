@@ -71,6 +71,7 @@ type Player struct {
 	deadUntil    float64
 	revealed     map[string]float64 // скрытый объект -> игровое время окончания видимости
 	spec         ShipSpec
+	shipLevel    int // уровень корабля 1–30: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
 
 	gender    string
 	pilotSpec string
@@ -157,6 +158,7 @@ type Ship struct {
 	Boosting   bool          `json:"boosting"`
 	Dead       bool          `json:"dead"`
 	Abilities  []AbilityInfo `json:"abilities"`
+	Level      int           `json:"level"` // уровень корабля (RPG-2)
 
 	Hold      map[string]float64 `json:"hold"`
 	CargoUsed float64            `json:"cargo_used"`
@@ -425,6 +427,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		if moved.length() > 1e-9 {
 			p.Dir = moved.normalized()
 		}
+		w.faceAttackTarget(p, dt)
 	}
 	w.stepNPCs()
 	w.stepLiving(dt)
@@ -445,7 +448,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
 			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
-			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
+			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
 			CanMine: me.spec.Abilities["mine"].Range > 0, MineRange: me.spec.Abilities["mine"].Range, InSafe: w.inSafe(me.Pos)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,

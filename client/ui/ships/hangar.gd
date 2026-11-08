@@ -173,7 +173,8 @@ func set_fleet(ships: Array) -> void:
 			continue
 		var b := ActionButton.new()
 		b.toggle_mode = true
-		b.text = "%s\n%s%s" % [str(sh.get("name", "")), str(sh.get("class", "")), " · врем." if bool(sh.get("temporary", false)) else ""]
+		var lvl := (" · ур. %d" % int(sh["level"])) if sh.has("level") else ""   # уровень корабля — от сервера
+		b.text = "%s%s\n%s%s" % [str(sh.get("name", "")), lvl, str(sh.get("class", "")), " · врем." if bool(sh.get("temporary", false)) else ""]
 		b.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size = Vector2(0, 52)
@@ -210,7 +211,7 @@ func _refresh() -> void:
 	_info.text = "Экипаж %d · двигателей %d · %s\nГабариты %s × %s × %s м" % [int(def.get("crew", 1)), int(def.get("engines", 2)), str(def.get("weapons", "")),
 		str(d[0]), str(d[1]), str(d[2])]
 	if _data.has("hull_max"):
-		_stats.text = "Корпус %d · щит %d · броня %d\nЭнергия %d · груз %d\nХарактеристики определяет сервер, значения балансируются." % [
+		_stats.text = ("Уровень корабля %d из 30\n" % int(_data["level"]) if _data.has("level") else "") + "Корпус %d · щит %d · броня %d\nЭнергия %d · груз %d\nХарактеристики определяет сервер, значения балансируются." % [
 			int(_data.get("hull_max", 0)), int(_data.get("shield_max", 0)), int(_data.get("armor", 0)), int(_data.get("energy_max", 0)), int(_data.get("cargo", 0))]
 	else:
 		_stats.text = "Характеристики недоступны: сервер их не прислал."

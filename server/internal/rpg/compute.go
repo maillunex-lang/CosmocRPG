@@ -79,7 +79,8 @@ type Result struct {
 // DefaultConfig — стартовые значения: ориентиры для разработки, не утверждённый баланс (баланс-проход после RPG-1…RPG-3).
 func DefaultConfig() Config {
 	growth := map[StatID]float64{}
-	for _, s := range []StatID{StatHull, StatShield, StatDamage, StatEnergy, StatCargo} {
+	// мощность вооружения (damage) добавится, когда способности станут данными, а не кодом: сейчас мир применяет рост только к этим четырём
+	for _, s := range []StatID{StatHull, StatShield, StatEnergy, StatCargo} {
 		growth[s] = 0.03
 	}
 	return Config{

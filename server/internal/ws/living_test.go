@@ -9,12 +9,15 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/rpg"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shipxp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 )
 
 // livingPilot — сервис пилота последнего созданного livingServer (опыт в памяти).
 var livingPilot *pilot.Service
+var livingShips *shipxp.Service
 
 // livingServer: мир с живыми локациями и контрактами; игрок заранее создан в хранилище в заданной точке.
 func livingServer(t *testing.T, token, ship string, at world.Vec, hold map[string]float64) (*quest.MemStore, worldgen.Layout, string) {
@@ -31,7 +34,8 @@ func livingServer(t *testing.T, token, ship string, at world.Vec, hold map[strin
 	id := world.PublicID(world.TokenHash(token))
 	_ = store.Save(context.Background(), world.Record{ID: id, Name: "Шахтёр", Pos: at, Dir: world.Vec{X: 1}, Created: true, ShipType: ship, PilotSpec: "miner", Hold: hold})
 	livingPilot = pilot.NewService(pilot.NewMemStore())
-	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc, Pilot: livingPilot}
+	livingShips = shipxp.NewService(shipxp.NewMemStore())
+	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc, Pilot: livingPilot, Ships: livingShips}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -231,3 +235,78 @@ func TestPilotXPFromSellOnceAndSpend(t *testing.T) {
 		t.Fatalf("состояние не сохранилось: %+v", again)
 	}
 }
+
+type shipLevelState struct {
+	Ship struct {
+		Type    string  `json:"type"`
+		Level   int     `json:"level"`
+		HullMax float64 `json:"hull_max"`
+	} `json:"ship"`
+}
+
+func (cl *client) nextShipLevel(cond func(shipLevelState) bool) shipLevelState {
+	cl.t.Helper()
+	for i := 0; i < 300; i++ {
+		m := cl.next("state")
+		var s shipLevelState
+		_ = json.Unmarshal(m.Payload, &s)
+		if cond(s) {
+			return s
+		}
+	}
+	cl.t.Fatal("состояние не достигло ожидаемого")
+	return shipLevelState{}
+}
+
+func TestShipLevelRestoredOnSwapAndXPFromSell(t *testing.T) {
+	_, _, url := livingServer(t, "shiplvltoken00001", "TMP-MINE", world.Vec{X: -12 + 8, Y: 14}, map[string]float64{"iron_ore": 10})
+	id := world.PublicID(world.TokenHash("shiplvltoken00001"))
+	// у шахтёра уже есть опыт: уровень подтягивается при входе
+	if _, err := livingShips.Grant(context.Background(), id, "TMP-MINE", "seed", "kill", rpgShipXP(5)); err != nil {
+		t.Fatal(err)
+	}
+	cl := connect(t, url)
+	w := cl.joinRaw("shiplvltoken00001")
+	sp, _ := w["ship_progress"].(map[string]any)
+	if sp == nil || sp["level"].(float64) != 5 {
+		t.Fatalf("welcome.ship_progress: %v", w["ship_progress"])
+	}
+	s := cl.nextShipLevel(func(s shipLevelState) bool { return s.Ship.Type == "TMP-MINE" })
+	if s.Ship.Level != 5 {
+		t.Fatalf("уровень корабля в состоянии: %d", s.Ship.Level)
+	}
+	hull5 := s.Ship.HullMax
+	// продажа даёт опыт и пилоту, и кораблю
+	cl.send("sell", nil)
+	m := cl.next("xp")
+	var x struct {
+		Gained int64
+		Ship   shipxp.State
+		Pilot  pilot.State
+	}
+	_ = json.Unmarshal(m.Payload, &x)
+	if x.Gained <= 0 || x.Ship.Ship != "TMP-MINE" || x.Ship.XP <= rpgShipXP(5) || x.Pilot.XP != x.Gained {
+		t.Fatalf("опыт за продажу: %+v", x)
+	}
+	// смена корабля: у нового свой уровень 1, у прежнего сохраняется
+	cl.send("set_ship", map[string]any{"ship": "FTR-001"})
+	s = cl.nextShipLevel(func(s shipLevelState) bool { return s.Ship.Type == "FTR-001" })
+	if s.Ship.Level != 1 {
+		t.Fatalf("новый корабль должен быть на уровне 1, а не %d", s.Ship.Level)
+	}
+	cl.send("set_ship", map[string]any{"ship": "TMP-MINE"})
+	s = cl.nextShipLevel(func(s shipLevelState) bool { return s.Ship.Type == "TMP-MINE" })
+	if s.Ship.Level != 5 || s.Ship.HullMax != hull5 {
+		t.Fatalf("уровень не восстановился при возврате на корабль: %d, корпус %v (было %v)", s.Ship.Level, s.Ship.HullMax, hull5)
+	}
+	cl.send("ships", nil)
+	var sh struct {
+		Levels map[string]shipxp.State `json:"levels"`
+	}
+	_ = json.Unmarshal(cl.next("ships").Payload, &sh)
+	if sh.Levels["TMP-MINE"].Level != 5 {
+		t.Fatalf("ангар: уровни кораблей %+v", sh.Levels)
+	}
+}
+
+func rpgShipXP(level int) int64 { return rpg.DefaultShipCurve.TotalXP(level) }

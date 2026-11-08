@@ -166,10 +166,13 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
 			notification.emit("%s: +%d кредитов" % [what, credits])
 		"xp":
-			_set_pilot(payload.get("pilot", {}) if payload.get("pilot") is Dictionary else {})
+			if payload.get("pilot") is Dictionary:   # сообщение может нести только опыт корабля
+				_set_pilot(payload["pilot"])
+			if bool(payload.get("ship_level_up", false)) and payload.get("ship") is Dictionary:
+				notification.emit("Корабль достиг уровня %d" % int((payload["ship"] as Dictionary).get("level", 1)))
 			if bool(payload.get("level_up", false)):
 				notification.emit("Новый уровень %d! Свободных очков характеристик: %d" % [int(_pilot.get("level", 1)), int(_pilot.get("attr_free", 0))])
-			else:
+			elif int(payload.get("gained", 0)) > 0:
 				notification.emit("+%d опыта" % int(payload.get("gained", 0)))
 		"pilot":
 			_set_pilot(payload)
@@ -179,7 +182,12 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 		"chat_history":
 			chat_history_loaded.emit(payload.get("general", []), payload.get("dms", []), payload.get("settings", {}))
 		"ships":
-			ships_updated.emit(payload.get("ships", []))
+			var fleet: Array = payload.get("ships", [])
+			var levels: Dictionary = payload.get("levels", {}) if payload.get("levels") is Dictionary else {}
+			for sh in fleet:   # уровень экземпляра корабля: нет записи — первый
+				if sh is Dictionary and payload.has("levels"):
+					sh["level"] = int((levels.get(str(sh.get("id", "")), {}) as Dictionary).get("level", 1))
+			ships_updated.emit(fleet)
 		"shop":
 			shop_updated.emit(payload)
 		"error":
@@ -228,6 +236,8 @@ func _ship_dict(ship: Dictionary) -> Dictionary:
 	d["mining"] = str(ship.get("mining", ""))
 	d["can_mine"] = bool(ship.get("can_mine", false))
 	d["in_safe"] = bool(ship.get("in_safe", false))
+	if ship.has("level"):
+		d["level"] = int(ship["level"])
 	d["cosmetics"] = ship.get("cosmetics", {}) if ship.get("cosmetics") is Dictionary else {}
 	return d
 

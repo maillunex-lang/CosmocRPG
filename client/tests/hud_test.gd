@@ -159,6 +159,17 @@ func _run() -> void:
 	screen.select_at(Vector2(2, 2))
 	await process_frame
 	_check(gw.snapshot()["target_id"] == "", "касание пустого места снимает цель")
+	# R-46: во время атаки пустое касание не сбрасывает цель и атаку
+	await _select(c, "pi1")
+	attack.pressed.emit()
+	await process_frame
+	await process_frame
+	if bool(gw.snapshot().get("attacking", false)):
+		screen.select_at(Vector2(2, 2))
+		await process_frame
+		_check(gw.snapshot()["target_id"] == "pi1" and bool(gw.snapshot().get("attacking", false)), "касание пустого места не прерывает атаку")
+		attack.pressed.emit()
+		await process_frame
 
 	# ============ атака враждебной цели: без подтверждения, защита от повторов ============
 	_free(c)

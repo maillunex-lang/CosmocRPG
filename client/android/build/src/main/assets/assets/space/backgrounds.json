@@ -1,0 +1,40 @@
+{
+  "textures": {
+    "stars_deep": "res://assets/space/backgrounds/stars_deep.webp",
+    "nebula_blue_violet": "res://assets/space/backgrounds/nebula_blue_violet.webp",
+    "gas_turquoise": "res://assets/space/backgrounds/gas_turquoise.webp"
+  },
+  "profiles": [
+    {
+      "id": "xi",
+      "name": "Система Кси",
+      "base_color": [0.010, 0.026, 0.066],
+      "layers": [
+        {"texture": "stars_deep", "blend": "add", "parallax": 0.10, "zoom": 1.15, "wrap": "mirror"},
+        {"texture": "nebula_blue_violet", "blend": "add", "parallax": 0.25, "zoom": 1.20},
+        {"texture": "gas_turquoise", "blend": "mix", "parallax": 0.50, "zoom": 1.30, "intensity": 0.35,
+         "drift": [3.0, 1.2], "min_quality": "medium"}
+      ]
+    },
+    {
+      "id": "omega",
+      "name": "Пояс Омега",
+      "base_color": [0.010, 0.024, 0.070],
+      "layers": [
+        {"texture": "stars_deep", "blend": "add", "parallax": 0.12, "zoom": 1.15, "wrap": "mirror", "brightness": 1.25, "flip": [-1, 1]},
+        {"texture": "nebula_blue_violet", "blend": "add", "parallax": 0.30, "zoom": 1.25, "intensity": 0.85, "tint": [1.0, 0.92, 1.08], "flip": [-1, -1]},
+        {"texture": "gas_turquoise", "blend": "mix", "parallax": 0.55, "zoom": 1.30, "intensity": 0.50, "tint": [0.85, 0.85, 1.1],
+         "flip": [1, -1], "drift": [-4.0, 1.0], "min_quality": "medium"}
+      ]
+    },
+    {
+      "id": "deep",
+      "name": "Глубокий космос",
+      "base_color": [0.008, 0.022, 0.060],
+      "layers": [
+        {"texture": "stars_deep", "blend": "add", "parallax": 0.08, "zoom": 1.15, "wrap": "mirror", "brightness": 1.1},
+        {"texture": "nebula_blue_violet", "blend": "add", "parallax": 0.20, "zoom": 1.20, "intensity": 0.40, "flip": [1, -1]}
+      ]
+    }
+  ]
+}

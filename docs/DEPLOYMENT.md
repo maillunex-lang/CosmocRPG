@@ -86,6 +86,12 @@ Docker публикует порты в обход `ufw`, поэтому реа�
 
 Ограничение: изменения, которые требуют нового кода (скрипты, сцены, новые экраны), по-прежнему идут новым APK.
 
+## Сборка Android через gradle и установка обновления из игры (2026-11-08, версия 0.3.4)
+
+С версии 0.3.4 APK собирается шаблоном gradle (`client/android/build`, `gradle_build/use_gradle_build=true`, `compress_native_libraries=true` — иначе APK вдвое больше). Свой код: `ApkInstallerPlugin.java` (плагин Godot «ApkInstaller»), `UpdateFileProvider.java`, `res/xml/update_paths.xml`, разрешение `REQUEST_INSTALL_PACKAGES` в `src/main/AndroidManifest.xml`. Каталог `libs/` шаблона в git не хранится: на новой машине `unzip` из `~/.local/share/godot/export_templates/4.7.2.stable/android_source.zip` только `libs/*` и `gradle/*` в `client/android/build/` (остальные файлы не затирать, они изменены). Нужны `ANDROID_HOME=~/Android/Sdk`, Java и доступ к services.gradle.org при первой сборке. Команда сборки прежняя: `. ~/keys/cosmoc/release.env && ANDROID_HOME=~/Android/Sdk godot --headless --path client --export-release "Android" <apk>`.
+
+Установка из игры: «Обновить» скачивает APK в `user://updates` (проверка размера и SHA-256 из подписанного манифеста), затем запускает системный установщик; при первом разе Android просит разрешить установку из этого источника. Если плагина нет (не Android, старая сборка), ссылка открывается в браузере, как раньше. Версии ≤0.3.3 так обновиться не могут: 0.3.4 ставится один раз вручную.
+
 ## Лендинг (2026-11-08)
 
 Статический сайт в каталоге `site/` (HTML, CSS, JS, изображения; без внешних скриптов и шрифтов, без встроенных стилей из-за CSP). Копируется в образ Caddy (`COPY site /site` в `infrastructure/caddy/Dockerfile`) и отдаётся на корне домена `https://rikagro.ru/` и `www`; админка остаётся на `/admin/`, игра `wss://rikagro.ru/ws`, раздача APK и манифеста `/download/`. Страница получает версию, размер и ссылку скачивания из `/download/latest.json` (ссылка принимается только `https`, на этот же сайт, путь `/download/…apk`). В `/download/` APK отдаётся с типом `application/vnd.android.package-archive` и `Content-Disposition: attachment`, JSON с `application/json`. Страница помечена `noindex` (альфа для своих). Выкатка: `docker compose … up -d --build --no-deps caddy`. Изменение Caddyfile для лендинга разрешено владельцем (R-39).

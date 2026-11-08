@@ -573,9 +573,15 @@ func _input(event: InputEvent) -> void:
 			gestures.drag(CameraGestures.MOUSE_RIGHT, event.position)
 
 
-## Выбор цели касанием в точке экрана (пустое место снимает цель).
+## Выбор цели касанием в точке экрана. Пустое место снимает цель, но не во время атаки или добычи:
+## случайное касание карты не должно прерывать бой и сбор ресурсов (прекращают их кнопки или выбор другой цели).
 func select_at(pos: Vector2) -> void:
-	gateway.set_target(nearest_id(screen_points(), pos, pick_radius))
+	var id := nearest_id(screen_points(), pos, pick_radius)
+	if id == "":
+		var st: Dictionary = gateway.snapshot()
+		if bool(st.get("attacking", false)) or str((st.get("ship", {}) as Dictionary).get("mining", "")) != "":
+			return
+	gateway.set_target(id)
 
 
 func _notification(what: int) -> void:

@@ -3,6 +3,10 @@
 __pycache__/
 *.pyc
 build/
+!client/android/build/
+client/android/build/build/
+client/android/build/.gradle/
+client/android/build/libs/
 *.apk
 *.aab
 *.idsig

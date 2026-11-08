@@ -281,10 +281,13 @@ func show_update_result(result: Dictionary, manual: bool) -> void:
 		if str(info.get("notes", "")) != "":
 			lines.append("Что нового: " + str(info["notes"]))
 		lines.append("Контрольная сумма SHA-256: %s…" % str(info.get("sha256", "")).left(16))
-		lines.append("«Обновить» откроет защищённую ссылку: файл скачается в браузере, установит его сама Android с вашим подтверждением. Прогресс игры сохранится.")
+		lines.append("«Обновить» скачает файл прямо в игре и запустит установку: Android попросит ваше подтверждение. Прогресс игры сохранится.")
 		update_text.text = "\n".join(lines)
 		for c in update_ok.pressed.get_connections():
 			update_ok.pressed.disconnect(c["callable"])
+		update_ok.text = "Обновить"
+		update_ok.disabled = false
+		update_later.disabled = false
 		update_ok.pressed.connect(func() -> void: update_confirmed.emit(info))
 		update_later.visible = status != "required"
 		update_panel.visible = true
@@ -310,6 +313,16 @@ func set_content_note(text: String) -> void:
 	if cv != "":
 		base += " · контент: %s" % cv
 	version_label.text = base if text == "" else base + "\n" + text
+
+
+## Ход установки обновления в окне обновления: текст и блокировка кнопки на время загрузки.
+func show_update_progress(text: String, busy: bool) -> void:
+	if text != "":
+		update_text.text = text
+	update_ok.disabled = busy
+	update_later.disabled = busy
+	if not busy and text != "":
+		update_ok.text = "Повторить"
 
 
 func begin_update_check() -> void:

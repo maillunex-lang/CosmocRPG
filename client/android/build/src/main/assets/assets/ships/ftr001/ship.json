@@ -1,0 +1,31 @@
+{
+  "id": "FTR-001",
+  "name": "Стриж",
+  "class": "Лёгкий истребитель",
+  "specializations": ["Перехватчик", "Разведчик"],
+  "dimensions_m": [12, 8.4, 2.8],
+  "crew": 1,
+  "engines": 2,
+  "weapons": "2 энергетические пушки, 1 ракетная точка",
+  "model_length": 1.9,
+  "visual_scale": 2.2,
+  "nose_axis": "-x",
+  "skins": {
+    "a": { "name": "Серебро и бирюза", "glb": "res://assets/ships/ftr001/striz_a.glb", "flame": [0.35, 0.9, 1.0] },
+    "b": { "name": "Графит и красный", "glb": "res://assets/ships/ftr001/striz_b.glb", "flame": [1.0, 0.4, 0.2] }
+  },
+  "points": {
+    "Engine_L": [0.88, 0.0, 0.13],
+    "Engine_R": [0.88, 0.0, -0.13],
+    "Weapon_L": [-0.30, 0.0, 0.27],
+    "Weapon_R": [-0.30, 0.0, -0.27],
+    "Missile_01": [-0.15, -0.07, 0.0],
+    "Hit_Center": [0.0, 0.0, 0.0],
+    "Camera_Focus": [0.0, 0.05, 0.0],
+    "Dock_Point": [0.95, 0.0, 0.0]
+  },
+  "specs": {
+    "interceptor": { "name": "Перехватчик", "ability": "Перехват: рывок к цели и усиленный выстрел" },
+    "scout": { "name": "Разведчик", "ability": "Импульсный сканер: обнаружение скрытых объектов и сигналов" }
+  }
+}

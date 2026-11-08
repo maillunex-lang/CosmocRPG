@@ -14,6 +14,7 @@ const CharacterScreen := preload("res://ui/character_screen.gd")
 const StartSplash := preload("res://ui/start_splash.gd")
 const Updater := preload("res://ui/updater.gd")
 const ContentLoader := preload("res://ui/content_loader.gd")
+const ApkInstaller := preload("res://ui/apk_installer.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "wss://rikagro.ru/ws"  # домен с сертификатом Let's Encrypt (запасной адрес: ws://78.17.214.25:8080/ws)
@@ -26,6 +27,8 @@ var _account_pending := false
 var _splash: Control
 var _updater: Node
 var _content: Node
+var _installer: Node
+var _update_info: Dictionary = {}
 var _update_manual := false
 var _overlay_bg: ColorRect
 var _overlay_back: ActionButton
@@ -129,9 +132,20 @@ func _build_start_screen() -> void:
 		_splash.begin_update_check()
 		_updater.check()
 		_content.check(true))
+	_installer = ApkInstaller.new()
+	add_child(_installer)
+	_installer.progress.connect(func(f: float) -> void: _splash.show_update_progress("Скачивание обновления… %d%%" % int(f * 100.0), true))
+	_installer.finished.connect(func(status: String, msg: String) -> void:
+		if status == "fallback":
+			if not _updater.open_download(_update_info):
+				_append(_danger("Ссылка на обновление отклонена как небезопасная"))
+			_splash.show_update_progress("", false)
+		else:
+			_splash.show_update_progress(msg, false))
 	_splash.update_confirmed.connect(func(info: Dictionary) -> void:
-		if not _updater.open_download(info):
-			_append(_danger("Ссылка на обновление отклонена как небезопасная")))
+		_update_info = info
+		_splash.show_update_progress("Подготовка…", true)
+		_installer.start(info))
 	_splash.secret_opened.connect(func() -> void: _open_overlay(true))
 	_sync_splash()
 

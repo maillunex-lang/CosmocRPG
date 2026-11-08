@@ -5,10 +5,8 @@
 	default_sni {$PUBLIC_HOST}
 }
 
-# Админка: https://<хост>/admin/ , HTTPS с самоподписанным сертификатом (внутренний CA Caddy), домена пока нет.
-https://{$PUBLIC_HOST}, https://localhost, https://127.0.0.1 {
-	tls internal
-
+# Общие правила для всех адресов
+(common) {
 	encode gzip
 
 	header {
@@ -34,6 +32,28 @@ https://{$PUBLIC_HOST}, https://localhost, https://127.0.0.1 {
 	}
 
 	redir /admin /admin/ permanent
+}
+
+# Игра и админка на домене: настоящий сертификат Let's Encrypt (проверка TLS-ALPN на порту 443, порт 80 не нужен).
+# Игровой WebSocket: wss://<домен>/ws
+{$GAME_DOMAIN:rikagro.ru}, www.{$GAME_DOMAIN:rikagro.ru} {
+	import common
+
+	handle /ws {
+		reverse_proxy server:8080
+	}
+	handle /health {
+		reverse_proxy server:8080
+	}
+	handle {
+		redir * /admin/ temporary
+	}
+}
+
+# Админка: https://<хост>/admin/ , HTTPS с самоподписанным сертификатом (внутренний CA Caddy), домена пока нет.
+https://{$PUBLIC_HOST}, https://localhost, https://127.0.0.1 {
+	tls internal
+	import common
 
 	# Всё остальное, включая корень, ведёт в админку
 	handle {

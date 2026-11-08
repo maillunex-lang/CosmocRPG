@@ -3,7 +3,7 @@
 Космическая idle MMORPG с общим онлайн-миром, экономической песочницей, открытым PvP и AI-цивилизацией.
 Платформа: Android. Графика: 2.5D-космос с полноценными 3D-кораблями.
 
-Статус: **Этап 00 — аудит и инфраструктура.** Игровых механик пока нет.
+Статус: **подготовка альфа-теста с друзьями.** Работают общий космос, бой с врагами, добыча, торговля станции, магазин, аккаунты, админка. Подробный статус: [единая дорожная карта](docs/ROADMAP.md).
 
 ## Стек
 
@@ -30,7 +30,7 @@
 - [GDD](docs/GDD.md) — игровой замысел
 - [ARCHITECTURE](docs/ARCHITECTURE.md) — архитектура
 - [API](docs/API.md) — протокол HTTPS + WebSocket
-- [ROADMAP](docs/ROADMAP.md) — этапы
+- [ROADMAP](docs/ROADMAP.md) — **единая дорожная карта**: все требования владельца, статусы, приоритеты, открытые вопросы
 - [DECISIONS](docs/DECISIONS.md) — журнал решений
 - [SECURITY](docs/SECURITY.md) — безопасность
 - [DEPLOYMENT](docs/DEPLOYMENT.md) — развёртывание
@@ -40,6 +40,7 @@
 - [Учёт ИИ-контента](docs/AI_CONTENT.md)
 - [UI](docs/ui/README.md) — документы интерфейса, [художественный стандарт фона](docs/ui/ART_STANDARD.md), [ассеты](docs/ui/ART_ASSETS.md)
 - [Корабли и бой (ТЗ)](docs/design/SHIPS_SPEC.md) — корабли, развитие, эскадры, боевые системы
+- [Альфа-тест](docs/design/ALPHA.md) · [Живые локации](docs/design/LIVING_LOCATIONS.md) · [Магазин и VIP](docs/design/SHOP_VIP.md) · [Аккаунты](docs/design/ACCOUNTS.md) · [AI Studio](docs/design/AI_STUDIO.md)
 
 ## Быстрый старт клиента
 

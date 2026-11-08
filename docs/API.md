@@ -58,3 +58,14 @@
 Персонаж (A1): при первом входе `welcome {needs_character: true, pilot_options[]}`, затем `create_character {nick, gender, pilot_spec}` → `welcome` с `character`. Подробности: `docs/design/ALPHA.md`. Каталог кораблей и ZIP-патчи: раздел «Корабли» админки (`/admin/api/ships/*`).
 
 Параметры мира: скорость 14 ед/с, радиус системы 400 ед., автопилот останавливается в 10 ед. от цели, максимум 50 игроков, корабль остаётся в мире 10 с после обрыва связи, позиции сохраняются раз в 5 с и при отключении.
+
+## Живые локации, добыча, магазин, смена корабля (2026-11-08)
+
+Все расширения аддитивные, версия протокола прежняя (1).
+
+Клиент → сервер: `mine {id}` (добыча из месторождения), `mine_stop`, `sell` (продажа груза у станции), `ships` (список кораблей каталога), `set_ship {ship}` (смена у станции), `shop`, `shop_buy {item, request_id}`, `shop_equip {slot, item}`.
+Сервер → клиент: `welcome` дополнен `layout` (раскладка системы: тела, станции, зоны, месторождения, точки, маршруты, параметры декора) и `visual` (графические пресеты), если включены живые локации; `state.ship` дополнен `hold`, `cargo_used`, `mining`, `can_mine`, `mine_range`, `in_safe`, `cosmetics`; `state.objects` дополнены `tier`, `resource`, `rarity`, `amount`, `amount_max`, `zone`, `vip`, `badge`, `name_color`, `engine` (виды `deposit`, `anomaly`, `derelict`, `signal`, `hostile` с уровнем); новые сообщения `reward {kind, ref, credits, total}`, `ships {ships[]}`, `shop {catalog, state, cosmetics}`; события боя `loot`, `mine`, `mine_start`, `mine_stop`, `discover`, `sell`, `ship_changed`.
+Коды ошибок: `no_module`, `hold_full`, `deposit_empty`, `no_deposit`, `not_at_station`, `nothing_to_sell`, `no_ship`, `hold_too_big`, `no_item`, `already_owned`, `vip_required`, `not_owned`, `bad_slot`, `bad_request`.
+Подробности: `docs/design/LIVING_LOCATIONS.md`, `docs/design/SHOP_VIP.md`.
+
+Админ-API (требует входа): `GET /admin/api/world`, `POST /admin/api/world/preview`, `PUT /admin/api/world`, `POST /admin/api/world/versions/{id}/rollback`.

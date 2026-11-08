@@ -4,10 +4,20 @@
       "id": "FTR-001",
       "name": "Стриж",
       "class": "Лёгкий истребитель",
-      "specs": ["interceptor", "scout"],
+      "specs": [
+        "interceptor",
+        "scout"
+      ],
       "default_spec": "interceptor",
-      "skins": ["a", "b"],
-      "dimensions_m": [12, 8.4, 2.8],
+      "skins": [
+        "a",
+        "b"
+      ],
+      "dimensions_m": [
+        12,
+        8.4,
+        2.8
+      ],
       "crew": 1,
       "engines": 2,
       "weapons": "2 энергетические пушки, 1 ракетная точка",
@@ -21,11 +31,160 @@
       "shield_regen_delay": 4,
       "energy_regen": 8,
       "abilities": {
-        "pulse":     { "name": "Сдвоенный импульс", "damage": 22, "shots": 2, "range": 30, "period": 1.0, "energy": 2 },
-        "boost":     { "name": "Форсаж", "speed_mul": 1.8, "duration": 3, "cooldown": 12, "energy": 20 },
-        "intercept": { "name": "Перехват", "spec": "interceptor", "max_dist": 40, "min_dist": 10, "range": 50, "damage_mul": 2.5, "cooldown": 10, "energy": 30 },
-        "scan":      { "name": "Импульсный сканер", "spec": "scout", "radius": 60, "reveal": 15, "cooldown": 20, "energy": 25 }
+        "pulse": {
+          "name": "Сдвоенный импульс",
+          "damage": 22,
+          "shots": 2,
+          "range": 30,
+          "period": 1.0,
+          "energy": 2
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.8,
+          "duration": 3,
+          "cooldown": 12,
+          "energy": 20
+        },
+        "intercept": {
+          "name": "Перехват",
+          "spec": "interceptor",
+          "max_dist": 40,
+          "min_dist": 10,
+          "range": 50,
+          "damage_mul": 2.5,
+          "cooldown": 10,
+          "energy": 30
+        },
+        "scan": {
+          "name": "Импульсный сканер",
+          "spec": "scout",
+          "radius": 60,
+          "reveal": 15,
+          "cooldown": 20,
+          "energy": 25
+        }
+      },
+      "role": "Боевой / разведывательный",
+      "temporary": false
+    },
+    {
+      "id": "TMP-HAUL",
+      "name": "Грузовик «Тягач»",
+      "class": "Лёгкий транспорт",
+      "role": "Торговля и логистика",
+      "temporary": true,
+      "specs": [
+        "hauler"
+      ],
+      "default_spec": "hauler",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        18,
+        10,
+        4
+      ],
+      "crew": 1,
+      "engines": 2,
+      "weapons": "1 оборонительная пушка",
+      "hull": 1800,
+      "shield": 400,
+      "armor": 150,
+      "energy": 120,
+      "cargo": 60,
+      "speed": 10.0,
+      "shield_regen": 10,
+      "shield_regen_delay": 5,
+      "energy_regen": 8,
+      "abilities": {
+        "pulse": {
+          "name": "Оборонительный импульс",
+          "damage": 14,
+          "shots": 2,
+          "range": 25,
+          "period": 1.2,
+          "energy": 2
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.5,
+          "duration": 3,
+          "cooldown": 14,
+          "energy": 25
+        }
+      }
+    },
+    {
+      "id": "TMP-MINE",
+      "name": "Буровик «Крот»",
+      "class": "Лёгкий добытчик",
+      "role": "Добыча и переработка",
+      "temporary": true,
+      "specs": [
+        "miner"
+      ],
+      "default_spec": "miner",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        15,
+        9,
+        4
+      ],
+      "crew": 1,
+      "engines": 2,
+      "weapons": "1 оборонительная пушка",
+      "hull": 1500,
+      "shield": 350,
+      "armor": 130,
+      "energy": 120,
+      "cargo": 40,
+      "speed": 11.0,
+      "shield_regen": 10,
+      "shield_regen_delay": 5,
+      "energy_regen": 8,
+      "abilities": {
+        "pulse": {
+          "name": "Оборонительный импульс",
+          "damage": 16,
+          "shots": 2,
+          "range": 25,
+          "period": 1.1,
+          "energy": 2
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.5,
+          "duration": 3,
+          "cooldown": 14,
+          "energy": 25
+        }
       }
     }
-  ]
+  ],
+  "starters": {
+    "interceptor": {
+      "ship": "FTR-001",
+      "spec": "interceptor",
+      "skin": "a"
+    },
+    "scout": {
+      "ship": "FTR-001",
+      "spec": "scout",
+      "skin": "b"
+    },
+    "trader": {
+      "ship": "TMP-HAUL",
+      "spec": "hauler",
+      "skin": "a"
+    },
+    "miner": {
+      "ship": "TMP-MINE",
+      "spec": "miner",
+      "skin": "a"
+    }
+  }
 }

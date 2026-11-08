@@ -70,6 +70,9 @@ type Player struct {
 	revealed     map[string]float64 // скрытый объект -> игровое время окончания видимости
 	spec         ShipSpec
 
+	gender    string
+	pilotSpec string
+
 	connected bool
 	lostAt    time.Time // момент обрыва связи
 }
@@ -81,7 +84,13 @@ type Record struct {
 	Pos  Vec
 	Dir  Vec
 	Skin string // облик корабля ("" — по умолчанию)
-	Spec string // специализация ("" — по умолчанию)
+	Spec string // специализация корабля ("" — по умолчанию)
+
+	// персонаж (создаётся при первом входе)
+	Created   bool
+	Gender    string // m | f
+	PilotSpec string // направление пилота: interceptor | scout | trader | miner
+	ShipType  string // тип корабля ("" — по умолчанию)
 }
 
 // Object — чужой объект в снимке (корабль другого игрока или станция).
@@ -155,7 +164,7 @@ type World struct {
 func New() *World {
 	return &World{
 		players: map[string]*Player{},
-		catalog: defaultCatalog,
+		catalog: defaultCatalog.Clone(),
 		npcs:    defaultNPCs(),
 		system:  System{ID: "xi", Name: "Система Кси", Background: "xi"},
 		station: Object{ID: StationID, Kind: "station", Stance: "friendly", Name: "Станция «Рубеж»",
@@ -196,7 +205,8 @@ func (w *World) Join(r Record) (*Player, bool) {
 		dir = Vec{1, 0}
 	}
 	p := &Player{ID: r.ID, Name: r.Name, Pos: pos, Dir: dir, connected: true}
-	w.initShip(p, r.Skin, r.Spec)
+	p.gender, p.pilotSpec = r.Gender, r.PilotSpec
+	w.initShip(p, r.ShipType, r.Skin, r.Spec)
 	w.players[r.ID] = p
 	return p, true
 }
@@ -217,7 +227,8 @@ func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 }
 
 func (p *Player) record() Record {
-	return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec}
+	return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
+		Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType}
 }
 
 // Records возвращает состояние всех кораблей (для периодического сохранения).

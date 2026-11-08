@@ -21,8 +21,11 @@ var (
 	ErrBadTarget = errors.New("bad_target")
 )
 
-func (w *World) initShip(p *Player, skin, spec string) {
-	sp, _ := w.catalog.Spec(DefaultShip)
+func (w *World) initShip(p *Player, shipType, skin, spec string) {
+	sp, ok := w.catalog.Spec(shipType)
+	if !ok {
+		sp, _ = w.catalog.Spec(DefaultShip)
+	}
 	p.spec, p.ShipType = sp, sp.ID
 	p.Skin = sp.Skins[0]
 	for _, s := range sp.Skins {
@@ -321,4 +324,42 @@ func (w *World) SpecInfo(id string) (ShipSpec, bool) {
 // ValidSkin проверяет облик (для протокола).
 func ValidSkin(s string) bool {
 	return len(s) > 0 && len(s) <= 8 && !strings.ContainsAny(s, " \t\n")
+}
+
+// Starter возвращает стартовый корабль направления пилота.
+func (w *World) Starter(pilot string) (Starter, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	st, ok := w.catalog.Starters[pilot]
+	return st, ok
+}
+
+// Catalog возвращает действующий каталог кораблей.
+func (w *World) Catalog() Catalog {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.catalog.Clone()
+}
+
+// SetCatalog применяет новый каталог на лету: у игроков обновляются паспорта кораблей (значения ограничиваются новыми максимумами).
+func (w *World) SetCatalog(c Catalog) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.catalog = c.Clone()
+	c = w.catalog
+	for _, p := range w.players {
+		sp, ok := c.Spec(p.ShipType)
+		if !ok {
+			sp, _ = c.Spec(DefaultShip)
+			p.ShipType = sp.ID
+		}
+		p.spec = sp
+		p.Hull, p.Shield, p.Energy = math.Min(p.Hull, sp.Hull), math.Min(p.Shield, sp.Shield), math.Min(p.Energy, sp.Energy)
+		if !contains(sp.Skins, p.Skin) {
+			p.Skin = sp.Skins[0]
+		}
+		if !contains(sp.Specs, p.Spec) {
+			p.Spec = sp.DefaultSpec
+		}
+	}
 }

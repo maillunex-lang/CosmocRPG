@@ -161,7 +161,7 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore),
+		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true,
 	})
 	worldDone := make(chan struct{})
 	go func() {

@@ -46,6 +46,8 @@ type Options struct {
 	Store      world.Store      // хранилище игроков; nil: позиции не сохраняются
 	Quests     *quest.Service   // контракты и награды; nil: функция выключена
 	Accounts   *account.Service // аккаунты (логин и пароль); nil: функция выключена
+	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
+	RequireCharacter bool
 }
 
 // Handler обслуживает WebSocket-соединения.
@@ -60,11 +62,12 @@ type Handler struct {
 
 // session — игровая сессия: состояние рассылается через очередь, чтобы медленный клиент не тормозил мир.
 type session struct {
-	conn   *websocket.Conn
-	cancel context.CancelFunc
-	states chan Message
-	events chan Message // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
-	pid    string
+	conn    *websocket.Conn
+	cancel  context.CancelFunc
+	states  chan Message
+	pending *world.Record // игрок вошёл, но ещё не создал персонажа
+	events  chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
+	pid     string
 }
 
 // NewHandler создаёт обработчик.
@@ -134,7 +137,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -230,44 +233,19 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 				rec.Name = n
 			}
 		}
-		// тот же игрок с другого устройства: старая сессия закрывается
-		h.mu.Lock()
-		old := h.active[rec.ID]
-		h.active[rec.ID] = ss
-		ss.pid = rec.ID
-		h.mu.Unlock()
-		if old != nil && old != ss {
-			_ = writeJSON(ctx, old.conn, errMsg("", "replaced", "вход с другого устройства"))
-			old.cancel()
-			old.conn.CloseNow()
+		if h.opts.Store != nil && h.opts.RequireCharacter && !rec.Created {
+			// персонаж не создан: в мир не пускаем, предлагаем создать (ник, пол, направление пилота)
+			r := rec
+			ss.pending = &r
+			reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(map[string]any{
+				"player_id": rec.ID, "name": rec.Name, "needs_character": true, "pilot_options": h.pilotOptions(),
+			})})
+			return true
 		}
-		if _, ok := w.Join(rec); !ok {
-			h.mu.Lock()
-			if h.active[rec.ID] == ss {
-				delete(h.active, rec.ID)
-			}
-			ss.pid = ""
-			h.mu.Unlock()
-			reply(errMsg(m.ID, "server_full", "сервер переполнен"))
-			return false
-		}
-		if h.opts.Quests != nil {
-			qctx, qcancel := context.WithTimeout(ctx, 5*time.Second)
-			if err := h.opts.Quests.Join(qctx, rec.ID); err != nil {
-				log.Error("ws: контракты игрока", "player", rec.ID, "err", err)
-			}
-			qcancel()
-		}
-		sys := w.System()
-		reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(map[string]any{
-			"player_id": rec.ID, "name": rec.Name, "system": sys,
-		})})
-		go h.pump(ctx, ss)
-		if st, ok := w.Snapshot(ss.pid); ok {
-			h.pushState(ss, st)
-		}
-		log.Info("ws: игрок вошёл", "player", rec.ID, "name", rec.Name)
-		return true
+		return h.finishJoin(ctx, ss, log, m, rec)
+	}
+	if m.Type == "create_character" {
+		return h.createCharacter(ctx, c, ss, log, m)
 	}
 	if ss.pid == "" {
 		reply(errMsg(m.ID, "not_joined", "сначала выполните join"))
@@ -627,4 +605,114 @@ func (h *Handler) accountMsg(ctx context.Context, c *websocket.Conn, ss *session
 		h.log.Info("ws: вход по аккаунту", "login", login, "player", pid)
 		reply(Message{Type: "account", ID: m.ID, Payload: mustJSON(map[string]any{"login": login, "created": false})})
 	}
+}
+
+// finishJoin регистрирует сессию, добавляет корабль в мир и отправляет welcome.
+func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger, m Message, rec world.Record) bool {
+	w := h.opts.World
+	reply := func(msg Message) { _ = writeJSON(ctx, ss.conn, msg) }
+	// тот же игрок с другого устройства: старая сессия закрывается
+	h.mu.Lock()
+	old := h.active[rec.ID]
+	h.active[rec.ID] = ss
+	ss.pid = rec.ID
+	h.mu.Unlock()
+	if old != nil && old != ss {
+		_ = writeJSON(ctx, old.conn, errMsg("", "replaced", "вход с другого устройства"))
+		old.cancel()
+		old.conn.CloseNow()
+	}
+	if _, ok := w.Join(rec); !ok {
+		h.mu.Lock()
+		if h.active[rec.ID] == ss {
+			delete(h.active, rec.ID)
+		}
+		ss.pid = ""
+		h.mu.Unlock()
+		reply(errMsg(m.ID, "server_full", "сервер переполнен"))
+		return false
+	}
+	if h.opts.Quests != nil {
+		qctx, qcancel := context.WithTimeout(ctx, 5*time.Second)
+		if err := h.opts.Quests.Join(qctx, rec.ID); err != nil {
+			log.Error("ws: контракты игрока", "player", rec.ID, "err", err)
+		}
+		qcancel()
+	}
+	sys := w.System()
+	reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(map[string]any{
+		"player_id": rec.ID, "name": rec.Name, "system": sys,
+		"character": map[string]any{"gender": rec.Gender, "pilot_spec": rec.PilotSpec, "ship_type": rec.ShipType},
+	})})
+	go h.pump(ctx, ss)
+	if st, ok := w.Snapshot(ss.pid); ok {
+		h.pushState(ss, st)
+	}
+	log.Info("ws: игрок вошёл", "player", rec.ID, "name", rec.Name)
+	return true
+}
+
+// pilotOptions описывает стартовые направления пилота и корабль каждого (для экрана создания персонажа).
+func (h *Handler) pilotOptions() []map[string]any {
+	cat := h.opts.World.Catalog()
+	var out []map[string]any
+	for _, ps := range world.PilotSpecs {
+		st, ok := cat.Starters[ps]
+		if !ok {
+			continue
+		}
+		sp, _ := cat.Spec(st.Ship)
+		out = append(out, map[string]any{"pilot": ps, "ship": st.Ship, "ship_name": sp.Name, "class": sp.Class, "role": sp.Role,
+			"temporary": sp.Temporary, "skin": st.Skin, "spec": st.Spec, "hull": sp.Hull, "shield": sp.Shield, "cargo": sp.Cargo, "speed": sp.Speed})
+	}
+	return out
+}
+
+// createCharacter завершает создание персонажа и впускает игрока в мир.
+func (h *Handler) createCharacter(ctx context.Context, c *websocket.Conn, ss *session, log *slog.Logger, m Message) bool {
+	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
+	if ss.pending == nil {
+		reply(errMsg(m.ID, "not_joined", "создание персонажа недоступно"))
+		return true
+	}
+	var p struct {
+		Nick      string `json:"nick"`
+		Gender    string `json:"gender"`
+		PilotSpec string `json:"pilot_spec"`
+	}
+	if json.Unmarshal(m.Payload, &p) != nil {
+		reply(errMsg(m.ID, "bad_message", "некорректный запрос"))
+		return true
+	}
+	nick, err := world.CleanNick(p.Nick)
+	if err == nil && !world.ValidGender(p.Gender) {
+		err = world.ErrBadGender
+	}
+	st, ok := h.opts.World.Starter(p.PilotSpec)
+	if err == nil && !ok {
+		err = world.ErrBadPilotSpec
+	}
+	var rec world.Record
+	if err == nil {
+		sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		rec, err = h.opts.Store.CreateCharacter(sctx, ss.pending.ID, nick, p.Gender, p.PilotSpec, st)
+		cancel()
+	}
+	if err != nil {
+		code := err.Error()
+		text := map[string]string{
+			"bad_nick": "ник: 3-16 символов, буквы (латиница и кириллица), цифры, «_» и «-» внутри", "nick_reserved": "этот ник недоступен",
+			"nick_taken": "такой ник уже занят", "bad_gender": "выберите пол", "bad_pilot_spec": "выберите стартовое направление",
+			"character_exists": "персонаж уже создан",
+		}[code]
+		if text == "" {
+			log.Error("ws: создание персонажа", "err", err)
+			code, text = "server_error", "ошибка сервера"
+		}
+		reply(errMsg(m.ID, code, text))
+		return true
+	}
+	ss.pending = nil
+	log.Info("ws: персонаж создан", "player", rec.ID, "nick", rec.Name, "pilot", rec.PilotSpec, "ship", rec.ShipType)
+	return h.finishJoin(ctx, ss, log, m, rec)
 }

@@ -285,32 +285,31 @@ func scanJSONKeys(v any, path string, report *Report, file string) {
 	}
 }
 
-// ParsePack безопасно читает ZIP, проверяет структуру, целостность и схемы.
-// Ничего не пишет на диск и не выполняет содержимое. Ссылочная целостность проверяется позже (Validate).
-func ParsePack(data []byte) (*Parsed, Report) {
-	rep := newReport()
-	fail := func() (*Parsed, Report) { rep.OK = false; return nil, rep }
+// ReadSafe безопасно читает ZIP: лимиты размера и числа файлов, защита от ZIP Slip и ZIP bomb, запрет символических ссылок,
+// шифрования, не-текстовых и исполняемых файлов, секретов. allowed — допустимые каталоги верхнего уровня.
+// Содержимое не выполняется и не пишется на диск. ok=false: дальше разбирать нечего.
+func ReadSafe(data []byte, allowed map[string]bool) (files map[string][]byte, total int64, rep Report, ok bool) {
+	rep = newReport()
 	if len(data) == 0 {
 		rep.errf("empty", "", "пустой файл")
-		return fail()
+		return nil, 0, rep, false
 	}
 	if len(data) > MaxZipBytes {
 		rep.errf("too_large", "", "архив больше %d МБ", MaxZipBytes>>20)
-		return fail()
+		return nil, 0, rep, false
 	}
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		rep.errf("bad_zip", "", "это не ZIP-архив или он повреждён: %v", err)
-		return fail()
+		return nil, 0, rep, false
 	}
 	if len(zr.File) > MaxFiles {
 		rep.errf("too_many_files", "", "в архиве %d записей, максимум %d", len(zr.File), MaxFiles)
-		return fail()
+		return nil, 0, rep, false
 	}
 
-	files := map[string][]byte{}
+	files = map[string][]byte{}
 	seen := map[string]bool{}
-	var total int64
 	for _, f := range zr.File {
 		name, why := safeName(f.Name)
 		if why != "" {
@@ -363,12 +362,12 @@ func ParsePack(data []byte) (*Parsed, Report) {
 		total += int64(len(b))
 		if total > MaxTotalBytes {
 			rep.errf("zip_bomb", "", "суммарный размер содержимого больше %d МБ", MaxTotalBytes>>20)
-			return fail()
+			return nil, 0, rep, false
 		}
 		files[name] = b
 	}
 	if len(rep.Errors) > 0 && files["manifest.json"] == nil {
-		return fail()
+		return nil, 0, rep, false
 	}
 
 	// структура, типы файлов, содержимое
@@ -378,7 +377,7 @@ func ParsePack(data []byte) (*Parsed, Report) {
 			if name != "manifest.json" && !rootDocRe.MatchString(name) {
 				rep.errf("unexpected_file", name, "в корне допускаются только manifest.json и документы .md/.txt")
 			}
-		} else if !allowedDirs[parts[0]] {
+		} else if !allowed[parts[0]] {
 			rep.errf("unexpected_dir", name, "каталог «%s» не входит в стандарт %s", parts[0], SchemaName)
 		}
 		ext := strings.ToLower(path.Ext(name))
@@ -405,7 +404,17 @@ func ParsePack(data []byte) (*Parsed, Report) {
 			}
 		}
 	}
+	return files, total, rep, true
+}
 
+// ParsePack безопасно читает ZIP, проверяет структуру, целостность и схемы.
+// Ничего не пишет на диск и не выполняет содержимое. Ссылочная целостность проверяется позже (Validate).
+func ParsePack(data []byte) (*Parsed, Report) {
+	files, total, rep, ok := ReadSafe(data, allowedDirs)
+	fail := func() (*Parsed, Report) { rep.OK = false; return nil, rep }
+	if !ok {
+		return fail()
+	}
 	mraw, ok := files["manifest.json"]
 	if !ok {
 		rep.errf("no_manifest", "manifest.json", "нет manifest.json")

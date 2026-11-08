@@ -593,3 +593,114 @@ func gameServer2(t *testing.T) (*Handler, string) {
 	h, _, url := gameServer(t)
 	return h, url
 }
+
+func characterServer(t *testing.T) (*world.MemStore, string) {
+	t.Helper()
+	store := world.NewMemStore()
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: world.New(), Store: store, RequireCharacter: true}
+	srv, h := newServer(t, opts)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { h.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	return store, srv.URL
+}
+
+func (cl *client) joinRaw(token string) map[string]any {
+	cl.t.Helper()
+	cl.send("join", map[string]any{"token": token, "protocol": ProtocolVersion})
+	m := cl.next("welcome")
+	var p map[string]any
+	_ = json.Unmarshal(m.Payload, &p)
+	return p
+}
+
+func TestCharacterCreationFlow(t *testing.T) {
+	store, url := characterServer(t)
+	a := connect(t, url)
+	w := a.joinRaw("charaaaaaaaaaaaaaaaa")
+	if w["needs_character"] != true {
+		t.Fatalf("новый игрок должен создать персонажа: %v", w)
+	}
+	opts := w["pilot_options"].([]any)
+	if len(opts) != 4 {
+		t.Fatalf("направлений пилота %d", len(opts))
+	}
+	temp := map[string]bool{}
+	ships := map[string]bool{}
+	for _, o := range opts {
+		m := o.(map[string]any)
+		temp[m["pilot"].(string)] = m["temporary"].(bool)
+		ships[m["ship"].(string)] = true
+	}
+	if temp["interceptor"] || temp["scout"] || !temp["trader"] || !temp["miner"] {
+		t.Fatalf("пометки временных моделей: %v", temp)
+	}
+	if len(ships) != 3 {
+		t.Fatalf("кораблей среди стартовых %d: специализации не должны создавать копии кораблей", len(ships))
+	}
+	// пока персонаж не создан, игрок не появляется в мире, команды отклоняются
+	a.send("move", map[string]any{"x": 1, "y": 0})
+	if m := a.next("error"); errCode(t, m) != "not_joined" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// ошибки создания
+	for _, tc := range []struct {
+		body map[string]any
+		code string
+	}{
+		{map[string]any{"nick": "ab", "gender": "m", "pilot_spec": "scout"}, "bad_nick"},
+		{map[string]any{"nick": "Admin", "gender": "m", "pilot_spec": "scout"}, "nick_reserved"},
+		{map[string]any{"nick": "Good_Nick", "gender": "x", "pilot_spec": "scout"}, "bad_gender"},
+		{map[string]any{"nick": "Good_Nick", "gender": "f", "pilot_spec": "wizard"}, "bad_pilot_spec"},
+	} {
+		a.send("create_character", tc.body)
+		if m := a.next("error"); errCode(t, m) != tc.code {
+			t.Errorf("%v: %s, ожидалось %s", tc.body, m.Payload, tc.code)
+		}
+	}
+	// успех: торговец получает временный грузовик
+	a.send("create_character", map[string]any{"nick": "Вася_Торг", "gender": "m", "pilot_spec": "trader"})
+	wm := a.next("welcome")
+	var wp map[string]any
+	_ = json.Unmarshal(wm.Payload, &wp)
+	ch := wp["character"].(map[string]any)
+	if wp["name"] != "Вася_Торг" || ch["pilot_spec"] != "trader" || ch["ship_type"] != "TMP-HAUL" || ch["gender"] != "m" {
+		t.Fatalf("персонаж: %v", wp)
+	}
+	var st shipState
+	for i := 0; i < 15 && st.Ship.Type == ""; i++ {
+		st = a.shipState()
+	}
+	if st.Ship.Type != "TMP-HAUL" || st.Ship.Hull != 1800 {
+		t.Fatalf("корабль торговца: %+v", st.Ship)
+	}
+	// повторное создание невозможно
+	a.send("create_character", map[string]any{"nick": "Другой", "gender": "m", "pilot_spec": "scout"})
+	if m := a.next("error"); errCode(t, m) != "not_joined" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// другое устройство того же игрока: персонаж уже есть, сразу в мир
+	r, _ := store.Resolve(context.Background(), "charaaaaaaaaaaaaaaaa", "")
+	if !r.Created || r.Name != "Вася_Торг" || r.ShipType != "TMP-HAUL" {
+		t.Fatalf("сохранённый персонаж: %+v", r)
+	}
+	a.c.CloseNow()
+	a2 := connect(t, url)
+	w2 := a2.joinRaw("charaaaaaaaaaaaaaaaa")
+	if w2["needs_character"] == true || w2["name"] != "Вася_Торг" {
+		t.Fatalf("повторный вход: %v", w2)
+	}
+	// уникальность ника без учёта регистра
+	c := connect(t, url)
+	c.joinRaw("charccccccccccccccc")
+	c.send("create_character", map[string]any{"nick": "вася_торг", "gender": "f", "pilot_spec": "miner"})
+	if m := c.next("error"); errCode(t, m) != "nick_taken" {
+		t.Fatalf("%s", m.Payload)
+	}
+	c.send("create_character", map[string]any{"nick": "Крот77", "gender": "f", "pilot_spec": "miner"})
+	cw := c.next("welcome")
+	if !strings.Contains(string(cw.Payload), "TMP-MINE") {
+		t.Fatalf("шахтёр: %s", cw.Payload)
+	}
+}

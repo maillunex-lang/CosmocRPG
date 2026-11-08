@@ -37,6 +37,8 @@ type ShipSpec struct {
 	ID               string                `json:"id"`
 	Name             string                `json:"name"`
 	Class            string                `json:"class"`
+	Role             string                `json:"role"`
+	Temporary        bool                  `json:"temporary"` // временная модель-заглушка: не считается полноценным кораблём каталога
 	Specs            []string              `json:"specs"`
 	DefaultSpec      string                `json:"default_spec"`
 	Skins            []string              `json:"skins"`
@@ -56,18 +58,66 @@ type ShipSpec struct {
 	Abilities        map[string]AbilityCfg `json:"abilities"`
 }
 
-// Catalog — каталог кораблей.
-type Catalog struct{ Ships map[string]ShipSpec }
+// Starter — стартовый корабль для направления пилота (отдельные копии корабля под специализации не создаются).
+type Starter struct {
+	Ship string `json:"ship"`
+	Spec string `json:"spec"`
+	Skin string `json:"skin"`
+}
+
+// PilotSpecs — стартовые направления пилота (не классы кораблей).
+var PilotSpecs = []string{"interceptor", "scout", "trader", "miner"}
+
+// Catalog — каталог кораблей и стартовые корабли направлений пилота.
+type Catalog struct {
+	Ships    map[string]ShipSpec
+	Starters map[string]Starter
+}
+
+// Clone — глубокая копия каталога: изменения копии не затрагивают оригинал (карты и срезы не разделяются).
+func (c Catalog) Clone() Catalog {
+	out := Catalog{Ships: map[string]ShipSpec{}, Starters: map[string]Starter{}}
+	for id, sp := range c.Ships {
+		ab := make(map[string]AbilityCfg, len(sp.Abilities))
+		for k, v := range sp.Abilities {
+			ab[k] = v
+		}
+		sp.Abilities = ab
+		sp.Specs = append([]string{}, sp.Specs...)
+		sp.Skins = append([]string{}, sp.Skins...)
+		out.Ships[id] = sp
+	}
+	for k, v := range c.Starters {
+		out.Starters[k] = v
+	}
+	return out
+}
+
+// Doc — документ каталога для хранения и ZIP-патчей (корабли по идентификатору).
+type Doc struct {
+	Ships    []ShipSpec         `json:"ships"`
+	Starters map[string]Starter `json:"starters"`
+}
+
+// Doc возвращает документ каталога (корабли упорядочены по идентификатору).
+func (c Catalog) Doc() Doc {
+	d := Doc{Starters: c.Starters}
+	for _, id := range sortedKeys(c.Ships) {
+		d.Ships = append(d.Ships, c.Ships[id])
+	}
+	return d
+}
 
 // LoadCatalog разбирает и проверяет конфигурацию кораблей.
 func LoadCatalog(data []byte) (Catalog, error) {
-	var raw struct {
-		Ships []ShipSpec `json:"ships"`
-	}
+	var raw Doc
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return Catalog{}, fmt.Errorf("ships.json: %w", err)
 	}
-	c := Catalog{Ships: map[string]ShipSpec{}}
+	c := Catalog{Ships: map[string]ShipSpec{}, Starters: raw.Starters}
+	if c.Starters == nil {
+		c.Starters = map[string]Starter{}
+	}
 	for _, s := range raw.Ships {
 		if s.ID == "" || s.Hull <= 0 || s.Shield < 0 || s.Energy <= 0 || s.Speed <= 0 || len(s.Skins) == 0 || len(s.Specs) == 0 {
 			return Catalog{}, fmt.Errorf("ships.json: некорректный корабль %q", s.ID)
@@ -91,6 +141,19 @@ func LoadCatalog(data []byte) (Catalog, error) {
 	}
 	if _, ok := c.Ships[DefaultShip]; !ok {
 		return Catalog{}, fmt.Errorf("ships.json: нет корабля по умолчанию %s", DefaultShip)
+	}
+	for _, ps := range PilotSpecs {
+		st, ok := c.Starters[ps]
+		if !ok {
+			return Catalog{}, fmt.Errorf("ships.json: нет стартового корабля для направления %q", ps)
+		}
+		sp, ok := c.Ships[st.Ship]
+		if !ok {
+			return Catalog{}, fmt.Errorf("ships.json: стартовый корабль %q направления %q не найден", st.Ship, ps)
+		}
+		if !contains(sp.Specs, st.Spec) || !contains(sp.Skins, st.Skin) {
+			return Catalog{}, fmt.Errorf("ships.json: стартовый выбор направления %q не подходит кораблю %s", ps, st.Ship)
+		}
 	}
 	return c, nil
 }
@@ -147,6 +210,15 @@ func defaultNPCs() []*npc {
 		{ID: "sig1", Name: "Слабый сигнал", Kind: "signal", Stance: "neutral", Pos: Vec{90, 60}, Hidden: true},
 		{ID: "sig2", Name: "Дрейфующий контейнер", Kind: "signal", Stance: "neutral", Pos: Vec{-70, 85}, Hidden: true},
 	}
+}
+
+func contains(list []string, v string) bool {
+	for _, x := range list {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 func dist(a, b Vec) float64 { return math.Hypot(a.X-b.X, a.Y-b.Y) }

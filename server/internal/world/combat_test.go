@@ -1,6 +1,7 @@
 package world
 
 import (
+	"encoding/json"
 	"math"
 	"testing"
 	"time"
@@ -317,3 +318,124 @@ func TestShieldRegeneratesAfterDelay(t *testing.T) {
 		t.Fatal("щит должен восстанавливаться после задержки")
 	}
 }
+
+func TestNickRules(t *testing.T) {
+	ok := []string{"Vasya", "Вася_Пупкин", "Ace-99", "ЗлойКот", "abc", "Ёжик2024"}
+	for _, n := range ok {
+		if got, err := CleanNick("  " + n + " "); err != nil || got != n {
+			t.Errorf("ник %q должен проходить: %v %q", n, err, got)
+		}
+	}
+	bad := []string{"", "ab", "x", "Очень_длинный_ник_17!", "has space", "_start", "end_", "123456", "ник@", "Привет!", "a🙂b", "кот кот"}
+	for _, n := range bad {
+		if _, err := CleanNick(n); err != ErrBadNick {
+			t.Errorf("ник %q должен быть некорректным: %v", n, err)
+		}
+	}
+	for _, n := range []string{"Admin", "АдминИгры", "xXModerXx", "хуйло", "Fuck_You", "Сервер1", "Бот-Х"} {
+		if _, err := CleanNick(n); err != ErrNickReserved && err != ErrBadNick {
+			t.Errorf("ник %q должен быть недоступен: %v", n, err)
+		}
+	}
+	if !ValidGender("m") || !ValidGender("f") || ValidGender("x") || ValidGender("") {
+		t.Fatal("пол")
+	}
+}
+
+func TestStartersAndTemporaryShips(t *testing.T) {
+	w := New()
+	cat := w.Catalog()
+	if len(cat.Ships) < 3 {
+		t.Fatalf("кораблей в каталоге %d", len(cat.Ships))
+	}
+	for _, ps := range PilotSpecs {
+		st, ok := w.Starter(ps)
+		if !ok {
+			t.Fatalf("нет стартового корабля для %s", ps)
+		}
+		if _, ok := cat.Spec(st.Ship); !ok {
+			t.Fatalf("стартовый корабль %s не найден", st.Ship)
+		}
+	}
+	// классы кораблей сохраняются отдельно от направления пилота: у «Стрижа» остаются свои специализации
+	st1, _ := w.Starter("interceptor")
+	st2, _ := w.Starter("scout")
+	if st1.Ship != "FTR-001" || st2.Ship != "FTR-001" || st1.Spec == st2.Spec {
+		t.Fatal("перехватчик и разведчик летают на «Стриже» с разными специализациями корабля")
+	}
+	for _, id := range []string{"TMP-HAUL", "TMP-MINE"} {
+		sp, _ := cat.Spec(id)
+		if !sp.Temporary {
+			t.Errorf("%s должен быть помечен как временная модель", id)
+		}
+	}
+	if sp, _ := cat.Spec("FTR-001"); sp.Temporary {
+		t.Error("«Стриж» не временный")
+	}
+	// игрок на временном корабле: паспорт корабля применяется (груз), способности специализации «Стрижа» недоступны
+	p, _ := w.Join(Record{ID: "h", Name: "h", ShipType: "TMP-HAUL", Skin: "a", Spec: "hauler"})
+	if p.ShipType != "TMP-HAUL" || p.Hull != 1800 || p.spec.Cargo != 60 {
+		t.Fatalf("грузовик: %+v", p.spec)
+	}
+	if err := w.UseAbility("h", "scan"); err != ErrUnknown && err != ErrWrongSpec {
+		t.Fatalf("сканер у грузовика: %v", err)
+	}
+	st, _ := w.Snapshot("h")
+	if st.Ship.Type != "TMP-HAUL" || st.Ship.Cargo != 60 || len(st.Ship.Abilities) != 1 {
+		t.Fatalf("снимок: %+v", st.Ship)
+	}
+	// неизвестный тип корабля заменяется стандартным
+	q, _ := w.Join(Record{ID: "q", Name: "q", ShipType: "НЕТ"})
+	if q.ShipType != "FTR-001" {
+		t.Fatalf("неизвестный корабль: %s", q.ShipType)
+	}
+}
+
+func TestSetCatalogLive(t *testing.T) {
+	w := New()
+	p, _ := w.Join(Record{ID: "a", Name: "a"})
+	cat := w.Catalog()
+	sp := cat.Ships["FTR-001"]
+	sp.Hull, sp.Shield, sp.Speed = 500, 100, 20
+	sp.Abilities["boost"] = AbilityCfg{Name: "Форсаж", SpeedMul: 3, Duration: 3, Cooldown: 12, Energy: 20}
+	cat.Ships["FTR-001"] = sp
+	w.SetCatalog(cat)
+	if p.Hull != 500 || p.Shield != 100 || p.spec.Speed != 20 {
+		t.Fatalf("паспорт игрока не обновился: hull=%.0f shield=%.0f speed=%.0f", p.Hull, p.Shield, p.spec.Speed)
+	}
+	w.SetMove("a", Vec{1, 0})
+	stepFor(w, 1)
+	if math.Abs(p.Speed-20) > 0.1 {
+		t.Fatalf("новая скорость %.2f", p.Speed)
+	}
+	if err := w.UseAbility("a", "boost"); err != nil {
+		t.Fatal(err)
+	}
+	stepFor(w, 1)
+	if math.Abs(p.Speed-60) > 0.5 {
+		t.Fatalf("новый множитель форсажа: %.2f", p.Speed)
+	}
+	// корабль удалён из каталога: игрок получает корабль по умолчанию
+	cat2 := w.Catalog()
+	delete(cat2.Ships, "TMP-HAUL")
+	cat2.Starters["trader"] = Starter{Ship: "FTR-001", Spec: "interceptor", Skin: "a"}
+	w.SetCatalog(cat2)
+}
+
+func TestCatalogStartersValidation(t *testing.T) {
+	var d Doc
+	_ = jsonUnmarshal(shipsJSON, &d)
+	d.Starters["miner"] = Starter{Ship: "НЕТ", Spec: "x", Skin: "a"}
+	b, _ := jsonMarshal(d)
+	if _, err := LoadCatalog(b); err == nil {
+		t.Fatal("стартовый корабль должен существовать")
+	}
+	delete(d.Starters, "miner")
+	b, _ = jsonMarshal(d)
+	if _, err := LoadCatalog(b); err == nil {
+		t.Fatal("для каждого направления пилота нужен стартовый корабль")
+	}
+}
+
+func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }
+func jsonMarshal(v any) ([]byte, error)   { return json.Marshal(v) }

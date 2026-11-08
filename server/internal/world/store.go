@@ -4,16 +4,20 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"unicode"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Store хранит игроков между сессиями.
 type Store interface {
+	// CreateCharacter завершает создание персонажа один раз: ник (уникален), пол, направление пилота и стартовый корабль.
+	CreateCharacter(ctx context.Context, id, nick, gender, pilot string, st Starter) (Record, error)
 	// Resolve находит игрока по токену или создаёт нового. name (может быть пустым) применяется только к новому.
 	Resolve(ctx context.Context, token, name string) (Record, error)
 	Save(ctx context.Context, r Record) error
@@ -82,35 +86,55 @@ func (s *PGStore) Resolve(ctx context.Context, token, name string) (Record, erro
 	}
 	rec := fresh(h, CleanName(name))
 	var px, py, dx, dy float64
-	var nm, skin, spec string
+	var nm, skin, spec, shipType, gender, pilot string
+	var created bool
 	err := s.pool.QueryRow(ctx, `
 		INSERT INTO players (token_hash, public_id, name, pos_x, pos_y, dir_x, dir_y) VALUES ($1, $7, $2, $3, $4, $5, $6)
 		ON CONFLICT (token_hash) DO UPDATE SET token_hash = players.token_hash
-		RETURNING name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec`,
-		h[:], rec.Name, rec.Pos.X, rec.Pos.Y, rec.Dir.X, rec.Dir.Y, rec.ID).Scan(&nm, &px, &py, &dx, &dy, &skin, &spec)
+		RETURNING name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec, ship_type, gender, pilot_spec, character_created`,
+		h[:], rec.Name, rec.Pos.X, rec.Pos.Y, rec.Dir.X, rec.Dir.Y, rec.ID).Scan(&nm, &px, &py, &dx, &dy, &skin, &spec, &shipType, &gender, &pilot, &created)
 	if err != nil {
 		return Record{}, fmt.Errorf("игрок: %w", err)
 	}
-	return Record{ID: rec.ID, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec}, nil
+	return Record{ID: rec.ID, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec, ShipType: shipType, Gender: gender, PilotSpec: pilot, Created: created}, nil
+}
+
+func (s *PGStore) CreateCharacter(ctx context.Context, id, nick, gender, pilot string, st Starter) (Record, error) {
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE players SET name = $2, gender = $3, pilot_spec = $4, ship_type = $5, ship_skin = $6, ship_spec = $7, character_created = true, updated_at = now()
+		WHERE public_id = $1 AND NOT character_created`, id, nick, gender, pilot, st.Ship, st.Skin, st.Spec)
+	if err != nil {
+		var pe *pgconn.PgError
+		if errors.As(err, &pe) && pe.Code == "23505" {
+			return Record{}, ErrNickTaken
+		}
+		return Record{}, fmt.Errorf("персонаж: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return Record{}, ErrCharacterSet
+	}
+	return s.byPublicID(ctx, id)
 }
 
 func (s *PGStore) byPublicID(ctx context.Context, pid string) (Record, error) {
 	var px, py, dx, dy float64
-	var nm, skin, spec string
-	err := s.pool.QueryRow(ctx, `SELECT name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec FROM players WHERE public_id = $1`, pid).
-		Scan(&nm, &px, &py, &dx, &dy, &skin, &spec)
+	var nm, skin, spec, shipType, gender, pilot string
+	var created bool
+	err := s.pool.QueryRow(ctx, `SELECT name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec, ship_type, gender, pilot_spec, character_created FROM players WHERE public_id = $1`, pid).
+		Scan(&nm, &px, &py, &dx, &dy, &skin, &spec, &shipType, &gender, &pilot, &created)
 	if err != nil {
 		return Record{}, fmt.Errorf("игрок аккаунта: %w", err)
 	}
-	return Record{ID: pid, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec}, nil
+	return Record{ID: pid, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec, ShipType: shipType, Gender: gender, PilotSpec: pilot, Created: created}, nil
 }
 
 func (s *PGStore) Save(ctx context.Context, r Record) error {
 	_, err := s.pool.Exec(ctx, `
 		UPDATE players SET pos_x = $2, pos_y = $3, dir_x = $4, dir_y = $5,
 			ship_skin = CASE WHEN $6 <> '' THEN $6 ELSE ship_skin END,
-			ship_spec = CASE WHEN $7 <> '' THEN $7 ELSE ship_spec END, updated_at = now()
-		WHERE public_id = $1`, r.ID, r.Pos.X, r.Pos.Y, r.Dir.X, r.Dir.Y, r.Skin, r.Spec)
+			ship_spec = CASE WHEN $7 <> '' THEN $7 ELSE ship_spec END,
+			ship_type = CASE WHEN $8 <> '' THEN $8 ELSE ship_type END, updated_at = now()
+		WHERE public_id = $1`, r.ID, r.Pos.X, r.Pos.Y, r.Dir.X, r.Dir.Y, r.Skin, r.Spec, r.ShipType)
 	return err
 }
 
@@ -159,4 +183,24 @@ func (s *MemStore) Get(id string) (Record, bool) {
 	defer s.mu.Unlock()
 	r, ok := s.recs[id]
 	return r, ok
+}
+
+func (s *MemStore) CreateCharacter(_ context.Context, id, nick, gender, pilot string, st Starter) (Record, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok := s.recs[id]
+	if !ok {
+		return Record{}, errors.New("игрока нет")
+	}
+	if r.Created {
+		return Record{}, ErrCharacterSet
+	}
+	for _, o := range s.recs {
+		if o.Created && strings.EqualFold(o.Name, nick) {
+			return Record{}, ErrNickTaken
+		}
+	}
+	r.Name, r.Gender, r.PilotSpec, r.ShipType, r.Skin, r.Spec, r.Created = nick, gender, pilot, st.Ship, st.Skin, st.Spec, true
+	s.recs[id] = r
+	return r, nil
 }

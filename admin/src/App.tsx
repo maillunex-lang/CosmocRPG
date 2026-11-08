@@ -4,8 +4,9 @@ import { Dashboard } from "./Dashboard";
 import { Login } from "./Login";
 import { Studio } from "./studio/Studio";
 import { ShipsAdmin } from "./ShipsAdmin";
+import { WorldAdmin } from "./WorldAdmin";
 
-type View = "server" | "studio" | "ships";
+type View = "server" | "studio" | "ships" | "world";
 type Session = { state: "loading" } | { state: "out" } | { state: "in"; username: string };
 
 export function App() {
@@ -29,5 +30,8 @@ export function App() {
   if (view === "ships") {
     return <ShipsAdmin username={session.username} onBack={() => setView("server")} onLoggedOut={() => void api.logout().finally(onLoggedOut)} />;
   }
-  return <Dashboard username={session.username} onLoggedOut={onLoggedOut} onOpenStudio={() => setView("studio")} onOpenShips={() => setView("ships")} />;
+  if (view === "world") {
+    return <WorldAdmin username={session.username} onBack={() => setView("server")} onLoggedOut={() => void api.logout().finally(onLoggedOut)} />;
+  }
+  return <Dashboard username={session.username} onLoggedOut={onLoggedOut} onOpenStudio={() => setView("studio")} onOpenShips={() => setView("ships")} onOpenWorld={() => setView("world")} />;
 }

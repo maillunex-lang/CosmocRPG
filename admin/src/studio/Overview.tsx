@@ -22,6 +22,16 @@ export function Overview() {
     } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
   }
 
+  async function nicknames() {
+    if (!window.confirm("Заменить имена капитанов игровыми никами (русские и английские)? Профили, правленные вручную, не изменятся. Версию можно откатить.")) return;
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      const r = await ai.nicknames();
+      setMsg(r.renamed > 0 ? `Переименовано капитанов: ${r.renamed} (версия ${r.version})` : "Переименовывать нечего: все ники уже применены.");
+      load();
+    } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
+  }
+
   async function rollback(id: number) {
     if (!window.confirm(`Откатить конфигурацию к версии ${id}? История сохранится, будет создана новая версия.`)) return;
     try { await ai.rollback(id); setMsg(`Откат к версии ${id} выполнен`); load(); } catch (e) { setErr(errText(e)); }
@@ -52,6 +62,7 @@ export function Overview() {
             <input type="number" min={1} max={400} value={count} onChange={(e) => setCount(Number(e.target.value))} style={{ width: 90 }} />
           </label>
           <button disabled={busy} onClick={() => void generate()}>{busy ? "Генерация…" : "Сгенерировать недостающих"}</button>
+          <button className="secondary" disabled={busy} onClick={() => void nicknames()}>Применить игровые ники</button>
         </div>
         <p className="muted">Генерация детерминирована и безопасна для повтора: существующие и вручную правленные профили не перезаписываются.</p>
       </section>

@@ -652,3 +652,77 @@ func Uniqueness(cfg Config) UniquenessReport {
 	rep.Similar = pairs
 	return rep
 }
+
+// RenameResult — итог переименования.
+type RenameResult struct {
+	Renamed int   `json:"renamed"`
+	Skipped int   `json:"skipped"` // правленные вручную и уже переименованные
+	Version int64 `json:"version"`
+}
+
+// ApplyNicknames заменяет имена капитанов игровыми никами (русские и английские вперемешку). Профили, правленные вручную,
+// не затрагиваются. Первое имя в биографии («Марта — …») заменяется местоимением. Повторный запуск безопасен.
+func (s *Service) ApplyNicknames(ctx context.Context, admin string, seed int64) (RenameResult, error) {
+	cfg, ver, err := s.Active(ctx)
+	if err != nil {
+		return RenameResult{}, err
+	}
+	taken := map[string]bool{}
+	for _, c := range cfg.Captains {
+		if c.Meta.Manual {
+			taken[strings.ToLower(c.Name)] = true
+		}
+	}
+	ids := make([]string, 0, len(cfg.Captains))
+	for id := range cfg.Captains {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	var res RenameResult
+	for _, id := range ids {
+		c := cfg.Captains[id]
+		if c.Meta.Manual {
+			res.Skipped++
+			continue
+		}
+		n := 0
+		fmt.Sscanf(strings.TrimPrefix(id, "cpt-"), "%d", &n)
+		nick := ""
+		for shift := 0; shift < 50; shift++ {
+			cand := NickFor(seed, max(n, 1), shift)
+			if !taken[strings.ToLower(cand)] {
+				nick = cand
+				break
+			}
+		}
+		if nick == "" || c.Name == nick {
+			res.Skipped++
+			continue
+		}
+		old := c.Name
+		first := strings.Fields(old)
+		if len(first) > 0 {
+			pron := "Он"
+			if c.Gender == "f" {
+				pron = "Она"
+			}
+			c.Bio = strings.Replace(c.Bio, first[0]+" — ", pron+" — ", 1)
+		}
+		c.Name, c.CallSign = nick, ""
+		c.Revision++
+		taken[strings.ToLower(nick)] = true
+		cfg.Captains[id] = c
+		res.Renamed++
+	}
+	if res.Renamed == 0 {
+		res.Version = ver
+		return res, nil
+	}
+	if bad := firstErrors(Validate(cfg), 3); len(bad) > 0 {
+		return res, fmt.Errorf("после переименования конфигурация не проходит проверку: %s", strings.Join(bad, "; "))
+	}
+	id, err := s.store.SaveVersion(ctx, NewVersion{Admin: admin, Source: "edit", Config: cfg, ExpectActive: &ver,
+		Note: fmt.Sprintf("Игровые ники: переименовано %d капитанов", res.Renamed)})
+	res.Version = id
+	return res, err
+}

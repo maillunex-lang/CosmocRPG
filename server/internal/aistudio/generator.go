@@ -86,6 +86,13 @@ func capFirst(s string) string {
 	return strings.ToUpper(string(r)) + s[n:]
 }
 
+func pronounCap(g string) string {
+	if g == "f" {
+		return "Она"
+	}
+	return "Он"
+}
+
 // adjForm возвращает форму прилагательного по полу: -ый/-ой/-ий → -ая для женского рода.
 func adjForm(a, g string) string {
 	if g != "f" {
@@ -176,14 +183,8 @@ func genCaptain(c *Config, seed int64, idx, attempt int) Captain {
 	if r.Intn(100) < 46 {
 		g = "f"
 	}
-	var first string
-	var sn string
-	sp := surnames[r.Intn(len(surnames))]
-	if g == "m" {
-		first, sn = pickS(r, firstM), sp[0]
-	} else {
-		first, sn = pickS(r, firstF), sp[1]
-	}
+	// игровой ник вместо «имя фамилия»: русские и английские вперемешку, по номеру капитана
+	nick := NickFor(seed, idx, attempt)
 	prof := Professions[r.Intn(len(Professions))]
 	pd := profTable[prof]
 
@@ -354,7 +355,7 @@ func genCaptain(c *Config, seed int64, idx, attempt int) Captain {
 	bio := strings.Join([]string{
 		fmt.Sprintf("%s %s.", "⟨Родился|Родилась⟩", pickS(r, originPlaces)),
 		careerLine,
-		fmt.Sprintf("%s — %s и %s: %s, а %s.", first, t1, t2, traitClauses[traits[0]], traitClauses[traits[1]]),
+		fmt.Sprintf("%s — %s и %s: %s, а %s.", pronounCap(g), t1, t2, traitClauses[traits[0]], traitClauses[traits[1]]),
 		fmt.Sprintf("Любит %s и %s.", interests[0], interests[1]),
 		fmt.Sprintf("Сейчас главная цель — %s.", topGoal),
 	}, " ")
@@ -367,13 +368,10 @@ func genCaptain(c *Config, seed int64, idx, attempt int) Captain {
 	if age > 90 {
 		age = 90
 	}
-	callSign := ""
-	if r.Intn(100) < 75 {
-		callSign = pickS(r, callSigns)
-	}
+	callSign := "" // ник уже является игровым именем; отдельный позывной не нужен
 
 	cp := Captain{
-		ID: id, Revision: 1, Name: first + " " + sn, CallSign: callSign, Gender: g, Age: age, Bio: bio, Profession: prof,
+		ID: id, Revision: 1, Name: nick, CallSign: callSign, Gender: g, Age: age, Bio: bio, Profession: prof,
 		Faction: fac, Corporation: corp,
 		Personality: Personality{Traits: traits, Scores: scores, Temper: temper},
 		Speech:      speech, Interests: interests, Goals: goals, Strategies: strategies, Relationships: []Relationship{},

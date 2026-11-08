@@ -105,6 +105,7 @@ export async function downloadGet(path: string, fallbackName: string): Promise<v
 export const ai = {
   dashboard: () => call<Dashboard>("GET", "/ai/dashboard"),
   generate: (count: number) => call<{ added: number; skipped: number; version: number }>("POST", "/ai/generate", { count }),
+  nicknames: () => call<{ renamed: number; skipped: number; version: number }>("POST", "/ai/nicknames", {}),
   captains: (q: URLSearchParams) =>
     call<{ total: number; items: CaptainSummary[]; version: number; factions: { id: string; name: string }[]; corporations: { id: string; name: string; faction: string }[]; professions: string[]; strategies: { id: string; title: string }[] }>("GET", `/ai/captains?${q}`),
   captain: (id: string) => call<Captain>("GET", `/ai/captains/${id}`),

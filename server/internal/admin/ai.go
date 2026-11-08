@@ -21,6 +21,7 @@ func (h *Handler) aiRoutes(mux *http.ServeMux) {
 	a := h.auth
 	mux.HandleFunc("GET /api/ai/dashboard", a(h.aiDashboard))
 	mux.HandleFunc("POST /api/ai/generate", a(h.aiGenerate))
+	mux.HandleFunc("POST /api/ai/nicknames", a(h.aiNicknames))
 	mux.HandleFunc("GET /api/ai/captains", a(h.aiCaptains))
 	mux.HandleFunc("GET /api/ai/captains/{id}", a(h.aiCaptain))
 	mux.HandleFunc("PUT /api/ai/captains/{id}", a(h.aiCaptainPut))
@@ -476,4 +477,14 @@ func (h *Handler) aiPrompt(w http.ResponseWriter, r *http.Request, _ User) {
 		note = "Полный пакет на 300 капитанов. Работай по очереди с группами по 25 капитанов, не теряя единый стиль и не повторяясь между группами."
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"prompt": aistudio.MasterPrompt(note)})
+}
+
+func (h *Handler) aiNicknames(w http.ResponseWriter, r *http.Request, u User) {
+	res, err := h.opts.AI.ApplyNicknames(r.Context(), u.Username, 20261108)
+	if err != nil {
+		h.aiFail(w, err)
+		return
+	}
+	h.aiAudit(r, u, "ai_nicknames", map[string]any{"renamed": res.Renamed, "version": res.Version})
+	writeJSON(w, http.StatusOK, res)
 }

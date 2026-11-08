@@ -1,6 +1,7 @@
 package aistudio
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -186,5 +187,96 @@ func TestSampleBiographyReadable(t *testing.T) {
 		cp := c.Captains[id]
 		t.Log(fmt.Sprintf("%s %s «%s» (%s, %s/%s): %s", id, cp.Name, cp.CallSign, cp.Profession, cp.Speech.Formality, cp.Speech.Humor, cp.Bio))
 		t.Log("  ", cp.Replies["greeting"], cp.Replies["ask_job"][0])
+	}
+}
+
+func TestNicknamesMixedLanguagesAndUnique(t *testing.T) {
+	list := Nicknames(20261108)
+	if len(list) < 400 {
+		t.Fatalf("ников %d, нужно не меньше 400", len(list))
+	}
+	seen := map[string]bool{}
+	cyr, lat := 0, 0
+	for _, n := range list {
+		k := strings.ToLower(n)
+		if seen[k] {
+			t.Errorf("повтор ника %s", n)
+		}
+		seen[k] = true
+		if l := len([]rune(n)); l < 3 || l > 24 {
+			t.Errorf("длина ника %q: %d", n, l)
+		}
+		if strings.ContainsAny(n, " \t") {
+			t.Errorf("пробел в нике %q", n)
+		}
+		isCyr := false
+		for _, r := range n {
+			if r >= 'А' && r <= 'я' || r == 'ё' || r == 'Ё' {
+				isCyr = true
+			}
+		}
+		if isCyr {
+			cyr++
+		} else {
+			lat++
+		}
+	}
+	if cyr < 120 || lat < 200 {
+		t.Errorf("перекос языков: кириллица %d, латиница %d", cyr, lat)
+	}
+	c := gen300(t)
+	cyrCaps := 0
+	for _, cp := range c.Captains {
+		if strings.ContainsAny(cp.Name, "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ") {
+			cyrCaps++
+		}
+		if strings.Contains(cp.Bio, cp.Name+" —") {
+			t.Errorf("ник в биографии %s", cp.ID)
+		}
+	}
+	if cyrCaps < 90 || cyrCaps > 160 {
+		t.Errorf("капитанов с русским ником %d из 300", cyrCaps)
+	}
+}
+
+func TestApplyNicknamesProtectsManualAndIsIdempotent(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc()
+	// старые имена «Имя Фамилия» имитируем: переименовываем руками двух капитанов, один из них правлен вручную
+	_, _, _ = s.Generate(ctx, "o", 20261108, 20)
+	cfg, ver, _ := s.Active(ctx)
+	a := cfg.Captains["cpt-0001"]
+	a.Name = "Марта Беляева"
+	a.Bio = strings.Replace(a.Bio, "Он —", "Марта —", 1)
+	a.Bio = strings.Replace(a.Bio, "Она —", "Марта —", 1)
+	cfg.Captains["cpt-0001"] = a
+	m := cfg.Captains["cpt-0002"]
+	m.Name, m.Meta.Manual = "Ручное Имя", true
+	cfg.Captains["cpt-0002"] = m
+	if _, err := s.store.SaveVersion(ctx, NewVersion{Source: "edit", Config: cfg, ExpectActive: &ver}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := s.ApplyNicknames(ctx, "o", 20261108)
+	if err != nil || res.Renamed == 0 {
+		t.Fatalf("переименование: %v %+v", err, res)
+	}
+	after, _, _ := s.Active(ctx)
+	if after.Captains["cpt-0002"].Name != "Ручное Имя" {
+		t.Fatal("вручную правленный капитан переименован")
+	}
+	if after.Captains["cpt-0001"].Name == "Марта Беляева" || strings.Contains(after.Captains["cpt-0001"].Bio, "Марта —") {
+		t.Fatalf("капитан не переименован: %q", after.Captains["cpt-0001"].Name)
+	}
+	if after.Captains["cpt-0001"].Revision != 2 {
+		t.Fatal("ревизия не увеличена")
+	}
+	again, err := s.ApplyNicknames(ctx, "o", 20261108)
+	if err != nil || again.Renamed != 0 {
+		t.Fatalf("повторный запуск должен ничего не менять: %+v", again)
+	}
+	for _, is := range Validate(after) {
+		if is.Level == "error" {
+			t.Errorf("ошибка согласованности: %+v", is)
+		}
 	}
 }

@@ -88,7 +88,12 @@ func _run() -> void:
 	_check((_n(c, "%TargetName") as Label).text == "Цель не выбрана" and not (_n(c, "%TargetHull") as Control).visible, "цель не выбрана")
 	var attack := _n(c, "%AttackButton") as ActionButton
 	_check(attack.disabled and attack.text == "Атаковать", "атака без цели недоступна")
-	var skills: Array = (_n(c, "%SkillsGrid") as GridContainer).get_children()
+	_check((_n(c, "%SpeedLabel") as Label).text.begins_with("0 м/с") and (_n(c, "%SpeedLabel") as Label).text.contains("Ручное"), "скорость: стоит на месте, ручное управление (%s)" % (_n(c, "%SpeedLabel") as Label).text)
+	_check(not (_n(c, "%HullBar") as ProgressBar).is_low() and (_n(c, "%HullBar") as ProgressBar).value > 250.0, "корпус в норме не предупреждает")
+	(_n(c, "%HullBar") as ProgressBar).set_values(200.0, 1000.0)
+	_check((_n(c, "%HullBar") as ProgressBar).is_low(), "критический корпус (20%) переходит в предупреждающий цвет")
+	(_n(c, "%HullBar") as ProgressBar).set_values(820.0, 1000.0)
+	var skills: Array = (_n(c, "%SkillsGrid") as Container).get_children()
 	_check(skills.size() == 4, "четыре способности")
 	_check(skills[0].disabled and not skills[1].disabled and not skills[2].disabled and not skills[3].disabled, "залп без цели недоступен, остальные доступны")
 	_check((_n(c, "%AutopilotButton") as Button).disabled, "автопилот без цели недоступен")
@@ -136,7 +141,7 @@ func _run() -> void:
 	hud = c["hud"]
 	gw = c["gw"]
 	attack = _n(c, "%AttackButton") as ActionButton
-	skills = (_n(c, "%SkillsGrid") as GridContainer).get_children()
+	skills = (_n(c, "%SkillsGrid") as Container).get_children()
 	await _select(c, "pi1")
 	await _tick(c, 0.1)
 	gw._objects["pi1"]["next_shot"] = 999.0  # пират пока не отвечает: проверяем только кнопку
@@ -194,7 +199,7 @@ func _run() -> void:
 	c = await _make()
 	hud = c["hud"]
 	gw = c["gw"]
-	skills = (_n(c, "%SkillsGrid") as GridContainer).get_children()
+	skills = (_n(c, "%SkillsGrid") as Container).get_children()
 	skills[1].pressed.emit()
 	await _tick(c, 0.1)
 	_check(skills[1].disabled and skills[1].text.contains("с"), "после применения «Щит» на перезарядке: %s" % skills[1].text)
@@ -430,7 +435,7 @@ func _verify_layout(size: Vector2i, insets: Vector4i, label: String, scenario: S
 
 	# блоки не пересекаются между собой
 	var blocks := []
-	for nm in ["ProfileCard", "QuestsCard", "ChatCard", "DemoBar", "AlertBar", "DebugSlot", "BottomNav", "TopRight", "TargetCard", "AttackButton", "SkillsGrid", "ToggleRow"]:
+	for nm in ["ProfileCard", "QuestsCard", "ChatCard", "DemoBar", "AlertBar", "DebugSlot", "BottomNav", "TopRight", "TargetCard", "AttackButton", "CombatBlock", "ToggleRow"]:
 		var node := hud.find_child(nm, true, false) as Control
 		if node != null and node.visible and node.size.x > 0.0 and node.size.y > 0.0:
 			blocks.append(node)

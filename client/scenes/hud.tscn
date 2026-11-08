@@ -80,27 +80,6 @@ layout_mode = 2
 theme_type_variation = &"MutedLabel"
 text = "Корабль"
 
-[node name="HullBar" type="ProgressBar" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 22)
-layout_mode = 2
-tooltip_text = "Корпус"
-script = ExtResource("7")
-
-[node name="ShieldBar" type="ProgressBar" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 22)
-layout_mode = 2
-tooltip_text = "Щиты"
-script = ExtResource("7")
-
-[node name="EnergyBar" type="ProgressBar" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 22)
-layout_mode = 2
-tooltip_text = "Энергия"
-script = ExtResource("7")
-
 [node name="QuestsCard" type="PanelContainer" parent="SafeArea/Columns/LeftStack"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -198,6 +177,59 @@ layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 
+[node name="CombatBlock" type="PanelContainer" parent="SafeArea/Columns/CenterStack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("3")
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Columns/CenterStack/CombatBlock"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="SpeedLabel" type="Label" parent="SafeArea/Columns/CenterStack/CombatBlock/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+text = "0 м/с"
+
+[node name="SkillsGrid" type="HBoxContainer" parent="SafeArea/Columns/CenterStack/CombatBlock/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="BarsRow" type="HBoxContainer" parent="SafeArea/Columns/CenterStack/CombatBlock/Box"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ShieldBar" type="ProgressBar" parent="SafeArea/Columns/CenterStack/CombatBlock/Box/BarsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(136, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Щиты"
+script = ExtResource("7")
+caption = "Щит"
+
+[node name="HullBar" type="ProgressBar" parent="SafeArea/Columns/CenterStack/CombatBlock/Box/BarsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(136, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Корпус"
+script = ExtResource("7")
+caption = "Корпус"
+
+[node name="EnergyBar" type="ProgressBar" parent="SafeArea/Columns/CenterStack/CombatBlock/Box/BarsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Энергия способностей"
+script = ExtResource("7")
+caption = "Эн."
+
 [node name="BottomNav" type="HBoxContainer" parent="SafeArea/Columns/CenterStack"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -292,13 +324,6 @@ layout_mode = 2
 text = "Атаковать"
 script = ExtResource("5")
 variant = 2
-
-[node name="SkillsGrid" type="GridContainer" parent="SafeArea/Columns/RightStack"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 12
-columns = 2
 
 [node name="ToggleRow" type="HBoxContainer" parent="SafeArea/Columns/RightStack"]
 layout_mode = 2

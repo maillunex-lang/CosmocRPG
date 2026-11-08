@@ -18,6 +18,8 @@ signal world_tapped(pos: Vector2)   # короткое касание в зон�
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
+const METERS_PER_UNIT := 100.0   # 1 ед. мира = 100 м (как расстояние в км в карточке цели)
+const SKILL_MIN_SIZE := Vector2(88, 56)
 
 var gateway: UiGateway
 var _last_state: Dictionary = {}
@@ -25,8 +27,13 @@ var _skill_buttons: Array = []
 var _pref_collapsed := {"quests": false, "chat": false}  # выбор игрока (вне боя)
 var _auto_collapsing := false
 var _was_combat := false
+## Преобразование вектора управления из экранных осей в мировые (камера повёрнута: «вверх» на экране — вперёд по камере).
+var move_transform: Callable = Callable()
 var _joy := Vector2.ZERO
 var _sent_move := Vector2.ZERO
+var _speed_mps := 0.0
+var _speed_prev_pos := Vector2.INF
+var _speed_prev_time := 0.0
 var _quests_sig := ""
 var _chat_sig := ""
 var _attack_expect: Variant = null  # ожидаемое значение attacking после нажатия (null: не ждём)
@@ -54,7 +61,8 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 @onready var _target_info: Label = %TargetInfo
 @onready var _target_hull: ProgressBar = %TargetHull
 @onready var _attack: ActionButton = %AttackButton
-@onready var _skills_grid: GridContainer = %SkillsGrid
+@onready var _skills_grid: Container = %SkillsGrid
+@onready var _speed_label: Label = %SpeedLabel
 @onready var _autopilot: ActionButton = %AutopilotButton
 @onready var _auto_skills: ActionButton = %AutoSkillsButton
 @onready var _confirm: Control = %Confirm
@@ -70,6 +78,7 @@ func _ready() -> void:
 	_chat_card.set_collapsed(true, false)
 
 	_hull.fill_color = Tokens.SUCCESS
+	_hull.warn_below = 0.25   # критический корпус краснеет
 	_shield.fill_color = Tokens.ACCENT
 	_energy.fill_color = Tokens.ACCENT_2
 	_target_hull.fill_color = Tokens.DANGER
@@ -117,8 +126,16 @@ func _build_skills() -> void:
 	for i in 4:
 		var b := ActionButton.new()
 		b.text = "Навык %d" % (i + 1)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY)
+		b.custom_minimum_size = SKILL_MIN_SIZE
+		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
+		var fill := ColorRect.new()   # затемнение убывает по мере перезарядки: готовность видна без чтения текста
+		fill.name = "CooldownFill"
+		fill.color = Color(Tokens.BG, 0.6)
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fill.set_anchors_preset(Control.PRESET_FULL_RECT)
+		fill.anchor_right = 0.0
+		fill.offset_right = 0.0
+		b.add_child(fill)
 		b.disabled = true
 		var slot := i
 		b.pressed.connect(func() -> void: if gateway != null: gateway.use_skill(slot))
@@ -134,7 +151,11 @@ func _process(_delta: float) -> void:
 		float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
 		float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W)))
 	var total := (_joy + kb).limit_length(1.0)
-	if not total.is_equal_approx(_sent_move):
+	if move_transform.is_valid() and total != Vector2.ZERO:
+		total = move_transform.call(total)
+	# при повороте камеры вектор меняется плавно: мелкие изменения не отправляем, чтобы не засорять канал
+	var changed := total.distance_to(_sent_move) > 0.04 or (total == Vector2.ZERO) != (_sent_move == Vector2.ZERO)
+	if changed:
 		_sent_move = total
 		gateway.move_input(total)
 
@@ -152,12 +173,32 @@ func apply_state(state: Dictionary) -> void:
 	_shield.set_values(ship.get("shield", 0.0), ship.get("shield_max", 1.0))
 	_energy.set_values(ship.get("energy", 0.0), ship.get("energy_max", 1.0))
 	_credits.set_value(int(state.get("credits", 0)))
+	_update_speed(state, ship)
 
 	var target := _target_object(state)
 	_apply_target(state, target)
 	_apply_buttons(state, target, ship)
 	_apply_combat_layout(bool(state.get("combat", {}).get("in_combat", false)))
 	_apply_lists(state)
+
+
+## Скорость считается по реальному перемещению корабля между снимками состояния (не выдуманное число).
+func _update_speed(state: Dictionary, ship: Dictionary) -> void:
+	if ship.is_empty() or not ship.has("pos"):
+		_speed_label.text = "Скорость недоступна"
+		return
+	var pos: Vector2 = ship["pos"]
+	var t: float = float(state.get("time", -1.0))
+	if _speed_prev_pos != Vector2.INF and t > _speed_prev_time + 0.001:
+		var inst := pos.distance_to(_speed_prev_pos) / (t - _speed_prev_time) * METERS_PER_UNIT
+		_speed_mps = lerpf(_speed_mps, inst, 0.5)
+		if _speed_mps < 0.5:
+			_speed_mps = 0.0
+	if t != _speed_prev_time or _speed_prev_pos == Vector2.INF:
+		_speed_prev_pos = pos
+		_speed_prev_time = t
+	var mode := "Автопилот" if bool(state.get("autopilot", false)) else "Ручное управление"
+	_speed_label.text = "%d м/с · %s" % [int(round(_speed_mps)), mode]
 
 
 func _target_object(state: Dictionary) -> Dictionary:
@@ -232,7 +273,11 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 			continue
 		var s: Dictionary = skills[i]
 		var cd: float = s["cooldown_left"]
-		b.text = ("%s · %d с" % [s["name"], int(ceil(cd))]) if cd > 0.0 else ("%s · %d" % [s["name"], int(s["energy_cost"])])
+		var fill := b.get_node_or_null("CooldownFill") as ColorRect
+		if fill != null:
+			fill.anchor_right = clampf(cd / maxf(float(s["cooldown"]), 0.001), 0.0, 1.0) if cd > 0.0 else 0.0
+			fill.offset_right = 0.0
+		b.text = ("%s\n%d с" % [s["name"], int(ceil(cd))]) if cd > 0.0 else ("%s\n%d" % [s["name"], int(s["energy_cost"])])
 		var blocked: bool = cd > 0.0 or float(ship.get("energy", 0.0)) < float(s["energy_cost"])
 		if s["needs_target"]:
 			blocked = blocked or not has_target or friendly or not state.get("target_in_range", false)

@@ -90,6 +90,7 @@ func _ready() -> void:
 	_hud.bind(gateway)
 	_hud.camera_mode_requested.connect(_rig.cycle_mode)
 	_hud.world_tapped.connect(select_at)
+	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
 	_hud.modal_opened.connect(gestures.cancel)  # окно подтверждения прерывает жест камеры
@@ -169,6 +170,15 @@ func _sync_ship(id: String, kind: String, stance: String, display_name: String, 
 		new_snapshot = true
 	if new_snapshot:
 		v.push_snapshot(sim_t, now, pos, dir)
+
+
+## Управление относительно камеры: вектор джойстика (вверх на экране = вперёд для камеры) в мировые оси.
+func screen_to_world_move(v: Vector2) -> Vector2:
+	var axes: Dictionary = _rig.screen_axes()
+	var r: Vector3 = axes["right"]
+	var f: Vector3 = axes["forward"]
+	var up := -v.y
+	return Vector2(r.x * v.x + f.x * up, r.z * v.x + f.z * up).limit_length(1.0)
 
 
 ## Положения объектов на экране (для выбора касанием).

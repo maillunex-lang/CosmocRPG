@@ -9,6 +9,12 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 		fill_color = v
 		_apply_fill()
 
+## Подпись слева от чисел (например «Щит»).
+@export var caption := ""
+## Ниже этой доли шкала становится предупреждающей (0 — не меняется).
+@export var warn_below := 0.0
+
+var _low := false
 var _text: Label
 
 
@@ -33,17 +39,31 @@ func _ready() -> void:
 func set_values(current: float, maximum: float) -> void:
 	max_value = maxf(1.0, maximum)
 	value = clampf(current, 0.0, max_value)
-	tooltip_text = "%d / %d" % [int(round(value)), int(round(max_value))]
+	tooltip_text = "%s %d / %d" % [caption, int(round(value)), int(round(max_value))]
 	_refresh_text()
+	_refresh_warning()
 
 
 func _refresh_text() -> void:
 	if _text != null:
-		_text.text = "%d / %d" % [int(round(value)), int(round(max_value))]
+		var nums := "%d / %d" % [int(round(value)), int(round(max_value))]
+		_text.text = (caption + " " + nums) if caption != "" else nums
+
+
+## Предупреждение о низком значении: цвет заливки меняется на красный (только цвет, без эффектов).
+func _refresh_warning() -> void:
+	var low := warn_below > 0.0 and value / max_value < warn_below
+	if low != _low:
+		_low = low
+		_apply_fill()
+
+
+func is_low() -> bool:
+	return _low
 
 
 func _apply_fill() -> void:
 	var s := StyleBoxFlat.new()
-	s.bg_color = fill_color
+	s.bg_color = Tokens.DANGER if _low else fill_color
 	s.set_corner_radius_all(6)
 	add_theme_stylebox_override("fill", s)

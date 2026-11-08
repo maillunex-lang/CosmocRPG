@@ -136,11 +136,11 @@ func _run() -> void:
 
 	# ============ тап по объекту выбирает цель ============
 	var pts: Dictionary = screen.screen_points()
-	var pirate_pt: Vector2 = pts["pi1"]
+	var pirate_pt: Vector2 = pts["ai1"]
 	var before := _state(c)
 	_touch(c, 0, true, pirate_pt)
 	_touch(c, 0, false, pirate_pt)
-	_check(gw.snapshot()["target_id"] == "pi1" and _state(c) == before, "тап по объекту выбирает цель и не двигает камеру")
+	_check(gw.snapshot()["target_id"] == "ai1" and _state(c) == before, "тап по объекту выбирает цель и не двигает камеру")
 	_touch(c, 0, true, free + Vector2(0, 40))
 	_touch(c, 0, false, free + Vector2(0, 40))
 	_check(gw.snapshot()["target_id"] == "", "тап по пустому месту снимает цель")
@@ -179,6 +179,33 @@ func _run() -> void:
 	_check(joy.is_active() and joy.vector == jv, "отпускание пальца камеры джойстик не сбрасывает")
 	_touch(c, 0, false, jc)
 	_check(not joy.is_active() and joy.vector == Vector2.ZERO, "джойстик отпускается своим пальцем")
+
+	# ============ управление относительно камеры ============
+	rig.set_view(0, 45, 50)
+	var w0: Vector2 = screen.screen_to_world_move(Vector2(0, -1))
+	_check(w0.is_equal_approx(Vector2(0, -1)), "камера на севере: джойстик вверх — на север (%s)" % str(w0))
+	rig.set_view(90, 45, 50)
+	var w90: Vector2 = screen.screen_to_world_move(Vector2(0, -1))
+	_check(w90.is_equal_approx(Vector2(-1, 0)), "камера повёрнута на 90°: джойстик вверх — вперёд по камере (%s)" % str(w90))
+	var wr: Vector2 = screen.screen_to_world_move(Vector2(1, 0))
+	_check(wr.is_equal_approx(Vector2(0, -1)), "камера повёрнута на 90° (смотрит на запад): джойстик вправо — на север, вправо по камере (%s)" % str(wr))
+	rig.set_view(180, 45, 50)
+	_check(screen.screen_to_world_move(Vector2(0, -1)).is_equal_approx(Vector2(0, 1)), "камера на 180°: джойстик вверх — на юг")
+	# сквозная проверка: удержание джойстика вверх при повороте камеры двигает корабль вперёд по камере
+	rig.set_view(90, 45, 50)
+	var p_before: Vector2 = gw.snapshot()["ship"]["pos"]
+	_touch(c, 0, true, jc)
+	_drag(c, 0, jc + Vector2(0, -70))
+	for i in 5:
+		await process_frame
+	gw.tick(0.5)
+	var p_after: Vector2 = gw.snapshot()["ship"]["pos"]
+	var dmove := p_after - p_before
+	_check(dmove.x < -1.0 and absf(dmove.y) < 0.5, "джойстик вверх при камере на 90° ведёт корабль по камере, а не на север (сдвиг %s)" % str(dmove))
+	_touch(c, 0, false, jc + Vector2(0, -70))
+	for i in 3:
+		await process_frame
+	rig.set_view(0, 45, 50)
 
 	# ============ щипок ============
 	rig.set_view(0, 45, 50)
@@ -265,9 +292,9 @@ func _run() -> void:
 	_mouse(c, MOUSE_BUTTON_RIGHT, false, free, InputEvent.DEVICE_ID_EMULATION)
 	_check(_state(c) == me, "мышь: события, эмулированные из касаний, игнорируются (нет двойной обработки)")
 	pts = screen.screen_points()
-	_mouse(c, MOUSE_BUTTON_LEFT, true, pts["pi1"])
-	_mouse(c, MOUSE_BUTTON_LEFT, false, pts["pi1"])
-	_check(gw.snapshot()["target_id"] == "pi1", "мышь: щелчок левой кнопкой по объекту выбирает цель")
+	_mouse(c, MOUSE_BUTTON_LEFT, true, pts["ai1"])
+	_mouse(c, MOUSE_BUTTON_LEFT, false, pts["ai1"])
+	_check(gw.snapshot()["target_id"] == "ai1", "мышь: щелчок левой кнопкой по объекту выбирает цель")
 	gw.set_target("")
 	# отпускание над панелью HUD не оставляет жест «залипшим»
 	_mouse(c, MOUSE_BUTTON_LEFT, true, free)

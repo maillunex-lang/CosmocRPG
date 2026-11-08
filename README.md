@@ -59,7 +59,7 @@ COSMOC_TEST_WS_URL=ws://127.0.0.1:8080/ws tools/test_client.sh [каталог_�
 cd server
 export COSMOC_DATABASE_URL='postgres://USER:PASS@127.0.0.1:5432/DB?sslmode=disable'
 go run ./cmd/server          # слушает :8080, GET /health, GET /ws
-COSMOC_TEST_DATABASE_URL=... go test -race ./...   # тесты БД стирают схему public: только тестовая база!
+COSMOC_TEST_DATABASE_URL=... go test -race ./...   # каждый тест работает в своей временной схеме, public не затрагивается
 ```
 
 Админка и Docker Compose появятся в шагах 00.5–00.6.

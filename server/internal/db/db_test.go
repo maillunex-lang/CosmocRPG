@@ -2,30 +2,30 @@ package db
 
 import (
 	"context"
-	"os"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/maillunex-lang/CosmocRPG/server/internal/testdb"
 )
 
+// testPool даёт пул с собственной временной схемой (см. пакет testdb).
 func testPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	url := os.Getenv("COSMOC_TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("COSMOC_TEST_DATABASE_URL не задана: интеграционный тест пропущен")
+	return testdb.Pool(t)
+}
+
+func TestConnectFailure(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if _, err := Connect(ctx, "postgres://nobody:x@127.0.0.1:1/none?sslmode=disable"); err == nil {
+		t.Fatal("подключение к недоступной базе должно давать ошибку")
 	}
-	ctx := context.Background()
-	pool, err := Connect(ctx, url)
-	if err != nil {
-		t.Fatal(err)
+	if _, err := Connect(ctx, "это не url"); err == nil {
+		t.Fatal("некорректный адрес должен давать ошибку")
 	}
-	t.Cleanup(pool.Close)
-	// чистая схема для каждого теста
-	if _, err := pool.Exec(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public"); err != nil {
-		t.Fatal(err)
-	}
-	return pool
 }
 
 func TestMigrateAppliesOnceAndIsIdempotent(t *testing.T) {

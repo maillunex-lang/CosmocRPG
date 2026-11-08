@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/testdb"
 )
 
 const testPassword = "correct horse battery"
@@ -98,19 +98,8 @@ func TestThrottleBoundsMemory(t *testing.T) {
 
 func testStore(t *testing.T) (*Store, *pgxpool.Pool) {
 	t.Helper()
-	url := os.Getenv("COSMOC_TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("COSMOC_TEST_DATABASE_URL не задана: интеграционный тест пропущен")
-	}
+	pool := testdb.Pool(t) // собственная временная схема, не мешает другим пакетам
 	ctx := context.Background()
-	pool, err := db.Connect(ctx, url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(pool.Close)
-	if _, err := pool.Exec(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public"); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := db.Migrate(ctx, pool); err != nil {
 		t.Fatal(err)
 	}

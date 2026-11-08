@@ -41,3 +41,31 @@ func TestPGStorePersistsPosition(t *testing.T) {
 		t.Fatal("токен не должен храниться в открытом виде")
 	}
 }
+
+func TestPGStorePersistsSkinAndSpec(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	if _, err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	s := NewPGStore(pool)
+	a, err := s.Resolve(ctx, "skintokentoken00001", "Пилот")
+	if err != nil || a.Skin != "a" || a.Spec != "interceptor" {
+		t.Fatalf("значения по умолчанию: %v %+v", err, a)
+	}
+	a.Skin, a.Spec = "b", "scout"
+	if err := s.Save(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := s.Resolve(ctx, "skintokentoken00001", "")
+	if b.Skin != "b" || b.Spec != "scout" {
+		t.Fatalf("после перезахода: %+v", b)
+	}
+	// пустые значения в записи не затирают сохранённый выбор
+	a.Skin, a.Spec = "", ""
+	_ = s.Save(ctx, a)
+	c, _ := s.Resolve(ctx, "skintokentoken00001", "")
+	if c.Skin != "b" || c.Spec != "scout" {
+		t.Fatalf("выбор затёрт: %+v", c)
+	}
+}

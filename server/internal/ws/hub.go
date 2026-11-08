@@ -129,7 +129,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch m.Type {
 		case "ping":
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
-		case "join", "move", "target", "autopilot":
+		case "join", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -269,6 +269,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		return true
 	}
 	switch m.Type {
+	case "attack", "ability", "set_skin", "set_spec":
+		h.gameShip(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
 		if err := json.Unmarshal(m.Payload, &p); err != nil || math.IsNaN(p.X+p.Y) || math.IsInf(p.X+p.Y, 0) {
@@ -300,6 +302,89 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		}
 	}
 	return true
+}
+
+func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
+	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
+	w := h.opts.World
+	fail := func(err error) {
+		code := err.Error()
+		switch err {
+		case world.ErrNoPlayer:
+			code = "not_joined"
+		}
+		reply(errMsg(m.ID, code, abilityText(code)))
+	}
+	switch m.Type {
+	case "attack":
+		var p struct {
+			On bool `json:"on"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil {
+			reply(errMsg(m.ID, "bad_message", "некорректная команда"))
+			return
+		}
+		if err := w.SetAttack(ss.pid, p.On); err != nil {
+			fail(err)
+		}
+	case "ability":
+		var p struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.ID == "" || len(p.ID) > 24 {
+			reply(errMsg(m.ID, "bad_message", "некорректная способность"))
+			return
+		}
+		if err := w.UseAbility(ss.pid, p.ID); err != nil {
+			fail(err)
+		}
+	case "set_skin", "set_spec":
+		var p struct {
+			Value string `json:"value"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Value == "" || len(p.Value) > 24 {
+			reply(errMsg(m.ID, "bad_message", "некорректное значение"))
+			return
+		}
+		var rec world.Record
+		var err error
+		if m.Type == "set_skin" {
+			rec, err = w.SetSkin(ss.pid, p.Value)
+		} else {
+			rec, err = w.SetSpec(ss.pid, p.Value)
+		}
+		if err != nil {
+			fail(err)
+			return
+		}
+		h.save(rec) // выбор сохраняется сразу
+	}
+}
+
+func abilityText(code string) string {
+	switch code {
+	case "cooldown":
+		return "способность перезаряжается"
+	case "no_energy":
+		return "не хватает энергии"
+	case "no_target":
+		return "выберите цель"
+	case "out_of_range":
+		return "цель слишком далеко"
+	case "wrong_spec":
+		return "способность другой специализации"
+	case "dead":
+		return "корабль уничтожен"
+	case "unknown_ability":
+		return "неизвестная способность"
+	case "bad_skin":
+		return "такого облика нет"
+	case "bad_spec":
+		return "такой специализации нет"
+	case "bad_target":
+		return "эту цель атаковать нельзя"
+	}
+	return "команда отклонена"
 }
 
 // pump пересылает состояние из очереди в соединение до его закрытия.
@@ -389,6 +474,10 @@ func (h *Handler) Tick(n int, now time.Time) {
 	for _, rec := range w.Step(1.0/tickHz, now) {
 		h.save(rec)
 	}
+	evs := w.DrainEvents()
+	if len(evs) > 0 {
+		h.broadcastEvents(evs)
+	}
 	if n%stateEvery != 0 {
 		return
 	}
@@ -454,6 +543,23 @@ func (h *Handler) evaluateQuests(ss *session, pid string, st world.State) {
 		case ss.events <- m:
 		default:
 			h.log.Warn("ws: очередь событий переполнена", "player", pid)
+		}
+	}
+}
+
+// broadcastEvents рассылает боевые события всем подключённым игрокам (визуальные эффекты; решения уже приняты сервером).
+func (h *Handler) broadcastEvents(evs []world.Event) {
+	h.mu.Lock()
+	sessions := make([]*session, 0, len(h.active))
+	for _, s := range h.active {
+		sessions = append(sessions, s)
+	}
+	h.mu.Unlock()
+	m := Message{Type: "combat_events", Payload: mustJSON(map[string]any{"events": evs})}
+	for _, s := range sessions {
+		select {
+		case s.events <- m:
+		default:
 		}
 	}
 }

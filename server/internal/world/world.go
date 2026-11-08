@@ -12,7 +12,7 @@ import (
 
 // Параметры мира (см. docs/design/STAGE01_ONLINE_SPACE.md).
 const (
-	Speed         = 14.0  // скорость корабля, ед/с
+	Speed         = 14.0  // базовая скорость, ед/с (скорость конкретного корабля берётся из data/ships.json)
 	Radius        = 400.0 // радиус системы, ед.
 	AutopilotStop = 10.0  // автопилот останавливается на таком расстоянии от цели, ед.
 	MaxPlayers    = 50
@@ -55,6 +55,21 @@ type Player struct {
 	Target    string
 	Autopilot bool
 
+	// корабль и бой (Этап «Стриж»): все значения принадлежат серверу
+	ShipType     string
+	Skin         string
+	Spec         string
+	Hull, Shield float64
+	Energy       float64
+	Attacking    bool
+	boostUntil   float64
+	cooldowns    map[string]float64 // способность -> игровое время окончания перезарядки
+	attackAt     float64
+	lastHit      float64
+	deadUntil    float64
+	revealed     map[string]float64 // скрытый объект -> игровое время окончания видимости
+	spec         ShipSpec
+
 	connected bool
 	lostAt    time.Time // момент обрыва связи
 }
@@ -65,24 +80,45 @@ type Record struct {
 	Name string
 	Pos  Vec
 	Dir  Vec
+	Skin string // облик корабля ("" — по умолчанию)
+	Spec string // специализация ("" — по умолчанию)
 }
 
 // Object — чужой объект в снимке (корабль другого игрока или станция).
 type Object struct {
-	ID     string     `json:"id"`
-	Kind   string     `json:"kind"`
-	Stance string     `json:"stance"`
-	Name   string     `json:"name"`
-	Pos    [2]float64 `json:"pos"`
-	Dir    [2]float64 `json:"dir"`
+	ID      string     `json:"id"`
+	Kind    string     `json:"kind"`
+	Stance  string     `json:"stance"`
+	Name    string     `json:"name"`
+	Pos     [2]float64 `json:"pos"`
+	Dir     [2]float64 `json:"dir"`
+	Ship    string     `json:"ship,omitempty"`
+	Skin    string     `json:"skin,omitempty"`
+	Hull    *float64   `json:"hull,omitempty"`
+	HullMax *float64   `json:"hull_max,omitempty"`
+	Dead    bool       `json:"dead,omitempty"`
 }
 
 // Ship — собственный корабль в снимке.
 type Ship struct {
-	Name  string     `json:"name"`
-	Pos   [2]float64 `json:"pos"`
-	Dir   [2]float64 `json:"dir"`
-	Speed float64    `json:"speed"`
+	Name      string        `json:"name"`
+	Pos       [2]float64    `json:"pos"`
+	Dir       [2]float64    `json:"dir"`
+	Speed     float64       `json:"speed"`
+	Type      string        `json:"type"`
+	Skin      string        `json:"skin"`
+	Spec      string        `json:"spec"`
+	Hull      float64       `json:"hull"`
+	HullMax   float64       `json:"hull_max"`
+	Shield    float64       `json:"shield"`
+	ShieldMax float64       `json:"shield_max"`
+	Energy    float64       `json:"energy"`
+	EnergyMax float64       `json:"energy_max"`
+	Armor     float64       `json:"armor"`
+	Cargo     float64       `json:"cargo"`
+	Boosting  bool          `json:"boosting"`
+	Dead      bool          `json:"dead"`
+	Abilities []AbilityInfo `json:"abilities"`
 }
 
 // State — снимок состояния для одного игрока.
@@ -92,6 +128,7 @@ type State struct {
 	Objects   []Object `json:"objects"`
 	TargetID  string   `json:"target_id"`
 	Autopilot bool     `json:"autopilot"`
+	Attacking bool     `json:"attacking"`
 }
 
 // System — описание системы.
@@ -108,12 +145,17 @@ type World struct {
 	t       float64
 	system  System
 	station Object
+	catalog Catalog
+	npcs    []*npc
+	events  []Event
 }
 
 // New создаёт мир с одной системой и станцией.
 func New() *World {
 	return &World{
 		players: map[string]*Player{},
+		catalog: defaultCatalog,
+		npcs:    defaultNPCs(),
 		system:  System{ID: "xi", Name: "Система Кси", Background: "xi"},
 		station: Object{ID: StationID, Kind: "station", Stance: "friendly", Name: "Станция «Рубеж»",
 			Pos: [2]float64{-12, 14}, Dir: [2]float64{0, -1}},
@@ -153,6 +195,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 		dir = Vec{1, 0}
 	}
 	p := &Player{ID: r.ID, Name: r.Name, Pos: pos, Dir: dir, connected: true}
+	w.initShip(p, r.Skin, r.Spec)
 	w.players[r.ID] = p
 	return p, true
 }
@@ -172,7 +215,9 @@ func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 	return p.record(), true
 }
 
-func (p *Player) record() Record { return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir} }
+func (p *Player) record() Record {
+	return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec}
+}
 
 // Records возвращает состояние всех кораблей (для периодического сохранения).
 func (w *World) Records() []Record {
@@ -249,6 +294,11 @@ func (w *World) objectPos(id string) (Vec, string, bool) {
 	if id == w.station.ID {
 		return Vec{w.station.Pos[0], w.station.Pos[1]}, w.station.Name, true
 	}
+	for _, n := range w.npcs {
+		if n.ID == id && (!n.Hidden || n.Kind == "hostile") && n.deadUntil <= w.t {
+			return n.Pos, n.Name, true
+		}
+	}
 	if p, ok := w.players[id]; ok {
 		return p.Pos, p.Name, true
 	}
@@ -268,6 +318,11 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 			delete(w.players, id)
 			continue
 		}
+		w.stepCombat(p, dt)
+		if p.deadUntil > w.t {
+			p.Speed, p.Move = 0, Vec{}
+			continue
+		}
 		move := p.Move
 		if p.Autopilot {
 			tp, _, ok := w.objectPos(p.Target)
@@ -283,7 +338,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 				}
 			}
 		}
-		vel := move.limit(1).mul(Speed)
+		vel := move.limit(1).mul(p.spec.Speed * w.speedFor(p))
 		step := vel.mul(dt)
 		if p.Autopilot && move != (Vec{}) {
 			// не перелетать точку остановки
@@ -306,6 +361,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 			p.Dir = moved.normalized()
 		}
 	}
+	w.stepNPCs()
 	sort.Slice(removed, func(i, j int) bool { return removed[i].ID < removed[j].ID })
 	return removed
 }
@@ -319,11 +375,26 @@ func (w *World) Snapshot(id string) (State, bool) {
 		return State{}, false
 	}
 	st := State{
-		Time:      w.t,
-		Ship:      Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed},
+		Time: w.t,
+		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
+			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
+			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, Boosting: me.boostUntil > w.t,
+			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,
+		Attacking: me.Attacking,
 		Objects:   []Object{w.station},
+	}
+	for _, n := range w.npcs {
+		if n.Hidden && me.revealed[n.ID] <= w.t {
+			continue // скрытые объекты видны только после сканирования
+		}
+		o := Object{ID: n.ID, Kind: n.Kind, Stance: n.Stance, Name: n.Name, Pos: [2]float64{n.Pos.X, n.Pos.Y}, Dir: [2]float64{0, -1}, Dead: n.deadUntil > w.t}
+		if n.Kind == "hostile" {
+			h, hm := n.Hull, n.HullMax
+			o.Hull, o.HullMax = &h, &hm
+		}
+		st.Objects = append(st.Objects, o)
 	}
 	ids := make([]string, 0, len(w.players))
 	for pid := range w.players {
@@ -335,7 +406,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 	for _, pid := range ids {
 		p := w.players[pid]
 		st.Objects = append(st.Objects, Object{ID: p.ID, Kind: "player", Stance: "neutral", Name: p.Name,
-			Pos: [2]float64{p.Pos.X, p.Pos.Y}, Dir: [2]float64{p.Dir.X, p.Dir.Y}})
+			Pos: [2]float64{p.Pos.X, p.Pos.Y}, Dir: [2]float64{p.Dir.X, p.Dir.Y}, Ship: p.ShipType, Skin: p.Skin, Dead: p.deadUntil > w.t})
 	}
 	return st, true
 }

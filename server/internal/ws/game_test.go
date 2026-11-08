@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -345,5 +346,142 @@ func TestClientCannotClaimReward(t *testing.T) {
 	s := a.questState()
 	if s.Credits == nil || *s.Credits != 0 {
 		t.Fatalf("кредиты изменились: %+v", s)
+	}
+}
+
+type shipState struct {
+	Ship struct {
+		Type, Skin, Spec     string
+		Hull, Shield, Energy float64
+		HullMax, ShieldMax   float64 `json:"-"`
+		Boosting             bool
+		Abilities            []struct {
+			ID           string
+			CooldownLeft float64 `json:"cooldown_left"`
+		}
+	} `json:"ship"`
+	Attacking bool `json:"attacking"`
+}
+
+func (cl *client) shipState() shipState {
+	cl.t.Helper()
+	m := cl.next("state")
+	var s shipState
+	_ = json.Unmarshal(m.Payload, &s)
+	return s
+}
+
+func TestShipAbilitiesAuthoritative(t *testing.T) {
+	_, store, url := gameServer(t)
+	a := connect(t, url)
+	pj := a.join("shipaaaaaaaaaaaaaa")
+	id := pj["player_id"].(string)
+	s := a.shipState()
+	if s.Ship.Type != "FTR-001" || s.Ship.Skin != "a" || s.Ship.Spec != "interceptor" || s.Ship.Hull != 1200 || s.Ship.Shield != 600 {
+		t.Fatalf("корабль: %+v", s.Ship)
+	}
+	// атака без цели и по игроку отклоняются сервером
+	a.send("attack", map[string]any{"on": true})
+	if m := a.next("error"); errCode(t, m) != "no_target" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// форсаж: результат приходит событием и в состоянии; повтор отклоняется
+	a.send("ability", map[string]any{"id": "boost"})
+	ev := a.next("combat_events")
+	if !strings.Contains(string(ev.Payload), `"boost"`) {
+		t.Fatalf("событие: %s", ev.Payload)
+	}
+	boosting := false
+	for i := 0; i < 20 && !boosting; i++ {
+		boosting = a.shipState().Ship.Boosting
+	}
+	if !boosting {
+		t.Fatal("форсаж не отражён в состоянии")
+	}
+	a.send("ability", map[string]any{"id": "boost"})
+	if m := a.next("error"); errCode(t, m) != "cooldown" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// способность другой специализации и неизвестная
+	a.send("ability", map[string]any{"id": "scan"})
+	if m := a.next("error"); errCode(t, m) != "wrong_spec" {
+		t.Fatalf("%s", m.Payload)
+	}
+	a.send("ability", map[string]any{"id": "fireball"})
+	if m := a.next("error"); errCode(t, m) != "unknown_ability" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// клиент не может задать значения сам: лишние поля игнорируются, чужие сообщения отклоняются
+	a.send("ability", map[string]any{"id": "boost", "hull": 999999, "damage": 1e9, "cooldown": 0})
+	if m := a.next("error"); errCode(t, m) != "cooldown" {
+		t.Fatalf("перезарядка обойдена: %s", m.Payload)
+	}
+	for _, typ := range []string{"damage", "set_hull", "heal", "grant_energy"} {
+		a.send(typ, map[string]any{"amount": 1e9})
+		if m := a.next("error"); errCode(t, m) != "unknown_type" {
+			t.Fatalf("%s: %s", typ, m.Payload)
+		}
+	}
+	if st := a.shipState(); st.Ship.Hull != 1200 {
+		t.Fatalf("корпус изменился: %.0f", st.Ship.Hull)
+	}
+	// облик и специализация: выбор сохраняется сразу, неверные значения отклоняются
+	a.send("set_skin", map[string]any{"value": "b"})
+	a.send("set_spec", map[string]any{"value": "scout"})
+	a.send("set_skin", map[string]any{"value": "нет"})
+	if m := a.next("error"); errCode(t, m) != "bad_skin" {
+		t.Fatalf("%s", m.Payload)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if r, ok := store.Get(id); ok && r.Skin == "b" && r.Spec == "scout" {
+			break
+		}
+		time.Sleep(30 * time.Millisecond)
+	}
+	if r, _ := store.Get(id); r.Skin != "b" || r.Spec != "scout" {
+		t.Fatalf("выбор не сохранён: %+v", r)
+	}
+	var st shipState
+	for i := 0; i < 15 && st.Ship.Skin != "b"; i++ {
+		st = a.shipState()
+	}
+	if st.Ship.Skin != "b" || st.Ship.Spec != "scout" || st.Ship.Hull != 1200 {
+		t.Fatalf("после выбора: %+v", st.Ship)
+	}
+	// после повторного входа облик тот же
+	b := connect(t, url)
+	b.join("shipaaaaaaaaaaaaaa")
+	st = shipState{}
+	for i := 0; i < 15 && st.Ship.Skin == ""; i++ {
+		st = b.shipState()
+	}
+	if st.Ship.Skin != "b" || st.Ship.Spec != "scout" {
+		t.Fatalf("облик не сохранился после входа: %+v", st.Ship)
+	}
+}
+
+func TestSkinChoiceVisibleToOthers(t *testing.T) {
+	_, _, url := gameServer(t)
+	a := connect(t, url)
+	b := connect(t, url)
+	a.join("shipbbbbbbbbbbbbbb")
+	b.join("shipcccccccccccccc")
+	a.send("set_skin", map[string]any{"value": "b"})
+	var found bool
+	for i := 0; i < 40 && !found; i++ {
+		m := b.next("state")
+		var s struct {
+			Objects []struct{ Ship, Skin, Kind string }
+		}
+		_ = json.Unmarshal(m.Payload, &s)
+		for _, o := range s.Objects {
+			if o.Kind == "player" && o.Skin == "b" && o.Ship == "FTR-001" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("другие игроки не видят выбранный облик")
 	}
 }

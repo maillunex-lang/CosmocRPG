@@ -1,0 +1,31 @@
+{
+  "ships": [
+    {
+      "id": "FTR-001",
+      "name": "Стриж",
+      "class": "Лёгкий истребитель",
+      "specs": ["interceptor", "scout"],
+      "default_spec": "interceptor",
+      "skins": ["a", "b"],
+      "dimensions_m": [12, 8.4, 2.8],
+      "crew": 1,
+      "engines": 2,
+      "weapons": "2 энергетические пушки, 1 ракетная точка",
+      "hull": 1200,
+      "shield": 600,
+      "armor": 120,
+      "energy": 100,
+      "cargo": 8,
+      "speed": 14.0,
+      "shield_regen": 15,
+      "shield_regen_delay": 4,
+      "energy_regen": 8,
+      "abilities": {
+        "pulse":     { "name": "Сдвоенный импульс", "damage": 22, "shots": 2, "range": 30, "period": 1.0, "energy": 2 },
+        "boost":     { "name": "Форсаж", "speed_mul": 1.8, "duration": 3, "cooldown": 12, "energy": 20 },
+        "intercept": { "name": "Перехват", "spec": "interceptor", "max_dist": 40, "min_dist": 10, "range": 50, "damage_mul": 2.5, "cooldown": 10, "energy": 30 },
+        "scan":      { "name": "Импульсный сканер", "spec": "scout", "radius": 60, "reveal": 15, "cooldown": 20, "energy": 25 }
+      }
+    }
+  ]
+}

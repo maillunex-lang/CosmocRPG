@@ -4,7 +4,7 @@ extends Control
 
 const WsClientScript := preload("res://scripts/net/ws_client.gd")
 const SETTINGS_PATH := "user://settings.cfg"
-const DEFAULT_URL := "ws://127.0.0.1:8080/ws"
+const DEFAULT_URL := "ws://78.17.214.25:8080/ws"  # тестовый сервер; позже будет настраиваться при сборке
 
 var _client: Node
 

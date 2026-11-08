@@ -1,0 +1,63 @@
+{
+  "type": "object",
+  "properties": {
+    "intents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_\\-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "minItems": 2,
+            "maxItems": 40
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 40
+            },
+            "minItems": 0,
+            "maxItems": 40
+          },
+          "clarify": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "examples"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 80
+    }
+  },
+  "required": [
+    "intents"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Намерения"
+}

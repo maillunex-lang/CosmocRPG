@@ -1,0 +1,378 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 8,
+      "pattern": "^cpt-\\d{4}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 60
+    },
+    "call_sign": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 40
+    },
+    "gender": {
+      "enum": [
+        "m",
+        "f"
+      ]
+    },
+    "age": {
+      "type": "integer",
+      "minimum": 18,
+      "maximum": 90
+    },
+    "bio": {
+      "type": "string",
+      "minLength": 80,
+      "maxLength": 1200
+    },
+    "profession": {
+      "enum": [
+        "пилот-грузоперевозчик",
+        "шахтёр-астероидщик",
+        "торговец",
+        "инженер-ремонтник",
+        "наёмник",
+        "исследователь",
+        "контрабандист",
+        "дипломат",
+        "медик",
+        "охотник за головами",
+        "учёный",
+        "логист",
+        "сборщик утиля",
+        "страж сектора",
+        "картограф",
+        "бортмеханик",
+        "навигатор",
+        "разведчик",
+        "квартирмейстер",
+        "журналист"
+      ]
+    },
+    "faction": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_\\-]*$"
+    },
+    "corporation": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 64
+    },
+    "personality": {
+      "type": "object",
+      "properties": {
+        "traits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "minItems": 3,
+          "maxItems": 6,
+          "uniqueItems": true
+        },
+        "scores": {
+          "type": "object",
+          "properties": {
+            "friendliness": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "caution": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "curiosity": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "greed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "loyalty": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "required": [
+            "friendliness",
+            "caution",
+            "curiosity",
+            "greed",
+            "loyalty"
+          ],
+          "additionalProperties": false
+        },
+        "temper": {
+          "enum": [
+            "calm",
+            "hot",
+            "cold",
+            "cheerful"
+          ]
+        }
+      },
+      "required": [
+        "traits",
+        "scores",
+        "temper"
+      ],
+      "additionalProperties": false
+    },
+    "speech": {
+      "type": "object",
+      "properties": {
+        "formality": {
+          "enum": [
+            "formal",
+            "neutral",
+            "casual"
+          ]
+        },
+        "verbosity": {
+          "enum": [
+            "terse",
+            "normal",
+            "talkative"
+          ]
+        },
+        "slang_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "humor": {
+          "enum": [
+            "none",
+            "dry",
+            "playful",
+            "sarcastic"
+          ]
+        },
+        "catchphrases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "minItems": 2,
+          "maxItems": 6,
+          "uniqueItems": true
+        },
+        "quirks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true
+        },
+        "address_player": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 30
+        },
+        "avoid_words": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 30
+          },
+          "minItems": 0,
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "formality",
+        "verbosity",
+        "slang_level",
+        "humor",
+        "catchphrases",
+        "quirks",
+        "address_player",
+        "avoid_words"
+      ],
+      "additionalProperties": false
+    },
+    "interests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 60
+      },
+      "minItems": 2,
+      "maxItems": 8,
+      "uniqueItems": true
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_\\-]*$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "priority"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 5
+    },
+    "strategies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9_\\-]*$"
+      },
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "captain_id": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 8,
+            "pattern": "^cpt-\\d{4}$"
+          },
+          "kind": {
+            "enum": [
+              "friend",
+              "rival",
+              "partner",
+              "neutral",
+              "enemy"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "captain_id",
+          "kind",
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 8
+    },
+    "replies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 400
+        },
+        "minItems": 1,
+        "maxItems": 8
+      },
+      "minProperties": 3
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "manual": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "generator",
+            "chatgpt",
+            "manual"
+          ]
+        },
+        "seed": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "manual",
+        "source",
+        "seed"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "name",
+    "call_sign",
+    "gender",
+    "age",
+    "bio",
+    "profession",
+    "faction",
+    "corporation",
+    "personality",
+    "speech",
+    "interests",
+    "goals",
+    "strategies",
+    "relationships",
+    "replies",
+    "meta"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Профиль AI-капитана"
+}

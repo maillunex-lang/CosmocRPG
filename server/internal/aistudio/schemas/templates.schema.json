@@ -1,0 +1,83 @@
+{
+  "type": "object",
+  "properties": {
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_\\-]*$"
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_\\-]*$"
+          },
+          "style": {
+            "type": "object",
+            "properties": {
+              "formality": {
+                "enum": [
+                  "formal",
+                  "neutral",
+                  "casual"
+                ]
+              },
+              "verbosity": {
+                "enum": [
+                  "terse",
+                  "normal",
+                  "talkative"
+                ]
+              },
+              "humor": {
+                "enum": [
+                  "none",
+                  "dry",
+                  "playful",
+                  "sarcastic"
+                ]
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "mood": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 30
+          },
+          "text": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 400
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        },
+        "required": [
+          "id",
+          "intent",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 3000
+    }
+  },
+  "required": [
+    "templates"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Шаблоны ответов"
+}

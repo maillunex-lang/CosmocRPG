@@ -1,0 +1,91 @@
+{
+  "type": "object",
+  "properties": {
+    "synonyms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "canonical": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "minItems": 1,
+            "maxItems": 40
+          }
+        },
+        "required": [
+          "canonical",
+          "variants"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 300
+    },
+    "slang": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slang": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "meaning": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "slang",
+          "meaning"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 300
+    },
+    "typos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "wrong": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "right": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "wrong",
+          "right"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 500
+    }
+  },
+  "required": [
+    "synonyms"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Синонимы, сленг, опечатки"
+}

@@ -1,0 +1,82 @@
+{
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_\\-]*$"
+          },
+          "when": {
+            "type": "object",
+            "properties": {
+              "prev_intent": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 64
+              },
+              "intent": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 64
+              },
+              "contains_any": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "minItems": 0,
+                "maxItems": 20
+              },
+              "mood": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 30
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "intent_override": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 64
+              },
+              "set_mood": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 30
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "when",
+          "then"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 200
+    }
+  },
+  "required": [
+    "rules"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Контекстные правила"
+}

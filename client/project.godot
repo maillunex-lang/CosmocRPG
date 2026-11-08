@@ -2,9 +2,14 @@ config_version=5
 
 [application]
 config/name="CosmocRPG"
+config/version="0.3.0"
 run/main_scene="res://scenes/connect.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
+
+[cosmoc]
+
+version_code=3
 
 [display]
 window/size/viewport_width=1280

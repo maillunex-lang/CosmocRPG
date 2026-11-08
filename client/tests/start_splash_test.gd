@@ -69,7 +69,13 @@ func _run() -> void:
 		_c(_inside(sp.account_button, safe), "%s: «Аккаунт» внутри безопасной зоны" % case[2])
 		_c(_inside(sp.status_label, safe), "%s: статус внутри безопасной зоны" % case[2])
 		_c(_inside(sp.get_node("%s" % "SafeAreaRoot" if false else ".").get_child(1).get_child(0).get_node("Logo") as Control, safe), "%s: логотип внутри безопасной зоны" % case[2])
-		_c(sp.play_button.size.y >= 56.0 and sp.account_button.size.y >= 48.0, "%s: кнопки не меньше 48 dp" % case[2])
+		_c(sp.play_button.size.y >= 56.0 and sp.account_button.size.y >= 48.0 and sp.update_button.size.y >= 48.0, "%s: кнопки не меньше 48 dp" % case[2])
+		_c(_inside(sp.update_button, safe) and _inside(sp.version_label, safe), "%s: «Проверить обновления» и номер версии внутри безопасной зоны" % case[2])
+		sp.show_update_result({"status": "available", "info": {"version_name": "0.4.0", "version_code": 4, "size": 38000000, "sha256": "a".repeat(64),
+				"notes": "Новые локации, радио и исправления. " + "Подробности. ".repeat(10), "url": "https://rikagro.ru/download/a.apk"}}, true)
+		await process_frame
+		await process_frame
+		_c(sp.update_panel.visible and Rect2(Vector2.ZERO, Vector2(size)).grow(1.0).encloses(sp.update_panel.get_global_rect()), "%s: окно обновления помещается на экране" % case[2])
 		(made[0] as Node).queue_free()
 		await process_frame
 
@@ -91,6 +97,41 @@ func _run() -> void:
 	_c(sp.play_button.disabled and sp.retry_button.visible, "при ошибке «Повторить» видна, «ИГРАТЬ» недоступна")
 	sp.set_state(Splash.State.ENTERING, "Вход")
 	_c(sp.play_button.disabled and sp.account_button.disabled and sp.play_button.text == "ВХОД…", "при входе кнопки заблокированы")
+	# --- обновления ---
+	const AppVersion := preload("res://ui/app_version.gd")
+	_c(sp.version_label.text.contains(AppVersion.label()), "на экране показан номер версии %s" % AppVersion.label())
+	_c(not sp.update_panel.visible, "окно обновления скрыто по умолчанию")
+	var asked := []
+	sp.update_check_requested.connect(func() -> void: asked.append(1))
+	sp.update_button.pressed.emit()
+	_c(asked.size() == 1, "кнопка «Проверить обновления» запрашивает проверку")
+	sp.begin_update_check()
+	_c(sp.update_button.is_busy(), "во время проверки кнопка занята")
+	var info := {"version_name": "0.4.0", "version_code": 4, "size": 38000000, "sha256": "ab".repeat(32), "notes": "Радио", "url": "https://rikagro.ru/download/a.apk"}
+	sp.show_update_result({"status": "available", "info": info}, false)
+	_c(sp.update_panel.visible and sp.update_text.text.contains("0.4.0") and sp.update_text.text.contains("Радио") and not sp.update_button.is_busy(), "автопроверка: доступное обновление показывает окно")
+	_c(not sp.update_text.text.contains("rikagro.ru"), "в окне обновления адрес сервера не показан")
+	var confirmed := []
+	sp.update_confirmed.connect(func(i: Dictionary) -> void: confirmed.append(i))
+	sp.update_ok.pressed.emit()
+	_c(confirmed.size() == 1 and confirmed[0]["version_code"] == 4, "«Обновить» передаёт данные обновления")
+	sp.update_later.pressed.emit()
+	_c(not sp.update_panel.visible, "«Позже» закрывает окно")
+	sp.show_update_result({"status": "up_to_date", "info": {}}, false)
+	_c(not sp.update_panel.visible, "автопроверка: «последняя версия» молчит")
+	sp.show_update_result({"status": "error", "error": "Нет связи с сервером обновлений"}, false)
+	_c(not sp.update_panel.visible, "автопроверка: ошибка молчит")
+	sp.show_update_result({"status": "up_to_date", "info": {}}, true)
+	_c(sp.update_panel.visible and sp.update_text.text.contains("последняя версия"), "ручная проверка: «у вас последняя версия»")
+	sp.show_update_result({"status": "error", "error": "Нет связи с сервером обновлений"}, true)
+	_c(sp.update_panel.visible and sp.update_text.text.contains("Не удалось проверить"), "ручная проверка: ошибка показана")
+	sp.update_ok.pressed.emit()
+	_c(not sp.update_panel.visible, "сообщение закрывается кнопкой")
+	sp.show_update_result({"status": "required", "info": info}, false)
+	sp.set_state(Splash.State.READY, "Сервер на связи")
+	_c(sp.play_button.disabled and not sp.update_later.visible and sp.update_text.text.contains("больше не поддерживается"), "обязательное обновление блокирует «ИГРАТЬ» и не даёт отложить")
+	sp.update_required = false
+	sp.set_state(Splash.State.READY, "Сервер на связи")
 	# --- секретный экран: пять нажатий за 2,5 с ---
 	var opened := [0]
 	sp.secret_opened.connect(func() -> void: opened[0] += 1)

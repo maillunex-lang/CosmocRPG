@@ -7,11 +7,14 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const SafeAreaRoot := preload("res://ui/safe_area_root.gd")
 const BgShader := preload("res://ui/start_bg.gdshader")
+const AppVersion := preload("res://ui/app_version.gd")
 
 signal play_pressed
 signal retry_pressed
 signal account_pressed
 signal secret_opened   # пять быстрых нажатий на логотип: служебный экран
+signal update_check_requested   # кнопка «Проверить обновления»
+signal update_confirmed(info: Dictionary)   # кнопка «Обновить» в окне обновления
 
 enum State { CONNECTING, READY, ERROR, ENTERING }
 
@@ -21,6 +24,13 @@ const SECRET_WINDOW_MS := 2500
 var state := State.CONNECTING
 var play_button: ActionButton
 var account_button: ActionButton
+var update_button: ActionButton
+var update_panel: PanelContainer
+var update_text: Label
+var update_ok: ActionButton
+var update_later: ActionButton
+var version_label: Label
+var update_required := false
 var retry_button: ActionButton
 var status_label: Label
 
@@ -61,6 +71,7 @@ func _ready() -> void:
 	_content.add_child(_spacer())
 	_content.add_child(_play_block())
 	_content.add_child(_bottom_bar())
+	_build_update_panel()
 	set_state(State.CONNECTING, "Подключение к серверу…")
 	if _animate:
 		_intro()
@@ -184,17 +195,121 @@ func _bottom_bar() -> Control:
 	account_button.custom_minimum_size = Vector2(190, 52)
 	account_button.pressed.connect(func() -> void: account_pressed.emit())
 	bar.add_child(account_button)
+	update_button = ActionButton.new()
+	update_button.text = "Проверить обновления"
+	update_button.custom_minimum_size = Vector2(270, 52)
+	update_button.pressed.connect(func() -> void: update_check_requested.emit())
+	bar.add_child(update_button)
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar.add_child(gap)
-	var ver := Label.new()
-	ver.text = "Альфа-тест"
-	ver.theme_type_variation = &"MutedLabel"
-	ver.size_flags_vertical = Control.SIZE_SHRINK_END
-	ver.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar.add_child(ver)
+	version_label = Label.new()
+	version_label.name = "Version"
+	version_label.text = "Альфа-тест · v%s" % AppVersion.label()
+	version_label.theme_type_variation = &"MutedLabel"
+	version_label.size_flags_vertical = Control.SIZE_SHRINK_END
+	version_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(version_label)
 	return bar
+
+
+func _build_update_panel() -> void:
+	var dim := ColorRect.new()   # затемнение и блокировка нажатий под окном
+	dim.name = "UpdateDim"
+	dim.color = Color(Tokens.BG, 0.72)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.visible = false
+	add_child(dim)
+	update_panel = PanelContainer.new()
+	update_panel.name = "UpdatePanel"
+	update_panel.visible = false
+	update_panel.visibility_changed.connect(func() -> void: dim.visible = update_panel.visible)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Tokens.SURFACE
+	sb.border_color = Color(Tokens.ACCENT, 0.5)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(Tokens.RADIUS)
+	sb.set_content_margin_all(18)
+	update_panel.add_theme_stylebox_override("panel", sb)
+	update_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	update_panel.custom_minimum_size = Vector2(560, 0)
+	update_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	update_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	update_panel.add_child(box)
+	var title := Label.new()
+	title.text = "Обновление игры"
+	title.theme_type_variation = &"TitleLabel"
+	box.add_child(title)
+	update_text = Label.new()
+	update_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	update_text.custom_minimum_size = Vector2(520, 0)
+	box.add_child(update_text)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	update_ok = ActionButton.new()
+	update_ok.text = "Обновить"
+	update_ok.variant = ActionButton.Variant.PRIMARY
+	update_ok.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(update_ok)
+	update_later = ActionButton.new()
+	update_later.text = "Позже"
+	update_later.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	update_later.pressed.connect(func() -> void: update_panel.visible = false)
+	row.add_child(update_later)
+	box.add_child(row)
+	add_child(update_panel)
+
+
+## Результат проверки обновлений: окно с версией, размером, описанием и контрольной суммой, либо короткое сообщение в статусе.
+## manual=true: показывать и «последняя версия», и ошибки; при автоматической проверке сообщаются только доступные обновления.
+func show_update_result(result: Dictionary, manual: bool) -> void:
+	update_button.end_busy()
+	var status := str(result.get("status", "error"))
+	var info: Dictionary = result.get("info", {})
+	update_required = status == "required"
+	if status == "available" or status == "required":
+		var mb := float(info.get("size", 0)) / 1048576.0
+		var lines := ["Доступна версия %s (%d), размер %.1f МБ." % [str(info.get("version_name", "")), int(info.get("version_code", 0)), mb],
+				"У вас версия %s." % AppVersion.label()]
+		if status == "required":
+			lines.append("Эта версия игры больше не поддерживается: для входа нужно обновить.")
+		if str(info.get("notes", "")) != "":
+			lines.append("Что нового: " + str(info["notes"]))
+		lines.append("Контрольная сумма SHA-256: %s…" % str(info.get("sha256", "")).left(16))
+		lines.append("«Обновить» откроет защищённую ссылку: файл скачается в браузере, установит его сама Android с вашим подтверждением. Прогресс игры сохранится.")
+		update_text.text = "\n".join(lines)
+		for c in update_ok.pressed.get_connections():
+			update_ok.pressed.disconnect(c["callable"])
+		update_ok.pressed.connect(func() -> void: update_confirmed.emit(info))
+		update_later.visible = status != "required"
+		update_panel.visible = true
+		_apply_play_gate()
+	elif manual:
+		update_panel.visible = false
+		var text := "У вас последняя версия" if status == "up_to_date" else "Не удалось проверить обновления: %s" % str(result.get("error", ""))
+		update_text.text = text
+		update_panel.visible = true
+		for c in update_ok.pressed.get_connections():
+			update_ok.pressed.disconnect(c["callable"])
+		update_ok.text = "Понятно"
+		update_ok.pressed.connect(func() -> void:
+			update_panel.visible = false
+			update_ok.text = "Обновить")
+		update_later.visible = false
+
+
+func begin_update_check() -> void:
+	update_button.begin_busy("Проверка…")
+
+
+## Обязательное обновление блокирует «ИГРАТЬ».
+func _apply_play_gate() -> void:
+	if update_required and play_button != null:
+		play_button.disabled = true
 
 
 ## Состояние связи: подпись, доступность кнопок, спиннер.
@@ -208,10 +323,12 @@ func set_state(s: State, text: String) -> void:
 		State.ERROR:
 			variation = &"DangerLabel"
 	status_label.theme_type_variation = variation
-	play_button.disabled = s != State.READY
+	play_button.disabled = s != State.READY or update_required
 	retry_button.visible = s == State.ERROR
 	_spinner.visible = s == State.CONNECTING or s == State.ENTERING
 	account_button.disabled = s == State.ENTERING
+	if update_button != null:
+		update_button.disabled = s == State.ENTERING
 	if s == State.ENTERING:
 		play_button.text = "ВХОД…"
 	else:

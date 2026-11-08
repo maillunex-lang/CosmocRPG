@@ -12,6 +12,7 @@ const ServerGateway := preload("res://ui/gateway/server_gateway.gd")
 const PlayerIdentity := preload("res://ui/player_identity.gd")
 const CharacterScreen := preload("res://ui/character_screen.gd")
 const StartSplash := preload("res://ui/start_splash.gd")
+const Updater := preload("res://ui/updater.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "wss://rikagro.ru/ws"  # домен с сертификатом Let's Encrypt (запасной адрес: ws://78.17.214.25:8080/ws)
@@ -22,6 +23,8 @@ var auto_connect := true
 var _client: Node
 var _account_pending := false
 var _splash: Control
+var _updater: Node
+var _update_manual := false
 var _overlay_bg: ColorRect
 var _overlay_back: ActionButton
 var _retry_timer: Timer
@@ -74,6 +77,7 @@ func _ready() -> void:
 	_build_start_screen()
 	if auto_connect:
 		_on_connect_pressed.call_deferred()
+		_updater.check.call_deferred()   # тихая проверка обновлений при запуске: окно только если обновление есть
 
 
 ## Стартовый экран поверх служебного: адрес сервера игроку не показывается. Служебный экран открывается пятью нажатиями на логотип.
@@ -108,6 +112,18 @@ func _build_start_screen() -> void:
 	_splash.play_pressed.connect(_enter_world)
 	_splash.retry_pressed.connect(_retry_now)
 	_splash.account_pressed.connect(func() -> void: _open_overlay(false))
+	_updater = Updater.new()
+	add_child(_updater)
+	_updater.finished.connect(func(res: Dictionary) -> void:
+		_splash.show_update_result(res, _update_manual)
+		_update_manual = false)
+	_splash.update_check_requested.connect(func() -> void:
+		_update_manual = true
+		_splash.begin_update_check()
+		_updater.check())
+	_splash.update_confirmed.connect(func(info: Dictionary) -> void:
+		if not _updater.open_download(info):
+			_append(_danger("Ссылка на обновление отклонена как небезопасная")))
 	_splash.secret_opened.connect(func() -> void: _open_overlay(true))
 	_sync_splash()
 

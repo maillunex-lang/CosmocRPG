@@ -82,13 +82,6 @@ layout_mode = 2
 theme_type_variation = &"MutedLabel"
 text = "Ур. 1"
 
-[node name="ExitButton" type="Button" parent="SafeArea/Columns/LeftStack/ProfileCard/Box/NameRow"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Выйти из игры"
-text = "Выйти"
-script = ExtResource("5")
-
 [node name="ShipName" type="Label" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -257,30 +250,6 @@ tooltip_text = "Энергия способностей"
 script = ExtResource("7")
 caption = "Эн."
 
-[node name="BottomNav" type="HBoxContainer" parent="SafeArea/Columns/CenterStack"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-mouse_filter = 2
-
-[node name="MapButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Карта"
-script = ExtResource("5")
-
-[node name="FleetButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Ангар"
-script = ExtResource("5")
-
-[node name="MenuButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Магазин"
-script = ExtResource("5")
-
 [node name="RightStack" type="VBoxContainer" parent="SafeArea/Columns"]
 layout_mode = 2
 size_flags_horizontal = 0
@@ -303,12 +272,21 @@ script = ExtResource("6")
 caption = "Кредиты"
 color = Color(0.9529412, 0.76862746, 0.41960785, 1)
 
-[node name="SettingsButton" type="Button" parent="SafeArea/Columns/RightStack/TopRight"]
+[node name="MapHudButton" type="Button" parent="SafeArea/Columns/RightStack/TopRight"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 48)
 layout_mode = 2
-text = "Настройки"
+tooltip_text = "Карта системы"
+text = "Карта"
 script = ExtResource("5")
-soon = true
+
+[node name="MenuButton" type="Button" parent="SafeArea/Columns/RightStack/TopRight"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 48)
+layout_mode = 2
+tooltip_text = "Меню: профиль, магазин, ангар, выход"
+text = "Меню"
+script = ExtResource("5")
 
 [node name="RightSpacer" type="Control" parent="SafeArea/Columns/RightStack"]
 layout_mode = 2
@@ -356,6 +334,85 @@ layout_mode = 2
 toggle_mode = true
 text = "Автопилот"
 script = ExtResource("5")
+
+[node name="MenuPopup" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="Control" parent="MenuPopup"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="MenuPopup"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -280.0
+offset_top = 76.0
+offset_right = -16.0
+offset_bottom = 456.0
+grow_horizontal = 0
+
+[node name="Box" type="VBoxContainer" parent="MenuPopup/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ProfileMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Профиль"
+script = ExtResource("5")
+
+[node name="ShopMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Магазин"
+script = ExtResource("5")
+
+[node name="HangarMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Ангар"
+script = ExtResource("5")
+
+[node name="StorageMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Склад"
+script = ExtResource("5")
+soon = true
+
+[node name="MailMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Почта"
+script = ExtResource("5")
+soon = true
+
+[node name="SettingsMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Настройки"
+script = ExtResource("5")
+soon = true
+
+[node name="ExitButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Выйти"
+script = ExtResource("5")
+variant = 2
 
 [node name="Confirm" type="Control" parent="."]
 unique_name_in_owner = true

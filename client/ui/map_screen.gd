@@ -1,7 +1,8 @@
 extends Control
-## Карта системы: границы, зоны, планеты, станции, месторождения, точки исследования, враги, игроки и корабль игрока.
-## Север сверху, масштаб подгоняется под экран. Нажатие на объект выбирает цель; «Автопилот» летит к выбранной цели.
-## Данные берутся из раскладки сервера (welcome.layout) и текущего состояния; своих расчётов карта не делает.
+## Карта системы (R-35): границы, зоны, планеты, станции, месторождения, точки, враги, игроки.
+## Масштаб: кнопки ±, колесо мыши к курсору, щипок; перетаскивание при увеличении. Кнопка «Я» — к игроку.
+## Корабль игрока — пульсирующая метка с курсом; выбранная цель — кольцо, пунктирный курс и дистанция.
+## Нажатие на объект выбирает цель; «Автопилот» летит к выбранной цели. Своих расчётов карта не делает.
 
 const Tokens := preload("res://ui/theme/tokens.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
@@ -15,6 +16,9 @@ signal closed
 const ZONE_COLORS := {"pve": Color("#F16C79"), "mining": Color("#F3C46B"), "explore": Color("#9575E8"), "trade": Color("#42C6E5")}
 const RESOURCE_COLORS := {"iron_ore": Color("#b08968"), "crystals": Color("#7fe3ff"), "gas": Color("#9be37f"), "scrap": Color("#9aa4ad")}
 const PICK_RADIUS := 26.0
+const ZOOM_MIN := 1.0
+const ZOOM_MAX := 10.0
+const PAN_DRAG_PX := 8.0   # меньше — касание, больше — перетаскивание
 
 var layout: Dictionary = {}
 var state: Dictionary = {}
@@ -23,9 +27,19 @@ var selected := ""
 var _map_rect := Rect2()
 var _scale := 1.0
 var _center := Vector2.ZERO
+var _zoom := 1.0
+var _pan := Vector2.ZERO   # смещение центра карты в мировых координатах
 var _info: Label
+var _coords: Label
 var _auto: ActionButton
 var _pickables: Array = []   # [{id, pos(мир), name}]
+var _touches := {}           # index -> позиция (щипок и перетаскивание)
+var _pinch_dist := 0.0
+var _pinch_zoom := 1.0
+var _drag_panning := false
+var _drag_start := Vector2.ZERO
+var _pan_start := Vector2.ZERO
+var _moved := 0.0
 
 
 func _ready() -> void:
@@ -46,6 +60,9 @@ func _ready() -> void:
 	title.text = "Карта системы"
 	title.theme_type_variation = &"TitleLabel"
 	side.add_child(title)
+	_coords = Label.new()
+	_coords.theme_type_variation = &"MutedLabel"
+	side.add_child(_coords)
 	_info = Label.new()
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_info.theme_type_variation = &"MutedLabel"
@@ -61,6 +78,27 @@ func _ready() -> void:
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(sp)
+
+	# масштаб и возврат к себе
+	var zoom_row := HBoxContainer.new()
+	zoom_row.add_theme_constant_override("separation", 8)
+	side.add_child(zoom_row)
+	var zoom_out := ActionButton.new()
+	zoom_out.text = "−"
+	zoom_out.tooltip_text = "Уменьшить масштаб"
+	zoom_out.pressed.connect(func() -> void: zoom_at(1.0 / 1.4, null))
+	zoom_row.add_child(zoom_out)
+	var me_btn := ActionButton.new()
+	me_btn.text = "Я"
+	me_btn.tooltip_text = "Показать моё положение (сброс масштаба)"
+	Icons.apply(me_btn, "user", Tokens.ACCENT, 20)
+	me_btn.pressed.connect(reset_view)
+	zoom_row.add_child(me_btn)
+	var zoom_in := ActionButton.new()
+	zoom_in.text = "+"
+	zoom_in.tooltip_text = "Увеличить масштаб"
+	zoom_in.pressed.connect(func() -> void: zoom_at(1.4, null))
+	zoom_row.add_child(zoom_in)
 	var close := ActionButton.new()
 	close.text = "Закрыть"
 	Icons.apply(close, "x", Color.WHITE, 22)
@@ -101,13 +139,40 @@ func radius() -> float:
 	return float(layout.get("radius", 400.0))
 
 
+func zoom() -> float:
+	return _zoom
+
+
 ## Соответствие мир → экран (север сверху). Вынесено отдельно для тестов.
 func to_screen(p: Vector2) -> Vector2:
-	return _center + p * _scale
+	return _center + (p + _pan) * _scale
 
 
 func to_world(s: Vector2) -> Vector2:
-	return (s - _center) / _scale
+	return (s - _center) / _scale - _pan
+
+
+## Увеличение/уменьшение. anchor — экранная точка, которая останется на месте (null: центр).
+func zoom_at(factor: float, anchor: Variant) -> void:
+	var a: Vector2 = anchor if anchor is Vector2 else _center
+	var world_before := to_world(a)
+	_zoom = clampf(_zoom * factor, ZOOM_MIN, ZOOM_MAX)
+	_compute_rect()
+	# после смены масштаба сдвигаем панораму так, чтобы точка под курсором/центром не съехала
+	_pan = (a - _center) / _scale - world_before
+	queue_redraw()
+
+
+## Вернуться к игроку и полному обзору.
+func reset_view() -> void:
+	_zoom = ZOOM_MIN
+	_pan = Vector2.ZERO
+	_compute_rect()
+	queue_redraw()
+
+
+func _process(_delta: float) -> void:
+	queue_redraw()   # пульс метки игрока
 
 
 func _compute_rect() -> void:
@@ -115,7 +180,7 @@ func _compute_rect() -> void:
 	var side := maxf(minf(avail.x, avail.y), 100.0)
 	_map_rect = Rect2(Vector2(16 + (avail.x - side) * 0.5, 16 + (avail.y - side) * 0.5), Vector2(side, side))
 	_center = _map_rect.get_center()
-	_scale = side / (2.0 * radius() * 1.04)
+	_scale = side / (2.0 * radius() * 1.04) * _zoom
 
 
 func _pos(d: Dictionary) -> Vector2:
@@ -127,6 +192,14 @@ func _draw() -> void:
 	_compute_rect()
 	_pickables.clear()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(Tokens.BG, 0.96))
+	var grid_step := _nice_step(70.0 / _scale)
+	if grid_step > 0.0:
+		var col := Color(Tokens.ACCENT, 0.07)
+		var x := -radius()
+		while x <= radius():
+			draw_line(to_screen(Vector2(x, -radius())), to_screen(Vector2(x, radius())), col, 1.0)
+			draw_line(to_screen(Vector2(-radius(), x)), to_screen(Vector2(radius(), x)), col, 1.0)
+			x += grid_step
 	draw_circle(_center, radius() * _scale, Color(Tokens.SURFACE_SUNKEN, 0.9))
 	draw_arc(_center, radius() * _scale, 0, TAU, 128, Color(Tokens.ACCENT, 0.5), 2.0, true)
 	var font := UiTheme.make_font(600)
@@ -139,8 +212,8 @@ func _draw() -> void:
 	for b in layout.get("bodies", []):
 		var bp := to_screen(_pos(b))
 		var br := maxf(float(b.get("radius", 5.0)) * _scale, 3.0)
-		var col: Array = b.get("color", [0.4, 0.5, 0.8])
-		draw_circle(bp, br, Color(float(col[0]), float(col[1]), float(col[2]), 0.9))
+		var col2: Array = b.get("color", [0.4, 0.5, 0.8])
+		draw_circle(bp, br, Color(float(col2[0]), float(col2[1]), float(col2[2]), 0.9))
 		if bool(b.get("ring", false)):
 			draw_arc(bp, br * 1.5, 0, TAU, 32, Color(0.85, 0.8, 0.7, 0.6), 1.5, true)
 		if str(b.get("kind", "")) == "planet":
@@ -151,7 +224,6 @@ func _draw() -> void:
 		draw_string(font, sp + Vector2(8, 4), str(s.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Tokens.TEXT)
 		_pickables.append({"id": str(s.get("id", "")), "pos": _pos(s), "name": str(s.get("name", ""))})
 	# серверные объекты из состояния: месторождения, точки, враги, игроки
-	var me: Dictionary = state.get("ship", {})
 	for o in state.get("objects", []):
 		var kind := str(o.get("kind", ""))
 		var p: Vector2 = o["pos"]
@@ -176,6 +248,20 @@ func _draw() -> void:
 				continue
 		if kind != "station":
 			_pickables.append({"id": str(o.get("id", "")), "pos": p, "name": str(o.get("name", ""))})
+	var me: Dictionary = state.get("ship", {})
+	# курс к цели: пунктир от корабля до выбранного объекта + дистанция посередине
+	if selected != "" and not me.is_empty():
+		for pk in _pickables:
+			if pk["id"] == selected:
+				var a2: Vector2 = to_screen(me["pos"])
+				var b2: Vector2 = to_screen(pk["pos"])
+				draw_dashed_line(a2, b2, Color(Tokens.RARE, 0.8), 2.0, 6.0, true)
+				var mid := (a2 + b2) * 0.5
+				var dist_km := (me["pos"] as Vector2).distance_to(pk["pos"]) / 10.0
+				var dist_text := "%.1f км" % dist_km
+				var tw := font.get_string_size(dist_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+				draw_rect(Rect2(mid + Vector2(-tw * 0.5 - 4, -10), Vector2(tw + 8, 16)), Color(Tokens.BG, 0.75))
+				draw_string(font, mid + Vector2(-tw * 0.5, 2), dist_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Tokens.RARE)
 	if not me.is_empty():
 		var mp := to_screen(me["pos"])
 		var d: Vector2 = me.get("dir", Vector2(1, 0))
@@ -183,8 +269,11 @@ func _draw() -> void:
 			d = Vector2(1, 0)
 		d = d.normalized()
 		var n := Vector2(-d.y, d.x)
-		draw_colored_polygon(PackedVector2Array([mp + d * 9, mp - d * 6 + n * 5, mp - d * 6 - n * 5]), Color.WHITE)
-		draw_arc(mp, 11, 0, TAU, 24, Color(Color.WHITE, 0.5), 1.0, true)
+		# пульс: расходящееся кольцо, чтобы метку было видно даже в плотной толпе объектов
+		var pulse := (Time.get_ticks_msec() % 1400) / 1400.0
+		draw_arc(mp, 8.0 + pulse * 14.0, 0, TAU, 32, Color(Tokens.ACCENT, (1.0 - pulse) * 0.5), 2.0, true)
+		draw_colored_polygon(PackedVector2Array([mp + d * 10, mp - d * 7 + n * 6, mp - d * 7 - n * 6]), Color.WHITE)
+		draw_arc(mp, 12, 0, TAU, 24, Color(Color.WHITE, 0.6), 1.5, true)
 	if selected != "":
 		for pk in _pickables:
 			if pk["id"] == selected:
@@ -192,15 +281,80 @@ func _draw() -> void:
 				draw_arc(sp2, 10, 0, TAU, 24, Tokens.RARE, 2.0, true)
 
 
+## Шаг сетки координат в мирах: ближайший «красивый» шаг, чтобы сетка была не чаще ~70 px.
+func _nice_step(target: float) -> float:
+	for st in [1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0]:
+		if st >= target:
+			return st
+	return 0.0
+
+
 func _gui_input(ev: InputEvent) -> void:
-	var pos := Vector2.ZERO
-	if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
-		pos = (ev as InputEventMouseButton).position
-	elif ev is InputEventScreenTouch and (ev as InputEventScreenTouch).pressed:
-		pos = (ev as InputEventScreenTouch).position
-	else:
+	if ev is InputEventMouseButton:
+		var mb := ev as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			zoom_at(1.25, mb.position)
+			return
+		if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			zoom_at(1.0 / 1.25, mb.position)
+			return
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_drag_panning = true
+				_drag_start = mb.position
+				_pan_start = _pan
+				_moved = 0.0
+			elif _drag_panning:
+				_drag_panning = false
+				if _moved <= PAN_DRAG_PX:
+					pick_at(mb.position)   # короткий клик — выбор
+			return
+	elif ev is InputEventMouseMotion and _drag_panning:
+		var mm := ev as InputEventMouseMotion
+		_moved = maxf(_moved, mm.position.distance_to(_drag_start))
+		if _zoom > ZOOM_MIN and _moved > PAN_DRAG_PX:
+			_pan = _pan_start + (mm.position - _drag_start) / _scale
+			queue_redraw()
 		return
-	pick_at(pos)
+	elif ev is InputEventScreenTouch:
+		var st := ev as InputEventScreenTouch
+		if st.pressed:
+			_touches[st.index] = st.position
+			if _touches.size() == 2:
+				var pts := _touches.values()
+				_pinch_dist = (pts[0] as Vector2).distance_to(pts[1])
+				_pinch_zoom = _zoom
+				_drag_panning = false
+			elif _touches.size() == 1:
+				_drag_panning = true
+				_drag_start = st.position
+				_pan_start = _pan
+				_moved = 0.0
+		else:
+			_touches.erase(st.index)
+			if _touches.size() < 2:
+				_pinch_dist = 0.0
+			if _touches.is_empty():
+				var was_pan := _drag_panning
+				_drag_panning = false
+				if was_pan and _moved <= PAN_DRAG_PX:
+					pick_at(st.position)   # короткий тап — выбор
+		return
+	elif ev is InputEventScreenDrag:
+		var sd := ev as InputEventScreenDrag
+		if _touches.has(sd.index):
+			_touches[sd.index] = sd.position
+		if _touches.size() == 2 and _pinch_dist > 0.0:
+			var pts2 := _touches.values()
+			var dist := (pts2[0] as Vector2).distance_to(pts2[1])
+			zoom_at(_pinch_zoom * dist / _pinch_dist / _zoom, null)
+			return
+		if _drag_panning and _zoom > ZOOM_MIN:
+			_moved = maxf(_moved, sd.position.distance_to(_drag_start))
+			if _moved > PAN_DRAG_PX:
+				_pan = _pan_start + (sd.position - _drag_start) / _scale
+				queue_redraw()
+		return
 
 
 ## Выбор объекта по точке экрана. Возвращает идентификатор или "".
@@ -227,9 +381,15 @@ func select(id: String) -> void:
 func _refresh_info() -> void:
 	if _info == null:
 		return
+	var me: Dictionary = state.get("ship", {})
+	if _coords != null:
+		if me.is_empty():
+			_coords.text = ""
+		else:
+			var mp: Vector2 = me["pos"]
+			_coords.text = "Мои координаты: X %d · Y %d · масштаб ×%.1f" % [int(round(mp.x)), int(round(mp.y)), _zoom]
 	var name_ := ""
 	var dist_km := -1.0
-	var me: Dictionary = state.get("ship", {})
 	for pk in _pickables:
 		if pk["id"] == selected:
 			name_ = str(pk["name"])
@@ -242,7 +402,7 @@ func _refresh_info() -> void:
 				if not me.is_empty():
 					dist_km = (me["pos"] as Vector2).distance_to(_pos(s)) / 10.0
 	if selected == "" or name_ == "":
-		_info.text = "Нажмите на станцию, месторождение, точку исследования или врага."
+		_info.text = "Нажмите на станцию, месторождение, точку исследования или врага. При увеличении карту можно перетаскивать."
 		_auto.disabled = true
 	else:
 		_info.text = "%s\nРасстояние: %.1f км" % [name_, dist_km] if dist_km >= 0.0 else name_

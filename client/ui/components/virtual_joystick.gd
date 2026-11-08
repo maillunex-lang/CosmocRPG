@@ -23,10 +23,19 @@ var _knob := Vector2.ZERO
 var _origin := Vector2.ZERO   # центр джойстика: точка первого касания
 var _press_msec := 0
 var _moved := 0.0
+var _alpha := 0.0   # «жидкое стекло»: джойстик проявляется только пока им управляют
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _process(delta: float) -> void:
+	var target := 1.0 if is_active() else 0.0
+	var a := lerpf(_alpha, target, clampf(delta * 10.0, 0.0, 1.0))
+	if not is_equal_approx(a, _alpha):
+		_alpha = a
+		queue_redraw()
 
 
 func is_active() -> bool:
@@ -107,11 +116,14 @@ func _notification(what: int) -> void:
 
 
 func _draw() -> void:
+	if _alpha < 0.02:
+		return  # в покое джойстик невидим: экран остаётся чистым
 	var c := _centre()
-	if not is_active():
-		# подсказка: бледное кольцо в зоне; джойстик появится там, где коснётся палец
-		draw_arc(c, radius, 0.0, TAU, 48, Color(Tokens.ACCENT, 0.18), 2.0, true)
-		return
-	draw_circle(c, radius, Color(Tokens.SURFACE, 0.45))
-	draw_arc(c, radius, 0.0, TAU, 48, Color(Tokens.ACCENT, 0.55), 2.0, true)
-	draw_circle(c + _knob, radius * 0.42, Color(Tokens.ACCENT, 0.7))
+	var a := _alpha
+	# «жидкое стекло»: лёгкая подложка, тонкое кольцо, мягкий сферический набалдачник
+	draw_circle(c, radius, Color(Tokens.SURFACE, 0.28 * a))
+	draw_arc(c, radius, 0.0, TAU, 48, Color(Tokens.ACCENT, 0.45 * a), 2.0, true)
+	var knob_pos := c + _knob
+	draw_circle(knob_pos - Vector2(radius * 0.1, radius * 0.12), radius * 0.42, Color(Color.WHITE, 0.10 * a))
+	draw_circle(knob_pos, radius * 0.42, Color(Tokens.ACCENT, 0.55 * a))
+	draw_arc(knob_pos, radius * 0.42, -2.4, -0.6, 16, Color(Color.WHITE, 0.35 * a), 1.5, true)

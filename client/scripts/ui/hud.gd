@@ -50,7 +50,9 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 
 @onready var _joystick: Control = %Joystick
 @onready var _reset_button: ActionButton = %ResetButton
-@onready var _bottom_nav: Control = %BottomNav
+@onready var _map_hud_button: ActionButton = %MapHudButton
+@onready var _menu_button: ActionButton = %MenuButton
+@onready var _menu_popup: Control = %MenuPopup
 
 @onready var _player_name: Label = %PlayerName
 @onready var _player_level: Label = %PlayerLevel
@@ -82,11 +84,6 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 
 
 func _ready() -> void:
-	# компактность: шрифт кнопок нижней панели чуть меньше
-	for b in _bottom_nav.get_children():
-		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
-	# «Настройки» ещё не реализованы: скрыты, чтобы не занимали топ-бар (узел остаётся для тестов)
-	%SettingsButton.visible = false
 	# чат по умолчанию свёрнут: космос занимает основную площадь
 	_pref_collapsed["chat"] = true
 	_chat_card.set_collapsed(true, false)
@@ -106,12 +103,17 @@ func _ready() -> void:
 	_attack.variant = ActionButton.Variant.DANGER
 	_build_skills()
 
-	# иконки боевого кластера: интерфейс легче читается
+	# иконки боевого кластера и верхнего правого угла: интерфейс легче читается
 	Icons.apply(_attack, "zap", Tokens.DANGER, 22)
 	Icons.apply(_autopilot, "rocket", Tokens.ACCENT, 22)
 	Icons.apply(_exit_button, "x", Tokens.TEXT, 18)
 	_exit_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
-	_exit_button.focus_mode = Control.FOCUS_NONE
+	Icons.apply(_map_hud_button, "globe", Tokens.ACCENT, 22)
+	Icons.apply(_menu_button, "menu", Tokens.ACCENT, 22)
+	# полупрозрачные, чтобы не спорить с космосом; при наведении/нажатии читаются полностью
+	for b in [_map_hud_button, _menu_button]:
+		b.modulate = Color(1, 1, 1, 0.85)
+		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
 	_avatar_rect.custom_minimum_size = Vector2(26, 26)
 	_avatar_rect.texture = Icons.tex("user")
 	_avatar_rect.modulate = Tokens.TEXT_MUTED
@@ -126,12 +128,20 @@ func _ready() -> void:
 	_profile_card.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			profile_requested.emit())
-	%FleetButton.pressed.connect(func() -> void: hangar_requested.emit())
-	%MenuButton.pressed.connect(func() -> void: shop_requested.emit())
-	%MapButton.pressed.connect(func() -> void: map_requested.emit())
-	Icons.apply(%MapButton, "globe", Tokens.ACCENT, 22)
-	Icons.apply(%MenuButton, "store", Tokens.ACCENT, 22)
-	Icons.apply(%FleetButton, "rocket", Tokens.ACCENT, 22)
+	_map_hud_button.pressed.connect(func() -> void: map_requested.emit())
+	_menu_button.pressed.connect(_toggle_menu)
+	(%MenuPopup/Backdrop as Control).gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			_set_menu_open(false))
+	%ProfileMenuButton.pressed.connect(func() -> void: _set_menu_open(false); profile_requested.emit())
+	%ShopMenuButton.pressed.connect(func() -> void: _set_menu_open(false); shop_requested.emit())
+	%HangarMenuButton.pressed.connect(func() -> void: _set_menu_open(false); hangar_requested.emit())
+	Icons.apply(%ProfileMenuButton, "user", Tokens.ACCENT, 22)
+	Icons.apply(%ShopMenuButton, "store", Tokens.ACCENT, 22)
+	Icons.apply(%HangarMenuButton, "rocket", Tokens.ACCENT, 22)
+	Icons.apply(%StorageMenuButton, "package", Tokens.ACCENT, 22)
+	Icons.apply(%MailMenuButton, "mail", Tokens.ACCENT, 22)
+	Icons.apply(%SettingsMenuButton, "settings", Tokens.ACCENT, 22)
 	_build_cargo_ui()
 	_confirm.opened.connect(func() -> void: modal_opened.emit())
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
@@ -147,6 +157,20 @@ func _ready() -> void:
 ## Короткое сообщение игроку (всплывающая плашка).
 func show_toast(text: String) -> void:
 	_alerts.toast(text)
+
+
+## Меню (R-35): полупрозрачная кнопка справа сверху раскрывает панель действий.
+func _toggle_menu() -> void:
+	_set_menu_open(not _menu_popup.visible)
+
+
+func _set_menu_open(open: bool) -> void:
+	_menu_popup.visible = open
+
+
+## Меню открыто (для тестов и жестов камеры).
+func is_menu_open() -> bool:
+	return _menu_popup.visible
 
 
 ## Подпись кнопки «Вид» показывает текущий режим камеры.

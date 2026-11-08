@@ -13,6 +13,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/worldcfg"
 )
@@ -36,6 +37,7 @@ type Options struct {
 	Ships         *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
 	World         *worldcfg.Service    // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
 	Chat          *chat.Service        // чат: журнал, мьюты, настройки (nil: раздел выключен)
+	Design        *design.Service      // библиотека дизайна: каталог элементов, замены, публикация (nil: раздел выключен)
 	LivingEnabled bool                 // включены ли живые локации на сервере (флаг COSMOC_FEATURE_LIVING)
 }
 
@@ -84,6 +86,9 @@ func (h *Handler) Routes() http.Handler {
 	}
 	if h.opts.Chat != nil {
 		h.chatRoutes(mux)
+	}
+	if h.opts.Design != nil {
+		h.designRoutes(mux)
 	}
 	return securityHeaders(mux)
 }

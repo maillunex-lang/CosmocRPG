@@ -21,6 +21,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
@@ -283,6 +284,24 @@ func run() error {
 			}
 		}
 	}()
+	var designSvc *design.Service
+	{
+		var signer *design.Signer
+		if cfg.AssetSignKeyFile != "" {
+			sg, err := design.LoadSigner(cfg.AssetSignKeyFile)
+			if err != nil {
+				log.Error("ключ подписи ресурсов не загружен: публикация ресурсов выключена", "err", err)
+			} else {
+				signer = sg
+			}
+		}
+		ds, err := design.NewService(design.NewPGStore(pool), signer)
+		if err != nil {
+			return fmt.Errorf("библиотека дизайна: %w", err)
+		}
+		designSvc = ds
+		log.Info("библиотека дизайна готова", "публикация", signer != nil)
+	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
 		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
@@ -299,7 +318,7 @@ func run() error {
 	}()
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewMux(pool, version, wsHandler),
+		Handler:           gameMux(pool, version, wsHandler, designSvc),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -321,7 +340,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ
@@ -372,4 +391,13 @@ func cleanupSessions(ctx context.Context, log *slog.Logger, store *admin.Store) 
 			}
 		}
 	}
+}
+
+// gameMux — публичные маршруты игрового порта: здоровье, WebSocket и раздача подписанных ресурсов дизайна (/assets/).
+func gameMux(db httpapi.Pinger, version string, ws http.Handler, d *design.Service) *http.ServeMux {
+	mux := httpapi.NewMux(db, version, ws)
+	if d != nil {
+		mux.Handle("/assets/", d.PublicHandler())
+	}
+	return mux
 }

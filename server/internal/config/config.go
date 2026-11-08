@@ -17,9 +17,10 @@ type Config struct {
 	WSMaxMessage    int64         // COSMOC_WS_MAX_MESSAGE, байт, по умолчанию 4096
 	WSRatePerSec    int           // COSMOC_WS_RATE_PER_SEC, сообщений в секунду, по умолчанию 20
 
-	FeatureLiving bool // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
-	FeatureAI     bool // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
-	FeatureQuests bool // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
+	FeatureLiving    bool   // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
+	AssetSignKeyFile string // COSMOC_ASSET_SIGN_KEY_FILE: приватный ключ подписи манифеста ресурсов (пусто: публикация ресурсов выключена)
+	FeatureAI        bool   // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
+	FeatureQuests    bool   // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
 
 	AdminAddr         string        // COSMOC_ADMIN_ADDR, адрес админ-API (по умолчанию 127.0.0.1:8081); значение off выключает
 	AdminCookieSecure bool          // COSMOC_ADMIN_COOKIE_SECURE, по умолчанию true (админка за HTTPS)
@@ -30,12 +31,13 @@ type Config struct {
 // Load собирает конфигурацию через функцию getenv (например, os.Getenv).
 func Load(getenv func(string) string) (Config, error) {
 	c := Config{
-		HTTPAddr:        def(getenv("COSMOC_HTTP_ADDR"), ":8080"),
-		DatabaseURL:     getenv("COSMOC_DATABASE_URL"),
-		LogLevel:        def(getenv("COSMOC_LOG_LEVEL"), "info"),
-		ShutdownTimeout: 10 * time.Second,
-		WSMaxMessage:    4096,
-		WSRatePerSec:    20,
+		HTTPAddr:         def(getenv("COSMOC_HTTP_ADDR"), ":8080"),
+		DatabaseURL:      getenv("COSMOC_DATABASE_URL"),
+		AssetSignKeyFile: getenv("COSMOC_ASSET_SIGN_KEY_FILE"),
+		LogLevel:         def(getenv("COSMOC_LOG_LEVEL"), "info"),
+		ShutdownTimeout:  10 * time.Second,
+		WSMaxMessage:     4096,
+		WSRatePerSec:     20,
 
 		AdminCookieSecure: true,
 		AdminSessionTTL:   12 * time.Hour,

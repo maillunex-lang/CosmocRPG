@@ -1,0 +1,912 @@
+{
+ "schema": "Cosmoc_Design_Catalog_v1",
+ "elements": [
+  {
+   "id": "background:gas_turquoise",
+   "category": "background",
+   "name": "gas_turquoise",
+   "group": "Фоны космоса",
+   "tags": [
+    "космос",
+    "слой фона"
+   ],
+   "builtin": "res://assets/space/backgrounds/gas_turquoise.webp",
+   "bytes": 224586,
+   "dims": null,
+   "used_by": [
+    "Пояс Омега",
+    "Система Кси"
+   ]
+  },
+  {
+   "id": "background:nebula_blue_violet",
+   "category": "background",
+   "name": "nebula_blue_violet",
+   "group": "Фоны космоса",
+   "tags": [
+    "космос",
+    "слой фона"
+   ],
+   "builtin": "res://assets/space/backgrounds/nebula_blue_violet.webp",
+   "bytes": 86652,
+   "dims": [
+    1536,
+    864
+   ],
+   "used_by": [
+    "Глубокий космос",
+    "Пояс Омега",
+    "Система Кси"
+   ]
+  },
+  {
+   "id": "background:stars_deep",
+   "category": "background",
+   "name": "stars_deep",
+   "group": "Фоны космоса",
+   "tags": [
+    "космос",
+    "слой фона"
+   ],
+   "builtin": "res://assets/space/backgrounds/stars_deep.webp",
+   "bytes": 76448,
+   "dims": [
+    1672,
+    941
+   ],
+   "used_by": [
+    "Глубокий космос",
+    "Пояс Омега",
+    "Система Кси"
+   ]
+  },
+  {
+   "id": "icon:badge-check",
+   "category": "icon",
+   "name": "badge-check",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/badge-check.svg",
+   "bytes": 412,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" />\n  <path d=\"m16 9-5.5 5.5L8 12\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:bot",
+   "category": "icon",
+   "name": "bot",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/bot.svg",
+   "bytes": 375,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 8V4H8\" />\n  <rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" />\n  <path d=\"M2 14h2\" />\n  <path d=\"M20 14h2\" />\n  <path d=\"M15 13v2\" />\n  <path d=\"M9 13v2\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:check",
+   "category": "icon",
+   "name": "check",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/check.svg",
+   "bytes": 234,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M20 6 9 17l-5-5\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:coins",
+   "category": "icon",
+   "name": "coins",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/coins.svg",
+   "bytes": 356,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M13.744 17.736a6 6 0 1 1-7.48-7.48\" />\n  <path d=\"M15 6h1v4\" />\n  <path d=\"m6.134 14.768.866-.5 2 3.464\" />\n  <circle cx=\"16\" cy=\"8\" r=\"6\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:crown",
+   "category": "icon",
+   "name": "crown",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/crown.svg",
+   "bytes": 459,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z\" />\n  <path d=\"M5 21h14\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:flame",
+   "category": "icon",
+   "name": "flame",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/flame.svg",
+   "bytes": 309,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:fuel",
+   "category": "icon",
+   "name": "fuel",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/fuel.svg",
+   "bytes": 392,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5\" />\n  <path d=\"M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16\" />\n  <path d=\"M2 21h13\" />\n  <path d=\"M3 9h11\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:gauge",
+   "category": "icon",
+   "name": "gauge",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/gauge.svg",
+   "bytes": 273,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m12 14 4-4\" />\n  <path d=\"M3.34 19a10 10 0 1 1 17.32 0\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:gem",
+   "category": "icon",
+   "name": "gem",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/gem.svg",
+   "bytes": 420,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10.5 3 8 9l4 13 4-13-2.5-6\" />\n  <path d=\"M17 3a2 2 0 0 1 1.6.8l3 4a2 2 0 0 1 .013 2.382l-7.99 10.986a2 2 0 0 1-3.247 0l-7.99-10.986A2 2 0 0 1 2.4 7.8l2.998-3.997A2 2 0 0 1 7 3z\" />\n  <path d=\"M2 9h20\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:globe",
+   "category": "icon",
+   "name": "globe",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/globe.svg",
+   "bytes": 326,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <circle cx=\"12\" cy=\"12\" r=\"10\" />\n  <path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\" />\n  <path d=\"M2 12h20\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:lock",
+   "category": "icon",
+   "name": "lock",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/lock.svg",
+   "bytes": 304,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" />\n  <path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:mail",
+   "category": "icon",
+   "name": "mail",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/mail.svg",
+   "bytes": 233,
+   "preview_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/><path d=\"m22 7-10 5L2 7\"/></svg>\n"
+  },
+  {
+   "id": "icon:menu",
+   "category": "icon",
+   "name": "menu",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/menu.svg",
+   "bytes": 270,
+   "preview_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"4\" y1=\"6\" x2=\"20\" y2=\"6\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"18\" x2=\"20\" y2=\"18\"/></svg>\n"
+  },
+  {
+   "id": "icon:package",
+   "category": "icon",
+   "name": "package",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/package.svg",
+   "bytes": 441,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" />\n  <path d=\"M12 22V12\" />\n  <polyline points=\"3.29 7 12 12 20.71 7\" />\n  <path d=\"m7.5 4.27 9 5.15\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:palette",
+   "category": "icon",
+   "name": "palette",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/palette.svg",
+   "bytes": 546,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z\" />\n  <circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"#ffffff\" />\n  <circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"#ffffff\" />\n  <circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"#ffffff\" />\n  <circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"#ffffff\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:pickaxe",
+   "category": "icon",
+   "name": "pickaxe",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/pickaxe.svg",
+   "bytes": 659,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m14 13-8.381 8.38a1 1 0 0 1-3.001-3L11 9.999\" />\n  <path d=\"M15.973 4.027A13 13 0 0 0 5.902 2.373c-1.398.342-1.092 2.158.277 2.601a19.9 19.9 0 0 1 5.822 3.024\" />\n  <path d=\"M16.001 11.999a19.9 19.9 0 0 1 3.024 5.824c.444 1.369 2.26 1.676 2.603.278A13 13 0 0 0 20 8.069\" />\n  <path d=\"M18.352 3.352a1.205 1.205 0 0 0-1.704 0l-5.296 5.296a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l5.296-5.296a1.205 1.205 0 0 0 0-1.704z\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:rocket",
+   "category": "icon",
+   "name": "rocket",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/rocket.svg",
+   "bytes": 524,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\" />\n  <path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09\" />\n  <path d=\"M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z\" />\n  <path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:send",
+   "category": "icon",
+   "name": "send",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/send.svg",
+   "bytes": 388,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\" />\n  <path d=\"m21.854 2.147-10.94 10.939\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:settings",
+   "category": "icon",
+   "name": "settings",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/settings.svg",
+   "bytes": 581,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915\" />\n  <circle cx=\"12\" cy=\"12\" r=\"3\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:shield",
+   "category": "icon",
+   "name": "shield",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/shield.svg",
+   "bytes": 381,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:shopping-cart",
+   "category": "icon",
+   "name": "shopping-cart",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/shopping-cart.svg",
+   "bytes": 452,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18\" />\n  <path d=\"M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25\" />\n  <circle cx=\"18\" cy=\"20\" r=\"2\" />\n  <circle cx=\"8\" cy=\"20\" r=\"2\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:skull",
+   "category": "icon",
+   "name": "skull",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/skull.svg",
+   "bytes": 418,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m12.5 17-.5-1-.5 1h1z\" />\n  <path d=\"M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z\" />\n  <circle cx=\"15\" cy=\"12\" r=\"1\" />\n  <circle cx=\"9\" cy=\"12\" r=\"1\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:sparkles",
+   "category": "icon",
+   "name": "sparkles",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/sparkles.svg",
+   "bytes": 562,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z\" />\n  <path d=\"M20 2v4\" />\n  <path d=\"M22 4h-4\" />\n  <circle cx=\"4\" cy=\"20\" r=\"2\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:star",
+   "category": "icon",
+   "name": "star",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/star.svg",
+   "bytes": 583,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:store",
+   "category": "icon",
+   "name": "store",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/store.svg",
+   "bytes": 582,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\" />\n  <path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\" />\n  <path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:user",
+   "category": "icon",
+   "name": "user",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/user.svg",
+   "bytes": 294,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\" />\n  <circle cx=\"12\" cy=\"7\" r=\"4\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:x",
+   "category": "icon",
+   "name": "x",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/x.svg",
+   "bytes": 255,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M18 6 6 18\" />\n  <path d=\"m6 6 12 12\" />\n</svg>\n"
+  },
+  {
+   "id": "icon:zap",
+   "category": "icon",
+   "name": "zap",
+   "group": "Иконки интерфейса",
+   "tags": [
+    "интерфейс",
+    "svg"
+   ],
+   "builtin": "res://assets/icons/zap.svg",
+   "bytes": 385,
+   "preview_svg": "<svg\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"#ffffff\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z\" />\n</svg>\n"
+  },
+  {
+   "id": "model:COR-001:a",
+   "category": "model",
+   "name": "Барс — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "COR-001",
+    "заглушка",
+    "Корвет"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "COR-001",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Корвет",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:COR-002:a",
+   "category": "model",
+   "name": "Кобра — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "COR-002",
+    "заглушка",
+    "Корвет"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "COR-002",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Корвет",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:CRU-001:a",
+   "category": "model",
+   "name": "Колосс — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "CRU-001",
+    "заглушка",
+    "Крейсер"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "CRU-001",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Крейсер",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:DST-001:a",
+   "category": "model",
+   "name": "Молот — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "DST-001",
+    "заглушка",
+    "Эсминец"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "DST-001",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Эсминец",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:FRG-001:a",
+   "category": "model",
+   "name": "Страж — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "FRG-001",
+    "заглушка",
+    "Фрегат"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "FRG-001",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Фрегат",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:FRG-002:a",
+   "category": "model",
+   "name": "Бастион — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "FRG-002",
+    "заглушка",
+    "Фрегат"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "FRG-002",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Фрегат",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:FTR-001:a",
+   "category": "model",
+   "name": "Стриж — Серебро и бирюза",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "FTR-001",
+    "своя модель",
+    "Лёгкий истребитель"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "FTR-001",
+   "skin": "a",
+   "placeholder": false,
+   "class": "Лёгкий истребитель",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:FTR-001:b",
+   "category": "model",
+   "name": "Стриж — Графит и красный",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "FTR-001",
+    "своя модель",
+    "Лёгкий истребитель"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_b.glb",
+   "bytes": 763104,
+   "ship": "FTR-001",
+   "skin": "b",
+   "placeholder": false,
+   "class": "Лёгкий истребитель",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:FTR-002:a",
+   "category": "model",
+   "name": "Ястреб — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "FTR-002",
+    "заглушка",
+    "Тяжёлый истребитель"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "FTR-002",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Тяжёлый истребитель",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:FTR-002:b",
+   "category": "model",
+   "name": "Ястреб — Временная окраска B",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "FTR-002",
+    "заглушка",
+    "Тяжёлый истребитель"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_b.glb",
+   "bytes": 763104,
+   "ship": "FTR-002",
+   "skin": "b",
+   "placeholder": true,
+   "class": "Тяжёлый истребитель",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:SCT-001:a",
+   "category": "model",
+   "name": "Следопыт — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "SCT-001",
+    "заглушка",
+    "Разведчик"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "SCT-001",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Разведчик",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:SUP-001:a",
+   "category": "model",
+   "name": "Эгида — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "SUP-001",
+    "заглушка",
+    "Корабль поддержки"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "SUP-001",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Корабль поддержки",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:TMP-HAUL:a",
+   "category": "model",
+   "name": "Грузовик «Тягач» — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "TMP-HAUL",
+    "заглушка",
+    "Лёгкий транспорт"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "TMP-HAUL",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Лёгкий транспорт",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "model:TMP-MINE:a",
+   "category": "model",
+   "name": "Буровик «Крот» — Временная окраска",
+   "group": "3D-модели кораблей",
+   "tags": [
+    "корабль",
+    "TMP-MINE",
+    "заглушка",
+    "Лёгкий добытчик"
+   ],
+   "builtin": "res://assets/ships/ftr001/striz_a.glb",
+   "bytes": 1047732,
+   "ship": "TMP-MINE",
+   "skin": "a",
+   "placeholder": true,
+   "class": "Лёгкий добытчик",
+   "model_length": 1.9,
+   "nose_axis": "-x"
+  },
+  {
+   "id": "ship_data:COR-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Барс",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "COR-001",
+    "Корвет"
+   ],
+   "builtin": "res://assets/ships/cor001/ship.json",
+   "bytes": 1463,
+   "ship": "COR-001",
+   "class": "Корвет",
+   "current": "{\"id\":\"COR-001\",\"name\":\"Барс\",\"class\":\"Корвет\",\"role\":\"Боевой\",\"temporary\":true,\"specializations\":[\"Охотник\",\"Страж\"],\"dimensions_m\":[24,14,5],\"crew\":2,\"engines\":2,\"weapons\":\"4 энергетические пушки\",\"model_length\":1.9,\"visual_scale\":2.9,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.4,1.0,0.55],\"tint\":[0.75,0.95,0.8]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"hunter\":{\"name\":\"Охотник\",\"ability\":\"Усиленное вооружение против малых целей\"},\"guard\":{\"name\":\"Страж\",\"ability\":\"Повышенная живучесть для сопровождения\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:COR-002",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Кобра",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "COR-002",
+    "Корвет"
+   ],
+   "builtin": "res://assets/ships/cor002/ship.json",
+   "bytes": 1486,
+   "ship": "COR-002",
+   "class": "Корвет",
+   "current": "{\"id\":\"COR-002\",\"name\":\"Кобра\",\"class\":\"Корвет\",\"role\":\"Боевой\",\"temporary\":true,\"specializations\":[\"Рейдер\",\"Страж\"],\"dimensions_m\":[22,13,4.6],\"crew\":2,\"engines\":3,\"weapons\":\"3 энергетические пушки, 2 ракетные точки\",\"model_length\":1.9,\"visual_scale\":2.8,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.55,0.6,1.0],\"tint\":[0.8,0.8,1.0]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"raider\":{\"name\":\"Рейдер\",\"ability\":\"Скорость и манёвренность для налётов\"},\"guard\":{\"name\":\"Страж\",\"ability\":\"Повышенная живучесть для сопровождения\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:CRU-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Колосс",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "CRU-001",
+    "Крейсер"
+   ],
+   "builtin": "res://assets/ships/cru001/ship.json",
+   "bytes": 1478,
+   "ship": "CRU-001",
+   "class": "Крейсер",
+   "current": "{\"id\":\"CRU-001\",\"name\":\"Колосс\",\"class\":\"Крейсер\",\"role\":\"Командный\",\"temporary\":true,\"specializations\":[\"Флагман\",\"Бомбардир\"],\"dimensions_m\":[140,48,22],\"crew\":18,\"engines\":6,\"weapons\":\"12 тяжёлых орудий, 6 ракетных установок\",\"model_length\":1.9,\"visual_scale\":5.2,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.5,0.75,1.0],\"tint\":[0.7,0.75,0.95]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"flagship\":{\"name\":\"Флагман\",\"ability\":\"Командная роль и живучесть\"},\"bombard\":{\"name\":\"Бомбардир\",\"ability\":\"Тяжёлые системы вооружения\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:DST-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Молот",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "DST-001",
+    "Эсминец"
+   ],
+   "builtin": "res://assets/ships/dst001/ship.json",
+   "bytes": 1535,
+   "ship": "DST-001",
+   "class": "Эсминец",
+   "current": "{\"id\":\"DST-001\",\"name\":\"Молот\",\"class\":\"Эсминец\",\"role\":\"Ракетные удары\",\"temporary\":true,\"specializations\":[\"Ударный\",\"Осадный\"],\"dimensions_m\":[80,32,14],\"crew\":12,\"engines\":4,\"weapons\":\"8 тяжёлых орудий, 4 ракетные установки\",\"model_length\":1.9,\"visual_scale\":4.4,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[1.0,0.5,0.2],\"tint\":[1.0,0.8,0.65]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"striker\":{\"name\":\"Ударный\",\"ability\":\"Тяжёлое вооружение и ракетные залпы (ракеты появятся с боевым этапом)\"},\"siege\":{\"name\":\"Осадный\",\"ability\":\"Дальнобойные орудия\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:FRG-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Страж",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "FRG-001",
+    "Фрегат"
+   ],
+   "builtin": "res://assets/ships/frg001/ship.json",
+   "bytes": 1552,
+   "ship": "FRG-001",
+   "class": "Фрегат",
+   "current": "{\"id\":\"FRG-001\",\"name\":\"Страж\",\"class\":\"Фрегат\",\"role\":\"Универсальный\",\"temporary\":true,\"specializations\":[\"Сопровождение\",\"Поддержка\"],\"dimensions_m\":[48,22,9],\"crew\":6,\"engines\":3,\"weapons\":\"6 энергетических пушек, 2 ракетные установки\",\"model_length\":1.9,\"visual_scale\":3.6,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.35,0.9,1.0],\"tint\":[0.85,0.9,1.0]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"escort\":{\"name\":\"Сопровождение\",\"ability\":\"Прикрытие эскадры\"},\"support\":{\"name\":\"Поддержка\",\"ability\":\"Усиленные щиты (ремонтные модули появятся с боевым этапом)\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:FRG-002",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Бастион",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "FRG-002",
+    "Фрегат"
+   ],
+   "builtin": "res://assets/ships/frg002/ship.json",
+   "bytes": 1499,
+   "ship": "FRG-002",
+   "class": "Фрегат",
+   "current": "{\"id\":\"FRG-002\",\"name\":\"Бастион\",\"class\":\"Фрегат\",\"role\":\"Тяжёлая броня\",\"temporary\":true,\"specializations\":[\"Бастион\",\"Сопровождение\"],\"dimensions_m\":[52,24,10],\"crew\":6,\"engines\":4,\"weapons\":\"5 энергетических пушек, 2 ракетные установки\",\"model_length\":1.9,\"visual_scale\":3.8,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[1.0,0.7,0.3],\"tint\":[0.95,0.85,0.75]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"bulwark\":{\"name\":\"Бастион\",\"ability\":\"Максимальная броня и живучесть\"},\"escort\":{\"name\":\"Сопровождение\",\"ability\":\"Прикрытие эскадры\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:FTR-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Стриж",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "FTR-001",
+    "Лёгкий истребитель"
+   ],
+   "builtin": "res://assets/ships/ftr001/ship.json",
+   "bytes": 1309,
+   "ship": "FTR-001",
+   "class": "Лёгкий истребитель",
+   "current": "{\"id\":\"FTR-001\",\"name\":\"Стриж\",\"class\":\"Лёгкий истребитель\",\"specializations\":[\"Перехватчик\",\"Разведчик\"],\"dimensions_m\":[12,8.4,2.8],\"crew\":1,\"engines\":2,\"weapons\":\"2 энергетические пушки, 1 ракетная точка\",\"model_length\":1.9,\"visual_scale\":2.2,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Серебро и бирюза\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.35,0.9,1.0]},\"b\":{\"name\":\"Графит и красный\",\"glb\":\"res://assets/ships/ftr001/striz_b.glb\",\"flame\":[1.0,0.4,0.2]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"interceptor\":{\"name\":\"Перехватчик\",\"ability\":\"Перехват: рывок к цели и усиленный выстрел\"},\"scout\":{\"name\":\"Разведчик\",\"ability\":\"Импульсный сканер: обнаружение скрытых объектов и сигналов\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:FTR-002",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Ястреб",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "FTR-002",
+    "Тяжёлый истребитель"
+   ],
+   "builtin": "res://assets/ships/ftr002/ship.json",
+   "bytes": 1838,
+   "ship": "FTR-002",
+   "class": "Тяжёлый истребитель",
+   "current": "{\"id\":\"FTR-002\",\"name\":\"Ястреб\",\"class\":\"Тяжёлый истребитель\",\"role\":\"Боевой\",\"temporary\":true,\"specializations\":[\"Перехватчик\",\"Разведчик\"],\"dimensions_m\":[13,9.2,3.2],\"crew\":1,\"engines\":2,\"weapons\":\"3 энергетические пушки, 2 ракетные точки\",\"model_length\":1.9,\"visual_scale\":2.5,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[1.0,0.45,0.25],\"tint\":[1.0,0.72,0.72]},\"b\":{\"name\":\"Временная окраска B\",\"glb\":\"res://assets/ships/ftr001/striz_b.glb\",\"flame\":[1.0,0.45,0.25],\"tint\":[1.0,0.72,0.72]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"interceptor\":{\"name\":\"Перехватчик\",\"ability\":\"Перехват: рывок к цели и усиленный выстрел\"},\"scout\":{\"name\":\"Разведчик\",\"ability\":\"Импульсный сканер: обнаружение скрытых объектов\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:SCT-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Следопыт",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "SCT-001",
+    "Разведчик"
+   ],
+   "builtin": "res://assets/ships/sct001/ship.json",
+   "bytes": 1449,
+   "ship": "SCT-001",
+   "class": "Разведчик",
+   "current": "{\"id\":\"SCT-001\",\"name\":\"Следопыт\",\"class\":\"Разведчик\",\"role\":\"Разведка\",\"temporary\":true,\"specializations\":[\"Разведчик\",\"Навигатор\"],\"dimensions_m\":[9,6.5,2.2],\"crew\":1,\"engines\":2,\"weapons\":\"1 лёгкая пушка\",\"model_length\":1.9,\"visual_scale\":2.0,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.3,1.0,0.9],\"tint\":[0.7,1.0,1.0]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"scout\":{\"name\":\"Разведчик\",\"ability\":\"Широкий импульсный сканер\"},\"navigator\":{\"name\":\"Навигатор\",\"ability\":\"Скорость и дальность перелётов\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:SUP-001",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Эгида",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "SUP-001",
+    "Корабль поддержки"
+   ],
+   "builtin": "res://assets/ships/sup001/ship.json",
+   "bytes": 1616,
+   "ship": "SUP-001",
+   "class": "Корабль поддержки",
+   "current": "{\"id\":\"SUP-001\",\"name\":\"Эгида\",\"class\":\"Корабль поддержки\",\"role\":\"Поддержка\",\"temporary\":true,\"specializations\":[\"Щитовая поддержка\",\"Ремонтник\"],\"dimensions_m\":[36,18,8],\"crew\":4,\"engines\":3,\"weapons\":\"2 оборонительные пушки\",\"model_length\":1.9,\"visual_scale\":3.2,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[1.0,0.9,0.4],\"tint\":[1.0,0.95,0.7]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"shield_support\":{\"name\":\"Щитовая поддержка\",\"ability\":\"Усиленные щиты (поддержка союзников появится с боевым этапом)\"},\"medic\":{\"name\":\"Ремонтник\",\"ability\":\"Живучесть (ремонт союзников появится с боевым этапом)\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:TMP-HAUL",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Грузовик «Тягач»",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "TMP-HAUL",
+    "Лёгкий транспорт"
+   ],
+   "builtin": "res://assets/ships/tmp_haul/ship.json",
+   "bytes": 1292,
+   "ship": "TMP-HAUL",
+   "class": "Лёгкий транспорт",
+   "current": "{\"id\":\"TMP-HAUL\",\"name\":\"Грузовик «Тягач»\",\"class\":\"Лёгкий транспорт\",\"role\":\"Торговля и логистика\",\"temporary\":true,\"specializations\":[\"Грузоперевозки\"],\"dimensions_m\":[18,10,4],\"crew\":1,\"engines\":2,\"weapons\":\"1 оборонительная пушка\",\"model_length\":1.9,\"visual_scale\":2.7,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[1.0,0.8,0.25]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"hauler\":{\"name\":\"Грузоперевозки\",\"ability\":\"Увеличенный трюм\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  },
+  {
+   "id": "ship_data:TMP-MINE",
+   "category": "ship_data",
+   "name": "Паспорт внешнего вида: Буровик «Крот»",
+   "group": "Паспорта кораблей",
+   "tags": [
+    "корабль",
+    "TMP-MINE",
+    "Лёгкий добытчик"
+   ],
+   "builtin": "res://assets/ships/tmp_mine/ship.json",
+   "bytes": 1264,
+   "ship": "TMP-MINE",
+   "class": "Лёгкий добытчик",
+   "current": "{\"id\":\"TMP-MINE\",\"name\":\"Буровик «Крот»\",\"class\":\"Лёгкий добытчик\",\"role\":\"Добыча и переработка\",\"temporary\":true,\"specializations\":[\"Добыча\"],\"dimensions_m\":[15,9,4],\"crew\":1,\"engines\":2,\"weapons\":\"1 оборонительная пушка\",\"model_length\":1.9,\"visual_scale\":2.45,\"nose_axis\":\"-x\",\"skins\":{\"a\":{\"name\":\"Временная окраска\",\"glb\":\"res://assets/ships/ftr001/striz_a.glb\",\"flame\":[0.95,0.7,0.2]}},\"points\":{\"Engine_L\":[0.88,0.0,0.13],\"Engine_R\":[0.88,0.0,-0.13],\"Weapon_L\":[-0.3,0.0,0.27],\"Weapon_R\":[-0.3,0.0,-0.27],\"Missile_01\":[-0.15,-0.07,0.0],\"Hit_Center\":[0.0,0.0,0.0],\"Camera_Focus\":[0.0,0.05,0.0],\"Dock_Point\":[0.95,0.0,0.0]},\"specs\":{\"miner\":{\"name\":\"Добыча\",\"ability\":\"Добыча ресурсов (позже)\"}}}",
+   "note": "Облики, точки привязки (двигатели, оружие, стыковка), масштаб, подписи способностей"
+  }
+ ]
+}

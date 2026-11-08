@@ -1,0 +1,32 @@
+{
+	admin off
+	auto_https disable_redirects
+	# клиенты, подключающиеся по IP, не присылают SNI
+	default_sni {$PUBLIC_HOST}
+}
+
+# Админка: HTTPS с самоподписанным сертификатом (внутренний CA Caddy), домена пока нет.
+https://{$PUBLIC_HOST}:8443, https://localhost:8443, https://127.0.0.1:8443 {
+	tls internal
+
+	encode gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+		-Server
+	}
+
+	# Админ-API Go-сервера (внутренняя сеть, наружу не публикуется)
+	handle /api/* {
+		reverse_proxy server:8081
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -48,7 +48,7 @@ describe("App", () => {
 
   it("успешный вход открывает панель со статусом и журналом", async () => {
     let loggedIn = false;
-    mockServer((m, p) => {
+    mockServer((_m, p) => {
       if (p === "/api/login") {
         loggedIn = true;
         return { status: 200, body: { username: "admin" } };

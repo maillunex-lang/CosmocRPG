@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  PG_URL: postgres://cosmoc:ci-password@127.0.0.1:5432/cosmoc_test?sslmode=disable
+
+jobs:
+  server:
+    name: Сервер (Go)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cosmoc
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: cosmoc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cosmoc -d cosmoc_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: go vet
+        run: go vet ./...
+      - name: Тесты (с race-детектором и базой)
+        run: go test -race -count=1 ./...
+        env:
+          COSMOC_TEST_DATABASE_URL: ${{ env.PG_URL }}
+      - name: Сборка бинарника
+        run: CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${GITHUB_SHA::7}" -o ../server-bin/server ./cmd/server
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-linux-amd64
+          path: server-bin/server
+          retention-days: 14
+
+  admin:
+    name: Админка (React + TS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Проверка типов
+        run: npm run typecheck
+      - name: Тесты
+        run: npm test
+      - name: Сборка
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist
+          path: admin/dist
+          retention-days: 14
+
+  client:
+    name: Клиент (Godot)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cosmoc
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: cosmoc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cosmoc -d cosmoc_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: Установка Godot и xvfb
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1 libglx-mesa0 libgl1-mesa-dri libxcursor1 libxinerama1 libxi6 libxrandr2 libfontconfig1
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo install -m 0755 "Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot
+          godot --version
+      - name: Импорт проекта (проверка загрузки ресурсов и сцен)
+        run: godot --headless --path client --import
+      - name: Запуск проекта без ошибок
+        run: godot --headless --path client --quit
+      - name: Сборка и запуск сервера для тестов
+        run: |
+          cd server && go build -o ../server-test ./cmd/server && cd ..
+          COSMOC_DATABASE_URL="$PG_URL" COSMOC_HTTP_ADDR=127.0.0.1:8080 COSMOC_ADMIN_ADDR=off ./server-test > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/health && break; sleep 1; done
+      - name: Тесты клиента (сеть и экран подключения)
+        run: tools/test_client.sh
+        env:
+          COSMOC_TEST_WS_URL: ws://127.0.0.1:8080/ws
+      - name: Журнал сервера при сбое
+        if: failure()
+        run: cat server.log
+
+  docker:
+    name: Docker (сборка образов)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка compose и сборка образов
+        working-directory: infrastructure
+        env:
+          POSTGRES_USER: cosmoc
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: cosmoc
+          PUBLIC_HOST: 127.0.0.1
+        run: |
+          docker compose config -q
+          docker compose build
+  # Сборка APK в CI (Android SDK, release-подпись через GitHub Secrets) добавляется на этапе UI-12.
+  # Автодеплой в production не включён: только по согласованию с владельцем.

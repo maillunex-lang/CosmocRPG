@@ -1,0 +1,66 @@
+# Звёздные рубежи: стек для VPS. Запуск (секреты вне репозитория):
+#   sudo docker compose -f infrastructure/docker-compose.yml --env-file ~/keys/cosmoc/stack.env up -d --build
+name: cosmoc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?задайте POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?задайте POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [db]   # только внутренняя сеть, порт наружу не публикуется
+
+  server:
+    build:
+      context: ../server
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      COSMOC_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      COSMOC_HTTP_ADDR: 0.0.0.0:8080
+      COSMOC_ADMIN_ADDR: 0.0.0.0:8081        # виден только внутри сети edge (Caddy)
+      COSMOC_ADMIN_COOKIE_SECURE: "true"
+      COSMOC_ADMIN_TRUST_PROXY: "true"       # за прокси только Caddy
+      COSMOC_LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${GAME_BIND:-0.0.0.0}:8080:8080"    # игровой порт (HTTP/WS без TLS до появления домена)
+    networks: [db, edge]
+
+  caddy:
+    build:
+      context: ..
+      dockerfile: infrastructure/caddy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?задайте PUBLIC_HOST (IP или домен)}
+    ports:
+      # по умолчанию только localhost: вход через SSH-туннель; ADMIN_BIND=0.0.0.0 откроет админку наружу
+      - "${ADMIN_BIND:-127.0.0.1}:8443:8443"
+    volumes:
+      - caddy_data:/data
+    networks: [edge]
+
+networks:
+  db:
+    internal: true
+  edge: {}
+
+volumes:
+  pgdata:
+  caddy_data:

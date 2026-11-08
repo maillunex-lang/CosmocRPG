@@ -25,6 +25,14 @@ import (
 var version = "dev"
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		// для HEALTHCHECK в Docker: в минимальном образе нет curl
+		if err := healthcheck(os.Getenv("COSMOC_HTTP_ADDR")); err != nil {
+			fmt.Fprintln(os.Stderr, "нездоров:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "admin-create" {
 		if err := adminCreate(); err != nil {
 			fmt.Fprintln(os.Stderr, "ошибка:", err)
@@ -36,6 +44,28 @@ func main() {
 		slog.Error("сервер остановлен с ошибкой", "err", err)
 		os.Exit(1)
 	}
+}
+
+// healthcheckURL строит адрес проверки по COSMOC_HTTP_ADDR (":8080", "0.0.0.0:8080", "127.0.0.1:9000").
+func healthcheckURL(addr string) string {
+	port := "8080"
+	if i := strings.LastIndex(addr, ":"); i >= 0 && i+1 < len(addr) {
+		port = addr[i+1:]
+	}
+	return "http://127.0.0.1:" + port + "/health"
+}
+
+func healthcheck(addr string) error {
+	c := &http.Client{Timeout: 3 * time.Second}
+	resp, err := c.Get(healthcheckURL(addr))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("статус %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func parseLevel(s string) slog.Level {

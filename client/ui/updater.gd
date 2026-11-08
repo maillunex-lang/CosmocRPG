@@ -62,19 +62,27 @@ static func _err(msg: String) -> Dictionary:
 	return {"status": "error", "error": msg, "info": {}}
 
 
+## Проверка подписи RSA-SHA256 (общая для манифестов обновлений и контента). Возвращает "" если подпись верна, иначе текст ошибки.
+static func verify_signature(data: PackedByteArray, sig_b64: String, public_pem: String) -> String:
+	var sig := Marshalls.base64_to_raw(sig_b64.strip_edges())
+	if sig.size() == 0:
+		return "Подпись манифеста отсутствует"
+	var key := CryptoKey.new()
+	if key.load_from_string(public_pem, true) != OK:
+		return "Не удалось загрузить публичный ключ"
+	if not Crypto.new().verify(HashingContext.HASH_SHA256, _digest(data), sig, key):
+		return "Подпись манифеста не подтверждена: обновление отклонено"
+	return ""
+
+
 ## Чистая проверка манифеста (без сети): подпись, поля, версия. Возвращает {status, error, info}.
 ## status: up_to_date | available | required | error. highest_seen — наибольшая ранее виденная версия манифеста (защита от отката).
 static func evaluate(manifest: PackedByteArray, sig_b64: String, public_pem: String, installed_code: int, highest_seen: int = 0) -> Dictionary:
 	if manifest.size() == 0 or manifest.size() > MAX_MANIFEST_BYTES:
 		return _err("Манифест пустой или слишком большой")
-	var sig := Marshalls.base64_to_raw(sig_b64.strip_edges())
-	if sig.size() == 0:
-		return _err("Подпись манифеста отсутствует")
-	var key := CryptoKey.new()
-	if key.load_from_string(public_pem, true) != OK:
-		return _err("Не удалось загрузить публичный ключ")
-	if not Crypto.new().verify(HashingContext.HASH_SHA256, _digest(manifest), sig, key):
-		return _err("Подпись манифеста не подтверждена: обновление отклонено")
+	var sig_err := verify_signature(manifest, sig_b64, public_pem)
+	if sig_err != "":
+		return _err(sig_err)
 	var parsed: Variant = JSON.parse_string(manifest.get_string_from_utf8())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return _err("Манифест повреждён")

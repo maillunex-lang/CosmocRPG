@@ -8,6 +8,7 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 const SafeAreaRoot := preload("res://ui/safe_area_root.gd")
 const BgShader := preload("res://ui/start_bg.gdshader")
 const AppVersion := preload("res://ui/app_version.gd")
+const ContentBoot := preload("res://ui/content_boot.gd")
 
 signal play_pressed
 signal retry_pressed
@@ -300,6 +301,15 @@ func show_update_result(result: Dictionary, manual: bool) -> void:
 			update_panel.visible = false
 			update_ok.text = "Обновить")
 		update_later.visible = false
+
+
+## Строка о докачке контента рядом с версией (пустая — только версия).
+func set_content_note(text: String) -> void:
+	var base := "Альфа-тест · v%s" % AppVersion.label()
+	var cv := ContentBoot.summary()
+	if cv != "":
+		base += " · контент: %s" % cv
+	version_label.text = base if text == "" else base + "\n" + text
 
 
 func begin_update_check() -> void:

@@ -13,6 +13,7 @@ const PlayerIdentity := preload("res://ui/player_identity.gd")
 const CharacterScreen := preload("res://ui/character_screen.gd")
 const StartSplash := preload("res://ui/start_splash.gd")
 const Updater := preload("res://ui/updater.gd")
+const ContentLoader := preload("res://ui/content_loader.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "wss://rikagro.ru/ws"  # домен с сертификатом Let's Encrypt (запасной адрес: ws://78.17.214.25:8080/ws)
@@ -24,6 +25,7 @@ var _client: Node
 var _account_pending := false
 var _splash: Control
 var _updater: Node
+var _content: Node
 var _update_manual := false
 var _overlay_bg: ColorRect
 var _overlay_back: ActionButton
@@ -117,15 +119,32 @@ func _build_start_screen() -> void:
 	_updater.finished.connect(func(res: Dictionary) -> void:
 		_splash.show_update_result(res, _update_manual)
 		_update_manual = false)
+	_content = ContentLoader.new()
+	add_child(_content)
+	_content.progress.connect(func(_id: String, f: float) -> void: _splash.set_content_note("Загрузка контента… %d%%" % int(f * 100.0)))
+	_content.finished.connect(func(res: Dictionary) -> void: _splash.set_content_note(_content_note(res)))
+	_content.check.call_deferred()   # докачка файлов игры в фоне, без переустановки APK
 	_splash.update_check_requested.connect(func() -> void:
 		_update_manual = true
 		_splash.begin_update_check()
-		_updater.check())
+		_updater.check()
+		_content.check(true))
 	_splash.update_confirmed.connect(func(info: Dictionary) -> void:
 		if not _updater.open_download(info):
 			_append(_danger("Ссылка на обновление отклонена как небезопасная")))
 	_splash.secret_opened.connect(func() -> void: _open_overlay(true))
 	_sync_splash()
+
+
+## Короткая строка о докачке контента для стартового экрана.
+func _content_note(res: Dictionary) -> String:
+	match str(res.get("status", "")):
+		"downloaded":
+			return "Контент обновлён — применится при следующем запуске"
+		"error":
+			return ""   # фоновая ошибка не мешает игре; подробности — в журнале сервера раздачи
+		_:
+			return ""
 
 
 ## Показ служебного экрана (dev=true: сервер, журнал) или только аккаунта.

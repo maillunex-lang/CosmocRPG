@@ -63,6 +63,8 @@ type Store interface {
 	// Complete отмечает контракт выполненным и начисляет награду одной транзакцией.
 	// granted=false, если контракт уже был выполнен (повтор): ничего не меняется.
 	Complete(ctx context.Context, pid string, d Def) (granted bool, credits int64, err error)
+	// GrantCredits начисляет кредиты один раз на ключ события (убийство, исследование, продажа).
+	GrantCredits(ctx context.Context, pid, key string, amount int64) (granted bool, credits int64, err error)
 }
 
 // View — то, что видит клиент.
@@ -229,6 +231,21 @@ func (s *Service) Evaluate(ctx context.Context, pid string, pos world.Vec) []Com
 		}
 	}
 	return out
+}
+
+// Grant выдаёт награду за серверное событие идемпотентно (повтор с тем же ключом ничего не начисляет).
+// Возвращает, начислено ли сейчас, и новый баланс.
+func (s *Service) Grant(ctx context.Context, pid, key string, amount int64) (bool, int64, error) {
+	granted, credits, err := s.store.GrantCredits(ctx, pid, key, amount)
+	if err != nil {
+		return false, 0, err
+	}
+	s.mu.Lock()
+	if ps, ok := s.players[pid]; ok {
+		ps.data.Credits = credits
+	}
+	s.mu.Unlock()
+	return granted, credits, nil
 }
 
 func (s *Service) satisfied(d Def, pos world.Vec) bool {

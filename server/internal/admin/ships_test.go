@@ -49,7 +49,7 @@ func TestShipAdminFlow(t *testing.T) {
 		Starters map[string]world.Starter
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &list)
-	if rec.Code != 200 || list.Version != 1 || len(list.Ships) != 3 || len(list.Starters) != 4 {
+	if rec.Code != 200 || list.Version != 1 || len(list.Ships) != 12 || len(list.Starters) != 4 {
 		t.Fatalf("список: %d %s", rec.Code, rec.Body.String()[:120])
 	}
 	var strizh world.ShipSpec

@@ -4,6 +4,7 @@
 package world
 
 import (
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 	"math"
 	"sort"
 	"sync"
@@ -13,7 +14,7 @@ import (
 // Параметры мира (см. docs/design/STAGE01_ONLINE_SPACE.md).
 const (
 	Speed         = 14.0  // базовая скорость, ед/с (скорость конкретного корабля берётся из data/ships.json)
-	Radius        = 400.0 // радиус системы, ед.
+	Radius        = 400.0 // радиус системы по умолчанию (без раскладки), ед.
 	AutopilotStop = 10.0  // автопилот останавливается на таком расстоянии от цели, ед.
 	MaxPlayers    = 50
 	Grace         = 10 * time.Second // сколько корабль остаётся в мире после обрыва связи
@@ -73,6 +74,15 @@ type Player struct {
 	gender    string
 	pilotSpec string
 
+	cosmetics Cosmetics
+
+	// груз и живые локации
+	hold       map[string]float64
+	mining     string
+	mineAt     float64
+	mineSince  float64
+	discovered map[string]bool
+
 	connected bool
 	lostAt    time.Time // момент обрыва связи
 }
@@ -91,6 +101,8 @@ type Record struct {
 	Gender    string // m | f
 	PilotSpec string // направление пилота: interceptor | scout | trader | miner
 	ShipType  string // тип корабля ("" — по умолчанию)
+
+	Hold map[string]float64 // груз (ресурс -> количество)
 }
 
 // Object — чужой объект в снимке (корабль другого игрока или станция).
@@ -106,6 +118,21 @@ type Object struct {
 	Hull    *float64   `json:"hull,omitempty"`
 	HullMax *float64   `json:"hull_max,omitempty"`
 	Dead    bool       `json:"dead,omitempty"`
+
+	// косметика (VIP, значок, цвета): только внешний вид
+	Vip       int    `json:"vip,omitempty"`
+	Badge     string `json:"badge,omitempty"`
+	NameColor string `json:"name_color,omitempty"`
+	Engine    string `json:"engine,omitempty"`
+
+	// живые локации
+	Tier      string   `json:"tier,omitempty"`
+	Resource  string   `json:"resource,omitempty"`
+	Rarity    string   `json:"rarity,omitempty"`
+	Amount    *float64 `json:"amount,omitempty"`
+	AmountMax *float64 `json:"amount_max,omitempty"`
+	Zone      string   `json:"zone,omitempty"`
+	Temporary bool     `json:"temporary,omitempty"`
 }
 
 // Ship — собственный корабль в снимке.
@@ -129,6 +156,15 @@ type Ship struct {
 	Boosting   bool          `json:"boosting"`
 	Dead       bool          `json:"dead"`
 	Abilities  []AbilityInfo `json:"abilities"`
+
+	Hold      map[string]float64 `json:"hold"`
+	CargoUsed float64            `json:"cargo_used"`
+	Mining    string             `json:"mining,omitempty"`
+	CanMine   bool               `json:"can_mine"`
+	MineRange float64            `json:"mine_range,omitempty"`
+	InSafe    bool               `json:"in_safe"`
+
+	Cosmetics Cosmetics `json:"cosmetics"`
 }
 
 // State — снимок состояния для одного игрока.
@@ -158,11 +194,20 @@ type World struct {
 	catalog Catalog
 	npcs    []*npc
 	events  []Event
+
+	// живые локации
+	deposits []*deposit
+	safe     []safeZone
+	rewards  []Reward
+	layout   worldgen.Layout
+	wcfg     worldgen.Config
+	radius   float64 // радиус системы: из раскладки, иначе Radius
 }
 
 // New создаёт мир с одной системой и станцией.
 func New() *World {
 	return &World{
+		radius:  Radius,
 		players: map[string]*Player{},
 		catalog: defaultCatalog.Clone(),
 		npcs:    defaultNPCs(),
@@ -197,7 +242,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 		return nil, false
 	}
 	pos := r.Pos
-	if !pos.finite() || pos.length() > Radius {
+	if !pos.finite() || pos.length() > w.radius {
 		pos = Vec{}
 	}
 	dir := r.Dir.normalized()
@@ -207,6 +252,8 @@ func (w *World) Join(r Record) (*Player, bool) {
 	p := &Player{ID: r.ID, Name: r.Name, Pos: pos, Dir: dir, connected: true}
 	p.gender, p.pilotSpec = r.Gender, r.PilotSpec
 	w.initShip(p, r.ShipType, r.Skin, r.Spec)
+	p.hold = sanitizeHold(r.Hold, p.spec.Cargo)
+	p.discovered = map[string]bool{}
 	w.players[r.ID] = p
 	return p, true
 }
@@ -228,7 +275,7 @@ func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 
 func (p *Player) record() Record {
 	return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
-		Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType}
+		Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType, Hold: copyHold(p.hold)}
 }
 
 // Records возвращает состояние всех кораблей (для периодического сохранения).
@@ -311,6 +358,11 @@ func (w *World) objectPos(id string) (Vec, string, bool) {
 			return n.Pos, n.Name, true
 		}
 	}
+	for _, d := range w.deposits {
+		if d.ID == id {
+			return d.Pos, d.Name, true
+		}
+	}
 	if p, ok := w.players[id]; ok {
 		return p.Pos, p.Name, true
 	}
@@ -361,8 +413,8 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 			}
 		}
 		np := p.Pos.add(step)
-		if np.length() > Radius {
-			np = np.normalized().mul(Radius)
+		if np.length() > w.radius {
+			np = np.normalized().mul(w.radius)
 		}
 		moved := np.sub(p.Pos)
 		p.Pos = np
@@ -374,6 +426,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		}
 	}
 	w.stepNPCs()
+	w.stepLiving(dt)
 	sort.Slice(removed, func(i, j int) bool { return removed[i].ID < removed[j].ID })
 	return removed
 }
@@ -391,7 +444,8 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
 			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
-			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me)},
+			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
+			CanMine: me.spec.Abilities["mine"].Range > 0, MineRange: me.spec.Abilities["mine"].Range, InSafe: w.inSafe(me.Pos)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,
 		Attacking: me.Attacking,
@@ -408,6 +462,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		}
 		st.Objects = append(st.Objects, o)
 	}
+	st.Objects = append(st.Objects, w.depositObjects()...)
 	ids := make([]string, 0, len(w.players))
 	for pid := range w.players {
 		if pid != id {
@@ -418,7 +473,8 @@ func (w *World) Snapshot(id string) (State, bool) {
 	for _, pid := range ids {
 		p := w.players[pid]
 		st.Objects = append(st.Objects, Object{ID: p.ID, Kind: "player", Stance: "neutral", Name: p.Name,
-			Pos: [2]float64{p.Pos.X, p.Pos.Y}, Dir: [2]float64{p.Dir.X, p.Dir.Y}, Ship: p.ShipType, Skin: p.Skin, Dead: p.deadUntil > w.t})
+			Pos: [2]float64{p.Pos.X, p.Pos.Y}, Dir: [2]float64{p.Dir.X, p.Dir.Y}, Ship: p.ShipType, Skin: p.Skin, Dead: p.deadUntil > w.t,
+			Vip: p.cosmetics.Vip, Badge: p.cosmetics.Badge, NameColor: p.cosmetics.NameColor, Engine: p.cosmetics.Engine})
 	}
 	return st, true
 }

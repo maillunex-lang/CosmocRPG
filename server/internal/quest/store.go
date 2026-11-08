@@ -102,6 +102,50 @@ func (s *PGStore) Complete(ctx context.Context, pid string, d Def) (bool, int64,
 	return granted, credits, nil
 }
 
+// GrantCredits начисляет кредиты один раз на ключ (UNIQUE player_id + grant_key): повтор ничего не меняет.
+func (s *PGStore) GrantCredits(ctx context.Context, pid, key string, amount int64) (bool, int64, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return false, 0, err
+	}
+	defer tx.Rollback(ctx)
+	granted := false
+	if amount > 0 {
+		g, err := tx.Exec(ctx, `
+			INSERT INTO reward_grants (player_id, grant_key, kind, amount) VALUES ($1, $2, 'credits', $3)
+			ON CONFLICT (player_id, grant_key) DO NOTHING`, pid, key, amount)
+		if err != nil {
+			return false, 0, err
+		}
+		if g.RowsAffected() == 1 {
+			if _, err := tx.Exec(ctx, `UPDATE players SET credits = credits + $2 WHERE public_id = $1`, pid, amount); err != nil {
+				return false, 0, err
+			}
+			granted = true
+		}
+	}
+	var credits int64
+	if err := tx.QueryRow(ctx, `SELECT credits FROM players WHERE public_id = $1`, pid).Scan(&credits); err != nil {
+		return false, 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, 0, err
+	}
+	return granted, credits, nil
+}
+
+func (m *MemStore) GrantCredits(_ context.Context, pid, key string, amount int64) (bool, int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	k := pid + "|" + key
+	if amount <= 0 || m.grants[k] {
+		return false, m.credits[pid], nil
+	}
+	m.grants[k] = true
+	m.credits[pid] += amount
+	return true, m.credits[pid], nil
+}
+
 // MemStore — хранилище в памяти для тестов; повторяет семантику PGStore.
 type MemStore struct {
 	mu      sync.Mutex

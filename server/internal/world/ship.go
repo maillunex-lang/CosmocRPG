@@ -201,6 +201,11 @@ type npc struct {
 	Hidden                 bool
 	deadUntil              float64
 	respawn                float64
+
+	// живые локации: ИИ врага и точка исследования (nil у учебных объектов)
+	ai    *aiState
+	pt    *pointCfg
+	kills int // сколько раз побеждён (для уникального ключа награды)
 }
 
 func defaultNPCs() []*npc {

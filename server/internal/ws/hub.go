@@ -18,6 +18,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
@@ -46,6 +47,7 @@ type Options struct {
 	Store      world.Store      // хранилище игроков; nil: позиции не сохраняются
 	Quests     *quest.Service   // контракты и награды; nil: функция выключена
 	Accounts   *account.Service // аккаунты (логин и пароль); nil: функция выключена
+	Shop       *shop.Service    // VIP и магазин косметики; nil: функция выключена
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
 	RequireCharacter bool
 }
@@ -137,7 +139,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "shop", "shop_buy", "shop_equip":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -252,8 +254,10 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		return true
 	}
 	switch m.Type {
-	case "attack", "ability", "set_skin", "set_spec":
+	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship":
 		h.gameShip(ctx, c, ss, m)
+	case "shop", "shop_buy", "shop_equip":
+		h.shopMsg(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
 		if err := json.Unmarshal(m.Payload, &p); err != nil || math.IsNaN(p.X+p.Y) || math.IsInf(p.X+p.Y, 0) {
@@ -321,6 +325,39 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		if err := w.UseAbility(ss.pid, p.ID); err != nil {
 			fail(err)
 		}
+	case "mine":
+		var p struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.ID == "" || len(p.ID) > 24 {
+			reply(errMsg(m.ID, "bad_message", "некорректное месторождение"))
+			return
+		}
+		if err := w.StartMining(ss.pid, p.ID); err != nil {
+			fail(err)
+		}
+	case "mine_stop":
+		w.StopMining(ss.pid)
+	case "ships":
+		reply(Message{Type: "ships", ID: m.ID, Payload: mustJSON(map[string]any{"ships": w.Fleet()})})
+	case "set_ship":
+		var p struct {
+			Ship string `json:"ship"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Ship == "" || len(p.Ship) > 24 {
+			reply(errMsg(m.ID, "bad_message", "некорректный корабль"))
+			return
+		}
+		rec, err := w.SetShip(ss.pid, p.Ship)
+		if err != nil {
+			fail(err)
+			return
+		}
+		h.save(rec) // смена корабля сохраняется сразу
+	case "sell":
+		if _, err := w.SellCargo(ss.pid); err != nil {
+			fail(err)
+		}
 	case "set_skin", "set_spec":
 		var p struct {
 			Value string `json:"value"`
@@ -366,6 +403,22 @@ func abilityText(code string) string {
 		return "такой специализации нет"
 	case "bad_target":
 		return "эту цель атаковать нельзя"
+	case "no_module":
+		return "на корабле нет добывающего модуля"
+	case "hold_full":
+		return "грузовой отсек полон"
+	case "deposit_empty":
+		return "месторождение истощено"
+	case "no_deposit":
+		return "такого месторождения нет"
+	case "not_at_station":
+		return "продавать груз можно только у станции"
+	case "nothing_to_sell":
+		return "в грузовом отсеке пусто"
+	case "no_ship":
+		return "такого корабля нет"
+	case "hold_too_big":
+		return "груз не поместится в этот корабль: сначала продайте его"
 	}
 	return "команда отклонена"
 }
@@ -461,6 +514,9 @@ func (h *Handler) Tick(n int, now time.Time) {
 	if len(evs) > 0 {
 		h.broadcastEvents(evs)
 	}
+	if rs := w.DrainRewards(); len(rs) > 0 && h.opts.Quests != nil {
+		go h.grantRewards(rs) // запись в базу не должна тормозить цикл симуляции
+	}
 	if n%stateEvery != 0 {
 		return
 	}
@@ -526,6 +582,33 @@ func (h *Handler) evaluateQuests(ss *session, pid string, st world.State) {
 		case ss.events <- m:
 		default:
 			h.log.Warn("ws: очередь событий переполнена", "player", pid)
+		}
+	}
+}
+
+// grantRewards выдаёт награды локаций идемпотентно (ключ события) и сообщает игроку о зачислении.
+func (h *Handler) grantRewards(rs []world.Reward) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for _, r := range rs {
+		granted, total, err := h.opts.Quests.Grant(ctx, r.Player, r.Key, r.Credits)
+		if err != nil {
+			h.log.Error("награда локации", "player", r.Player, "key", r.Key, "err", err)
+			continue
+		}
+		if !granted {
+			continue
+		}
+		h.log.Info("награда выдана", "player", r.Player, "kind", r.Kind, "ref", r.Ref, "credits", r.Credits, "total", total)
+		h.mu.Lock()
+		ss := h.active[r.Player]
+		h.mu.Unlock()
+		if ss == nil {
+			continue
+		}
+		select {
+		case ss.events <- Message{Type: "reward", Payload: mustJSON(map[string]any{"kind": r.Kind, "ref": r.Ref, "credits": r.Credits, "total": total})}:
+		default:
 		}
 	}
 }
@@ -639,11 +722,18 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 		}
 		qcancel()
 	}
+	h.applyCosmetics(ctx, rec.ID)
 	sys := w.System()
-	reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(map[string]any{
+	welcome := map[string]any{
 		"player_id": rec.ID, "name": rec.Name, "system": sys,
 		"character": map[string]any{"gender": rec.Gender, "pilot_spec": rec.PilotSpec, "ship_type": rec.ShipType},
-	})})
+	}
+	if lay, wcfg := w.Layout(); lay.System != "" {
+		// раскладка системы и визуальные параметры: клиент строит декор по seed, серверные объекты приходят в state
+		welcome["layout"] = lay
+		welcome["visual"] = wcfg.Visual
+	}
+	reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(welcome)})
 	go h.pump(ctx, ss)
 	if st, ok := w.Snapshot(ss.pid); ok {
 		h.pushState(ss, st)
@@ -715,4 +805,93 @@ func (h *Handler) createCharacter(ctx context.Context, c *websocket.Conn, ss *se
 	ss.pending = nil
 	log.Info("ws: персонаж создан", "player", rec.ID, "nick", rec.Name, "pilot", rec.PilotSpec, "ship", rec.ShipType)
 	return h.finishJoin(ctx, ss, log, m, rec)
+}
+
+// applyCosmetics загружает покупки игрока и применяет внешний вид к его кораблю в мире.
+func (h *Handler) applyCosmetics(ctx context.Context, pid string) {
+	if h.opts.Shop == nil {
+		return
+	}
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	st, err := h.opts.Shop.State(cctx, pid)
+	if err != nil {
+		h.log.Error("магазин: состояние игрока", "player", pid, "err", err)
+		return
+	}
+	h.setCosmetics(pid, st)
+}
+
+func (h *Handler) setCosmetics(pid string, st shop.State) shop.Cosmetics {
+	c := h.opts.Shop.Cosmetics(st)
+	h.opts.World.SetCosmetics(pid, world.Cosmetics{Vip: c.Vip, Badge: c.Badge, NameColor: c.NameColor, Engine: c.Engine})
+	return c
+}
+
+func shopText(code string) string {
+	switch code {
+	case "no_item":
+		return "такого товара нет"
+	case "already_owned":
+		return "товар уже куплен"
+	case "vip_required":
+		return "нужен более высокий VIP-уровень"
+	case "not_owned":
+		return "сначала купите этот товар"
+	case "bad_slot":
+		return "товар не подходит к этому слоту"
+	case "bad_request":
+		return "некорректный запрос"
+	}
+	return "операция отклонена"
+}
+
+// shopMsg обрабатывает shop (каталог и состояние), shop_buy (покупка) и shop_equip (экипировка). Сервер единственный источник результата.
+func (h *Handler) shopMsg(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
+	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
+	if h.opts.Shop == nil {
+		reply(errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
+		return
+	}
+	var st shop.State
+	var err error
+	sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	switch m.Type {
+	case "shop":
+		st, err = h.opts.Shop.State(sctx, ss.pid)
+	case "shop_buy":
+		var p struct {
+			Item      string `json:"item"`
+			RequestID string `json:"request_id"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Item == "" || len(p.Item) > 48 {
+			reply(errMsg(m.ID, "bad_message", "некорректная покупка"))
+			return
+		}
+		st, err = h.opts.Shop.Buy(sctx, ss.pid, p.Item, p.RequestID)
+	case "shop_equip":
+		var p struct {
+			Slot string `json:"slot"`
+			Item string `json:"item"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || len(p.Slot) > 16 || len(p.Item) > 48 {
+			reply(errMsg(m.ID, "bad_message", "некорректная команда"))
+			return
+		}
+		st, err = h.opts.Shop.Equip(sctx, ss.pid, p.Slot, p.Item)
+	}
+	if err != nil {
+		code := err.Error()
+		switch err {
+		case shop.ErrNoItem, shop.ErrOwned, shop.ErrVipNeeded, shop.ErrNotOwned, shop.ErrBadSlot, shop.ErrBadReq:
+		default:
+			h.log.Error("магазин", "player", ss.pid, "type", m.Type, "err", err)
+			code = "internal"
+		}
+		reply(errMsg(m.ID, code, shopText(code)))
+		return
+	}
+	cos := h.setCosmetics(ss.pid, st)
+	reply(Message{Type: "shop", ID: m.ID, Payload: mustJSON(map[string]any{"catalog": h.opts.Shop.Config(), "state": st, "cosmetics": cos})})
 }

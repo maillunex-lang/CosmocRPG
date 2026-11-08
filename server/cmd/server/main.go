@@ -22,7 +22,10 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldcfg"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/ws"
 )
 
@@ -40,6 +43,13 @@ func main() {
 	}
 	if len(os.Args) > 1 && os.Args[1] == "admin-create" {
 		if err := adminCreate(); err != nil {
+			fmt.Fprintln(os.Stderr, "ошибка:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "ships-sync" {
+		if err := shipsSync(); err != nil {
 			fmt.Fprintln(os.Stderr, "ошибка:", err)
 			os.Exit(1)
 		}
@@ -77,6 +87,74 @@ func parseLevel(s string) slog.Level {
 	var l slog.Level
 	_ = l.UnmarshalText([]byte(s))
 	return l
+}
+
+// shipsSync добавляет в активный каталог кораблей то, чего в нём нет, из встроенных данных: новые корабли и недостающие способности.
+// Значения существующих кораблей (правки из админки) не перезаписываются. Повторный запуск ничего не меняет.
+func shipsSync() error {
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	if _, err := db.Migrate(ctx, pool); err != nil {
+		return err
+	}
+	svc := shipcatalog.NewService(shipcatalog.NewPGStore(pool), nil)
+	if err := svc.Init(ctx); err != nil {
+		return err
+	}
+	changed, err := syncShips(ctx, svc, func(m string) { fmt.Println(m) })
+	if err != nil {
+		return err
+	}
+	fmt.Println("изменений:", changed)
+	return nil
+}
+
+// syncShips добавляет недостающее из встроенного каталога (см. shipsSync) и возвращает число изменённых кораблей.
+func syncShips(ctx context.Context, svc *shipcatalog.Service, say func(string)) (int, error) {
+	active, _, err := svc.Active(ctx)
+	if err != nil {
+		return 0, err
+	}
+	have := map[string]world.ShipSpec{}
+	for _, sp := range active.Ships {
+		have[sp.ID] = sp
+	}
+	changed := 0
+	for _, b := range world.DefaultDoc().Ships {
+		cur, ok := have[b.ID]
+		if !ok {
+			if _, err := svc.UpdateShip(ctx, "система", b); err != nil {
+				return changed, fmt.Errorf("корабль %s: %w", b.ID, err)
+			}
+			say("добавлен корабль " + b.ID)
+			changed++
+			continue
+		}
+		added := false
+		for k, ab := range b.Abilities {
+			if _, has := cur.Abilities[k]; !has {
+				cur.Abilities[k] = ab
+				added = true
+				say("корабль " + b.ID + ": добавлена способность " + k)
+			}
+		}
+		if added {
+			if _, err := svc.UpdateShip(ctx, "система", cur); err != nil {
+				return changed, fmt.Errorf("корабль %s: %w", b.ID, err)
+			}
+			changed++
+		}
+	}
+	return changed, nil
 }
 
 // adminCreate создаёт администратора: server admin-create
@@ -160,6 +238,20 @@ func run() error {
 		}
 		log.Info("контракты включены (COSMOC_FEATURE_QUESTS)")
 	}
+	// конфигурация мира («живые локации»): версии в базе; активная применяется к миру на лету, если функция включена флагом
+	worldCfg := worldcfg.NewService(worldcfg.NewPGStore(pool), func(wc worldgen.Config) {
+		if !cfg.FeatureLiving || len(wc.Systems) == 0 {
+			return
+		}
+		if err := gameWorld.ApplyLayout(worldgen.Generate(wc.Systems[0], wc), wc); err != nil {
+			log.Error("конфигурация мира не применена", "err", err)
+			return
+		}
+		log.Info("живые локации применены", "system", wc.Systems[0].ID)
+	})
+	if err := worldCfg.Init(ctx); err != nil {
+		return err
+	}
 	// каталог кораблей: версии в базе, активный каталог применяется к миру на лету
 	ships := shipcatalog.NewService(shipcatalog.NewPGStore(pool), gameWorld.SetCatalog)
 	if err := ships.Init(ctx); err != nil {
@@ -167,7 +259,7 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true,
+		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)),
 	})
 	worldDone := make(chan struct{})
 	go func() {
@@ -198,7 +290,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ

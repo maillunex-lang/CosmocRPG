@@ -13,6 +13,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldcfg"
 )
 
 const (
@@ -24,14 +25,16 @@ const (
 
 // Options — настройки обработчика админ-API.
 type Options struct {
-	SessionTTL   time.Duration
-	CookieSecure bool // true за HTTPS (Caddy); false только для локальной разработки и тестов
-	TrustProxy   bool // доверять заголовку X-Forwarded-For от обратного прокси (Caddy)
-	Version      string
-	StartedAt    time.Time
-	WSSessions   func() int64         // число активных игровых сессий
-	AI           *aistudio.Service    // AI Civilization Training Studio (nil: раздел выключен)
-	Ships        *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
+	SessionTTL    time.Duration
+	CookieSecure  bool // true за HTTPS (Caddy); false только для локальной разработки и тестов
+	TrustProxy    bool // доверять заголовку X-Forwarded-For от обратного прокси (Caddy)
+	Version       string
+	StartedAt     time.Time
+	WSSessions    func() int64         // число активных игровых сессий
+	AI            *aistudio.Service    // AI Civilization Training Studio (nil: раздел выключен)
+	Ships         *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
+	World         *worldcfg.Service    // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
+	LivingEnabled bool                 // включены ли живые локации на сервере (флаг COSMOC_FEATURE_LIVING)
 }
 
 // Handler — HTTP-обработчик админ-API (/api/...).
@@ -73,6 +76,9 @@ func (h *Handler) Routes() http.Handler {
 	}
 	if h.opts.Ships != nil {
 		h.shipRoutes(mux)
+	}
+	if h.opts.World != nil {
+		h.worldRoutes(mux)
 	}
 	return securityHeaders(mux)
 }

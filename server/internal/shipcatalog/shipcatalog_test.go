@@ -417,7 +417,7 @@ func TestPGStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	vs, _ := s.Versions(ctx)
-	if len(vs) != 1 || vs[0].Source != "seed" || vs[0].Ships != 3 {
+	if len(vs) != 1 || vs[0].Source != "seed" || vs[0].Ships != 12 {
 		t.Fatalf("версии: %+v", vs)
 	}
 	doc, _, _ := s.Active(ctx)

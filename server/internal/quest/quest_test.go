@@ -195,3 +195,44 @@ func TestPGDefinitionVersionsKeptAndRewardKeyedByVersion(t *testing.T) {
 		t.Fatalf("определений %d, ожидалось 2 версии", n)
 	}
 }
+
+func TestPGGrantCreditsIdempotentAndConcurrent(t *testing.T) {
+	ctx, st, pid := pgSetup(t)
+	const n = 8
+	res := make(chan bool, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			g, _, err := st.GrantCredits(ctx, pid, "kill:en-sp-1:1", 40)
+			if err != nil {
+				t.Error(err)
+			}
+			res <- g
+		}()
+	}
+	granted := 0
+	for i := 0; i < n; i++ {
+		if <-res {
+			granted++
+		}
+	}
+	if granted != 1 {
+		t.Fatalf("награда выдана %d раз, ожидался один", granted)
+	}
+	data, _ := st.Load(ctx, pid)
+	if data.Credits != 40 {
+		t.Fatalf("кредиты %d", data.Credits)
+	}
+	if g, _, _ := st.GrantCredits(ctx, pid, "kill:en-sp-1:2", 40); !g {
+		t.Fatal("другой ключ должен выдаваться")
+	}
+}
+
+func TestMemGrantCreditsIdempotent(t *testing.T) {
+	m := NewMemStore()
+	ctx := context.Background()
+	g1, t1, _ := m.GrantCredits(ctx, "p", "k", 10)
+	g2, t2, _ := m.GrantCredits(ctx, "p", "k", 10)
+	if !g1 || g2 || t1 != 10 || t2 != 10 {
+		t.Fatalf("%v %v %d %d", g1, g2, t1, t2)
+	}
+}

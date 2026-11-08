@@ -105,3 +105,27 @@ func TestPGCharacterCreation(t *testing.T) {
 		t.Fatalf("после сохранения: %+v", c)
 	}
 }
+
+func TestPGStorePersistsHold(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	if _, err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	s := NewPGStore(pool)
+	a, err := s.Resolve(ctx, "pgholdtokentoken01", "Груз")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(a.Hold) != 0 {
+		t.Fatalf("новый игрок с грузом: %v", a.Hold)
+	}
+	a.Hold = map[string]float64{"iron_ore": 12.5, "crystals": 3}
+	if err := s.Save(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	b, err := s.Resolve(ctx, "pgholdtokentoken01", "")
+	if err != nil || b.Hold["iron_ore"] != 12.5 || b.Hold["crystals"] != 3 {
+		t.Fatalf("груз после перезахода: %v %v", b.Hold, err)
+	}
+}

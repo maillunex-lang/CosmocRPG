@@ -161,6 +161,481 @@
           "duration": 3,
           "cooldown": 14,
           "energy": 25
+        },
+        "mine": {
+          "name": "Добывающий лазер",
+          "range": 22,
+          "period": 1.0,
+          "damage": 5,
+          "energy": 0
+        }
+      }
+    },
+    {
+      "id": "FTR-002",
+      "name": "Ястреб",
+      "class": "Тяжёлый истребитель",
+      "role": "Боевой",
+      "temporary": true,
+      "specs": [
+        "interceptor",
+        "scout"
+      ],
+      "default_spec": "interceptor",
+      "skins": [
+        "a",
+        "b"
+      ],
+      "dimensions_m": [
+        13,
+        9.2,
+        3.2
+      ],
+      "crew": 1,
+      "engines": 2,
+      "weapons": "3 энергетические пушки, 2 ракетные точки",
+      "hull": 1600,
+      "shield": 700,
+      "armor": 160,
+      "energy": 110,
+      "cargo": 10,
+      "speed": 13.0,
+      "shield_regen": 16,
+      "shield_regen_delay": 4,
+      "energy_regen": 9,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 28,
+          "shots": 2,
+          "range": 32,
+          "period": 1.0,
+          "energy": 2
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.7,
+          "duration": 3,
+          "cooldown": 13,
+          "energy": 22
+        },
+        "intercept": {
+          "name": "Перехват",
+          "spec": "interceptor",
+          "max_dist": 40,
+          "min_dist": 10,
+          "range": 50,
+          "damage_mul": 2.5,
+          "cooldown": 10,
+          "energy": 30
+        },
+        "scan": {
+          "name": "Импульсный сканер",
+          "spec": "scout",
+          "radius": 60,
+          "reveal": 15,
+          "cooldown": 20,
+          "energy": 25
+        }
+      }
+    },
+    {
+      "id": "COR-001",
+      "name": "Барс",
+      "class": "Корвет",
+      "role": "Боевой",
+      "temporary": true,
+      "specs": [
+        "hunter",
+        "guard"
+      ],
+      "default_spec": "hunter",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        24,
+        14,
+        5
+      ],
+      "crew": 2,
+      "engines": 2,
+      "weapons": "4 энергетические пушки",
+      "hull": 2600,
+      "shield": 1200,
+      "armor": 220,
+      "energy": 140,
+      "cargo": 14,
+      "speed": 11.5,
+      "shield_regen": 20,
+      "shield_regen_delay": 4,
+      "energy_regen": 10,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 34,
+          "shots": 2,
+          "range": 30,
+          "period": 1.1,
+          "energy": 3
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.5,
+          "duration": 3,
+          "cooldown": 15,
+          "energy": 25
+        }
+      }
+    },
+    {
+      "id": "COR-002",
+      "name": "Кобра",
+      "class": "Корвет",
+      "role": "Боевой",
+      "temporary": true,
+      "specs": [
+        "raider",
+        "guard"
+      ],
+      "default_spec": "raider",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        22,
+        13,
+        4.6
+      ],
+      "crew": 2,
+      "engines": 3,
+      "weapons": "3 энергетические пушки, 2 ракетные точки",
+      "hull": 2200,
+      "shield": 1100,
+      "armor": 200,
+      "energy": 150,
+      "cargo": 12,
+      "speed": 12.5,
+      "shield_regen": 20,
+      "shield_regen_delay": 4,
+      "energy_regen": 11,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 30,
+          "shots": 3,
+          "range": 28,
+          "period": 0.9,
+          "energy": 3
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.7,
+          "duration": 3,
+          "cooldown": 14,
+          "energy": 25
+        }
+      }
+    },
+    {
+      "id": "FRG-001",
+      "name": "Страж",
+      "class": "Фрегат",
+      "role": "Универсальный",
+      "temporary": true,
+      "specs": [
+        "escort",
+        "support"
+      ],
+      "default_spec": "escort",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        48,
+        22,
+        9
+      ],
+      "crew": 6,
+      "engines": 3,
+      "weapons": "6 энергетических пушек, 2 ракетные установки",
+      "hull": 5000,
+      "shield": 2500,
+      "armor": 350,
+      "energy": 220,
+      "cargo": 40,
+      "speed": 9.0,
+      "shield_regen": 30,
+      "shield_regen_delay": 5,
+      "energy_regen": 12,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 46,
+          "shots": 3,
+          "range": 34,
+          "period": 1.2,
+          "energy": 4
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.4,
+          "duration": 3,
+          "cooldown": 18,
+          "energy": 35
+        }
+      }
+    },
+    {
+      "id": "FRG-002",
+      "name": "Бастион",
+      "class": "Фрегат",
+      "role": "Тяжёлая броня",
+      "temporary": true,
+      "specs": [
+        "bulwark",
+        "escort"
+      ],
+      "default_spec": "bulwark",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        52,
+        24,
+        10
+      ],
+      "crew": 6,
+      "engines": 4,
+      "weapons": "5 энергетических пушек, 2 ракетные установки",
+      "hull": 5600,
+      "shield": 2200,
+      "armor": 420,
+      "energy": 200,
+      "cargo": 36,
+      "speed": 8.5,
+      "shield_regen": 26,
+      "shield_regen_delay": 5,
+      "energy_regen": 11,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 44,
+          "shots": 3,
+          "range": 32,
+          "period": 1.2,
+          "energy": 4
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.35,
+          "duration": 3,
+          "cooldown": 18,
+          "energy": 35
+        }
+      }
+    },
+    {
+      "id": "DST-001",
+      "name": "Молот",
+      "class": "Эсминец",
+      "role": "Ракетные удары",
+      "temporary": true,
+      "specs": [
+        "striker",
+        "siege"
+      ],
+      "default_spec": "striker",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        80,
+        32,
+        14
+      ],
+      "crew": 12,
+      "engines": 4,
+      "weapons": "8 тяжёлых орудий, 4 ракетные установки",
+      "hull": 9000,
+      "shield": 3500,
+      "armor": 600,
+      "energy": 300,
+      "cargo": 50,
+      "speed": 7.0,
+      "shield_regen": 34,
+      "shield_regen_delay": 6,
+      "energy_regen": 13,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 70,
+          "shots": 4,
+          "range": 40,
+          "period": 1.4,
+          "energy": 5
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.3,
+          "duration": 3,
+          "cooldown": 22,
+          "energy": 45
+        }
+      }
+    },
+    {
+      "id": "CRU-001",
+      "name": "Колосс",
+      "class": "Крейсер",
+      "role": "Командный",
+      "temporary": true,
+      "specs": [
+        "flagship",
+        "bombard"
+      ],
+      "default_spec": "flagship",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        140,
+        48,
+        22
+      ],
+      "crew": 18,
+      "engines": 6,
+      "weapons": "12 тяжёлых орудий, 6 ракетных установок",
+      "hull": 16000,
+      "shield": 6000,
+      "armor": 900,
+      "energy": 450,
+      "cargo": 90,
+      "speed": 6.0,
+      "shield_regen": 45,
+      "shield_regen_delay": 7,
+      "energy_regen": 15,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 95,
+          "shots": 4,
+          "range": 44,
+          "period": 1.5,
+          "energy": 6
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.25,
+          "duration": 3,
+          "cooldown": 25,
+          "energy": 55
+        }
+      }
+    },
+    {
+      "id": "SCT-001",
+      "name": "Следопыт",
+      "class": "Разведчик",
+      "role": "Разведка",
+      "temporary": true,
+      "specs": [
+        "scout",
+        "navigator"
+      ],
+      "default_spec": "scout",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        9,
+        6.5,
+        2.2
+      ],
+      "crew": 1,
+      "engines": 2,
+      "weapons": "1 лёгкая пушка",
+      "hull": 900,
+      "shield": 500,
+      "armor": 80,
+      "energy": 160,
+      "cargo": 12,
+      "speed": 16.0,
+      "shield_regen": 14,
+      "shield_regen_delay": 3,
+      "energy_regen": 12,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 18,
+          "shots": 2,
+          "range": 26,
+          "period": 1.0,
+          "energy": 2
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.9,
+          "duration": 4,
+          "cooldown": 12,
+          "energy": 20
+        },
+        "scan": {
+          "name": "Широкий сканер",
+          "spec": "scout",
+          "radius": 95,
+          "reveal": 20,
+          "cooldown": 22,
+          "energy": 30
+        }
+      }
+    },
+    {
+      "id": "SUP-001",
+      "name": "Эгида",
+      "class": "Корабль поддержки",
+      "role": "Поддержка",
+      "temporary": true,
+      "specs": [
+        "shield_support",
+        "medic"
+      ],
+      "default_spec": "shield_support",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        36,
+        18,
+        8
+      ],
+      "crew": 4,
+      "engines": 3,
+      "weapons": "2 оборонительные пушки",
+      "hull": 3200,
+      "shield": 2400,
+      "armor": 260,
+      "energy": 260,
+      "cargo": 30,
+      "speed": 9.5,
+      "shield_regen": 40,
+      "shield_regen_delay": 4,
+      "energy_regen": 14,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 26,
+          "shots": 2,
+          "range": 28,
+          "period": 1.2,
+          "energy": 3
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.4,
+          "duration": 3,
+          "cooldown": 16,
+          "energy": 30
         }
       }
     }

@@ -208,6 +208,7 @@ func (w *World) hitNPC(p *Player, n *npc, dmg float64) {
 	if n.Hull <= 0 {
 		n.deadUntil = w.t + n.respawn
 		w.emit(Event{Type: "death", To: n.ID})
+		w.onNPCKilled(p, n)
 		for _, q := range w.players {
 			if q.Target == n.ID {
 				q.Target, q.Attacking, q.Autopilot = "", false, false
@@ -220,6 +221,10 @@ func (w *World) hitNPC(p *Player, n *npc, dmg float64) {
 func (w *World) DamagePlayer(id string, dmg float64) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	w.damagePlayerLocked(id, dmg)
+}
+
+func (w *World) damagePlayerLocked(id string, dmg float64) {
 	p, ok := w.players[id]
 	if !ok || p.deadUntil > w.t {
 		return
@@ -235,7 +240,7 @@ func (w *World) DamagePlayer(id string, dmg float64) {
 	if p.Hull <= 0 {
 		w.emit(Event{Type: "death", To: p.ID})
 		p.deadUntil = w.t + 3
-		p.Attacking, p.Autopilot, p.Move = false, false, Vec{}
+		p.Attacking, p.Autopilot, p.Move, p.mining = false, false, Vec{}, ""
 	}
 }
 
@@ -282,6 +287,7 @@ func (w *World) stepNPCs() {
 	for _, n := range w.npcs {
 		if n.Kind == "hostile" && n.deadUntil > 0 && n.deadUntil <= w.t {
 			n.deadUntil, n.Hull, n.Shield = 0, n.HullMax, n.ShieldMax
+			n.resetAI()
 			w.emit(Event{Type: "respawn", To: n.ID})
 		}
 	}

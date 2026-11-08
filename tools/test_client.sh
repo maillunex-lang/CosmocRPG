@@ -9,12 +9,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 rc=0
 
 echo "== интерфейс: тема, безопасная зона, раскладка, компоненты, шлюз, HUD космоса"
-for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test background_test art_standard_test frame_stats_test; do
+for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test background_test art_standard_test frame_stats_test camera_test camera_input_test labels_test; do
   echo "-- $t"
   timeout 180 godot --headless --path "$ROOT/client" --script "res://tests/$t.gd" 2>&1 \
     | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"
   [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
 done
+
+echo "== камера: реальная отрисовка обязательных видов (нужен рендеринг)"
+timeout 280 xvfb-run -a -s "-screen 0 1920x1080x24" \
+  godot --path "$ROOT/client" --resolution 1280x720 --script res://tests/camera_render_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"
+[ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
 
 echo "== фон космоса: реальная отрисовка шейдерами (нужен рендеринг)"
 timeout 280 xvfb-run -a -s "-screen 0 1920x1080x24" \

@@ -127,11 +127,24 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="Joystick" type="Control" parent="SafeArea/Columns/LeftStack"]
+[node name="ControlRow" type="HBoxContainer" parent="SafeArea/Columns/LeftStack"]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+
+[node name="Joystick" type="Control" parent="SafeArea/Columns/LeftStack/ControlRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 script = ExtResource("9")
+
+[node name="ResetButton" type="Button" parent="SafeArea/Columns/LeftStack/ControlRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 8
+tooltip_text = "Сбросить камеру: стандартный наклон и масштаб, выравнивание за кораблём"
+text = "Вид"
+script = ExtResource("5")
 
 [node name="CenterStack" type="VBoxContainer" parent="SafeArea/Columns"]
 layout_mode = 2

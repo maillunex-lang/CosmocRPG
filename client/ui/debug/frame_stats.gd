@@ -189,8 +189,50 @@ func toggle() -> void:
 		_refresh()
 
 
+## Быстрое касание тремя пальцами: три касания начались почти одновременно (в пределах 250 мс) и закончились
+## быстро (не позже 600 мс от первого) без заметного сдвига. Долгое удержание (джойстик, щипок) жестом не считается.
+const TAP3_START_WINDOW_MS := 250
+const TAP3_RELEASE_MS := 600
+const TAP3_MOVE_PX := 40.0
+
+var _touch_start: Dictionary = {}   # index -> {t, pos, moved}
+var _tap3_armed := false
+var _tap3_t0 := 0
+
+
 func _input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed and event.index == 2:
-		toggle()  # третий палец
+	if event is InputEventScreenTouch:
+		_track_touch(event)
+	elif event is InputEventScreenDrag:
+		if _touch_start.has(event.index):
+			_touch_start[event.index]["moved"] = (event.position as Vector2).distance_to(_touch_start[event.index]["pos"]) > TAP3_MOVE_PX \
+				or _touch_start[event.index]["moved"]
 	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
 		toggle()
+
+
+func _track_touch(event: InputEventScreenTouch) -> void:
+	var now := Time.get_ticks_msec()
+	if event.pressed:
+		_touch_start[event.index] = {"t": now, "pos": event.position, "moved": false}
+		if _touch_start.size() >= 3:
+			var ts: Array = []
+			for k in _touch_start:
+				ts.append(_touch_start[k]["t"])
+			ts.sort()
+			# три самых недавних касания должны начаться почти одновременно
+			var n := ts.size()
+			if int(ts[n - 1]) - int(ts[n - 3]) <= TAP3_START_WINDOW_MS:
+				_tap3_armed = true
+				_tap3_t0 = int(ts[n - 3])
+	else:
+		if _tap3_armed and now - _tap3_t0 <= TAP3_RELEASE_MS:
+			var moved := false
+			for k in _touch_start:
+				moved = moved or _touch_start[k]["moved"]
+			if not moved:
+				toggle()
+		_tap3_armed = false
+		_touch_start.erase(event.index)
+		if _touch_start.is_empty():
+			_tap3_armed = false

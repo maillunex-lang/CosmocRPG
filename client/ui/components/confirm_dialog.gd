@@ -7,6 +7,7 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 
 signal answered(confirmed: bool)
+signal opened()   # окно открылось (активные жесты камеры нужно завершить)
 
 var _title: Label
 var _message: Label
@@ -70,6 +71,7 @@ func ask(title: String, message: String, confirm_text: String = "Подтвер�
 	_message.text = message
 	_confirm.text = confirm_text
 	visible = true
+	opened.emit()
 	_cancel.grab_focus()  # по умолчанию «Отмена»: случайное нажатие Enter не подтверждает опасное действие
 	return await answered
 

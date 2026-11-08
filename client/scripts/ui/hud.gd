@@ -13,6 +13,8 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 
 signal exit_requested
+signal camera_reset_requested
+signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
 
@@ -29,6 +31,7 @@ var _chat_sig := ""
 var _attack_expect: Variant = null  # ожидаемое значение attacking после нажатия (null: не ждём)
 
 @onready var _joystick: Control = %Joystick
+@onready var _reset_button: ActionButton = %ResetButton
 @onready var _bottom_nav: Control = %BottomNav
 
 @onready var _player_name: Label = %PlayerName
@@ -78,6 +81,9 @@ func _ready() -> void:
 	_joystick.visible = UiSettings.joystick_enabled()
 	_joystick.vector_changed.connect(func(v: Vector2) -> void: _joy = v)
 
+	_reset_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
+	_reset_button.pressed.connect(func() -> void: camera_reset_requested.emit())
+	_confirm.opened.connect(func() -> void: modal_opened.emit())
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())
 	_attack.pressed.connect(_on_attack_pressed)

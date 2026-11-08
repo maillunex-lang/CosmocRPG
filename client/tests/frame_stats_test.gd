@@ -131,16 +131,82 @@ func _run() -> void:
 		tt.pressed = true
 		n._input(tt)
 	_check(n.visible, "одно и два касания панель не переключают")
-	var third := InputEventScreenTouch.new()
-	third.index = 2
-	third.pressed = true
-	n._input(third)
-	_check(not n.visible, "третий палец переключает панель")
-	var release := InputEventScreenTouch.new()
-	release.index = 2
-	release.pressed = false
-	n._input(release)
-	_check(not n.visible, "отпускание пальца панель не переключает")
+	# быстрое касание тремя пальцами переключает панель
+	n._touch_start.clear()
+	n._tap3_armed = false
+	var before_vis: bool = n.visible
+	for idx in [0, 1, 2]:
+		var tt3 := InputEventScreenTouch.new()
+		tt3.index = idx
+		tt3.pressed = true
+		tt3.position = Vector2(100 + idx * 80, 300)
+		n._input(tt3)
+	for idx in [0, 1, 2]:
+		var up3 := InputEventScreenTouch.new()
+		up3.index = idx
+		up3.pressed = false
+		n._input(up3)
+	_check(n.visible != before_vis, "быстрое касание тремя пальцами переключает панель")
+	var after_vis: bool = n.visible
+	# три касания, но первое удерживается давно (например, джойстик): не жест
+	var held := InputEventScreenTouch.new()
+	held.index = 0
+	held.pressed = true
+	n._input(held)
+	await create_timer(0.4).timeout
+	for idx in [1, 2]:
+		var late := InputEventScreenTouch.new()
+		late.index = idx
+		late.pressed = true
+		n._input(late)
+	for idx in [2, 1, 0]:
+		var up_l := InputEventScreenTouch.new()
+		up_l.index = idx
+		up_l.pressed = false
+		n._input(up_l)
+	_check(n.visible == after_vis, "удерживаемый палец плюс два быстрых (джойстик и щипок) панель не переключают")
+	# три пальца удерживаются дольше 600 мс
+	for idx in [0, 1, 2]:
+		var tl := InputEventScreenTouch.new()
+		tl.index = idx
+		tl.pressed = true
+		n._input(tl)
+	await create_timer(0.7).timeout
+	for idx in [0, 1, 2]:
+		var ul := InputEventScreenTouch.new()
+		ul.index = idx
+		ul.pressed = false
+		n._input(ul)
+	_check(n.visible == after_vis, "долгое удержание трёх пальцев (больше 600 мс) панель не переключает")
+	# три быстрых касания, но с заметным сдвигом (свайп)
+	for idx in [0, 1, 2]:
+		var tm := InputEventScreenTouch.new()
+		tm.index = idx
+		tm.pressed = true
+		tm.position = Vector2(100, 100)
+		n._input(tm)
+	var drag := InputEventScreenDrag.new()
+	drag.index = 1
+	drag.position = Vector2(300, 100)
+	n._input(drag)
+	for idx in [0, 1, 2]:
+		var um := InputEventScreenTouch.new()
+		um.index = idx
+		um.pressed = false
+		n._input(um)
+	_check(n.visible == after_vis, "три пальца со сдвигом (свайп) панель не переключают")
+	# после жеста счётчики сбрасываются: следующее касание одним пальцем ничего не делает
+	var single := InputEventScreenTouch.new()
+	single.index = 0
+	single.pressed = true
+	n._input(single)
+	single = InputEventScreenTouch.new()
+	single.index = 0
+	single.pressed = false
+	n._input(single)
+	_check(n.visible == after_vis and n._touch_start.is_empty(), "после жеста состояние касаний очищено")
+	if n.visible:
+		n.toggle()
 	var echo := InputEventKey.new()
 	echo.keycode = KEY_F3
 	echo.pressed = true

@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/space/space_screen.gd" id="1"]
 [ext_resource type="Script" path="res://ui/space_bg/space_background.gd" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="3"]
+[ext_resource type="Script" path="res://ui/camera/space_camera_rig.gd" id="4"]
 
 [sub_resource type="Environment" id="Environment_space"]
 background_mode = 0
@@ -17,6 +18,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1")
 
 [node name="SpaceBackground" type="Control" parent="."]
@@ -50,18 +52,24 @@ render_target_update_mode = 4
 [node name="WorldEnvironment" type="WorldEnvironment" parent="WorldContainer/WorldViewport"]
 environment = SubResource("Environment_space")
 
-[node name="Sun" type="DirectionalLight3D" parent="WorldContainer/WorldViewport"]
+[node name="CameraRig" type="Node3D" parent="WorldContainer/WorldViewport"]
+unique_name_in_owner = true
+script = ExtResource("4")
+
+[node name="Yaw" type="Node3D" parent="WorldContainer/WorldViewport/CameraRig"]
+
+[node name="Sun" type="DirectionalLight3D" parent="WorldContainer/WorldViewport/CameraRig/Yaw"]
 transform = Transform3D(1, 0, 0, 0, 0.7, 0.7, 0, -0.7, 0.7, 0, 5, 0)
 light_energy = 1.1
 
-[node name="CameraRig" type="Node3D" parent="WorldContainer/WorldViewport"]
-unique_name_in_owner = true
+[node name="Pitch" type="Node3D" parent="WorldContainer/WorldViewport/CameraRig/Yaw"]
 
-[node name="Camera3D" type="Camera3D" parent="WorldContainer/WorldViewport/CameraRig"]
+[node name="Camera3D" type="Camera3D" parent="WorldContainer/WorldViewport/CameraRig/Yaw/Pitch"]
 unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 150)
 projection = 1
 size = 50.0
-far = 200.0
+far = 600.0
 
 [node name="Ships" type="Node3D" parent="WorldContainer/WorldViewport"]
 unique_name_in_owner = true

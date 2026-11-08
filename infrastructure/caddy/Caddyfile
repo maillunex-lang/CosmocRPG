@@ -5,8 +5,8 @@
 	default_sni {$PUBLIC_HOST}
 }
 
-# Админка: HTTPS с самоподписанным сертификатом (внутренний CA Caddy), домена пока нет.
-https://{$PUBLIC_HOST}:8443, https://localhost:8443, https://127.0.0.1:8443 {
+# Админка: https://<хост>/admin/ , HTTPS с самоподписанным сертификатом (внутренний CA Caddy), домена пока нет.
+https://{$PUBLIC_HOST}, https://localhost, https://127.0.0.1 {
 	tls internal
 
 	encode gzip
@@ -19,14 +19,24 @@ https://{$PUBLIC_HOST}:8443, https://localhost:8443, https://127.0.0.1:8443 {
 		-Server
 	}
 
-	# Админ-API Go-сервера (внутренняя сеть, наружу не публикуется)
-	handle /api/* {
+	# Админ-API Go-сервера (внутренняя сеть, наружу не публикуется); префикс /admin отбрасывается
+	handle /admin/api/* {
+		uri strip_prefix /admin
 		reverse_proxy server:8081
 	}
 
-	handle {
+	# Статика админки (SPA: неизвестные пути отдают index.html)
+	handle /admin/* {
+		uri strip_prefix /admin
 		root * /srv
 		try_files {path} /index.html
 		file_server
+	}
+
+	redir /admin /admin/ permanent
+
+	# Всё остальное, включая корень, ведёт в админку
+	handle {
+		redir * /admin/ temporary
 	}
 }

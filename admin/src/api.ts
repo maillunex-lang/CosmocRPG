@@ -53,12 +53,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+// Админка размещена под базовым путём (vite `base`, сейчас "/admin/"); API лежит под ним же.
+export const API = `${import.meta.env.BASE_URL}api`;
+
 export const api = {
-  login: (username: string, password: string) => request<{ username: string }>("POST", "/api/login", { username, password }),
-  logout: () => request<{ status: string }>("POST", "/api/logout"),
-  me: () => request<{ username: string }>("GET", "/api/me"),
-  status: () => request<Status>("GET", "/api/status"),
-  audit: (limit = 20) => request<{ entries: AuditEntry[] }>("GET", `/api/audit?limit=${limit}`),
+  login: (username: string, password: string) => request<{ username: string }>("POST", `${API}/login`, { username, password }),
+  logout: () => request<{ status: string }>("POST", `${API}/logout`),
+  me: () => request<{ username: string }>("GET", `${API}/me`),
+  status: () => request<Status>("GET", `${API}/status`),
+  audit: (limit = 20) => request<{ entries: AuditEntry[] }>("GET", `${API}/audit?limit=${limit}`),
 };
 
 export function formatUptime(seconds: number): string {

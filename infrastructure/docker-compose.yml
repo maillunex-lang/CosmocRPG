@@ -50,8 +50,9 @@ services:
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?задайте PUBLIC_HOST (IP или домен)}
     ports:
-      # по умолчанию только localhost: вход через SSH-туннель; ADMIN_BIND=0.0.0.0 откроет админку наружу
-      - "${ADMIN_BIND:-127.0.0.1}:8443:8443"
+      # админка: https://<хост>/admin/ . По умолчанию только localhost (SSH-туннель);
+      # ADMIN_BIND=0.0.0.0 открывает её наружу (решение владельца: открыта)
+      - "${ADMIN_BIND:-127.0.0.1}:443:443"
     volumes:
       - caddy_data:/data
     networks: [edge]

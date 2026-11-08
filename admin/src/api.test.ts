@@ -23,7 +23,7 @@ describe("api", () => {
     const f = mockFetch(200, { username: "admin" });
     await expect(api.login("admin", "pw")).resolves.toEqual({ username: "admin" });
     const [url, init] = f.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/login");
+    expect(url).toBe("/admin/api/login");
     expect(init.method).toBe("POST");
     expect(init.credentials).toBe("same-origin");
     expect(init.body).toBe(JSON.stringify({ username: "admin", password: "pw" }));

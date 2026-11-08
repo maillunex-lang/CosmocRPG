@@ -45,3 +45,7 @@
 ## 2026-11-08 — шрифт Golos Text и Android SDK
 
 Шрифт Golos Text (OFL) добавлен в `client/ui/fonts/` (проверено: все русские символы есть, вес через числовой тег оси работает). Android SDK установлен, пробный debug-APK собран и проверен (aapt2/apksigner): landscape, INTERNET, подпись v2/v3, 27 МБ. Не проверено: запуск на устройстве. Release-подпись (постоянный keystore вне репозитория) ещё не создана.
+
+## 2026-11-08 — release-ключ
+
+Создан release-keystore (`~/keys/cosmoc/`, вне репозитория). Release-APK собран и проверен (`apksigner`: v2/v3, отпечаток совпал). Нужно от владельца: сделать резервную копию `~/keys/cosmoc/release.keystore` и `release.env` вне VPS. Запуск APK на устройстве не проверялся.

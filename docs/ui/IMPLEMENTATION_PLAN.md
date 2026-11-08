@@ -10,7 +10,7 @@
 
 **Ориентация и масштаб:** `window/handheld/orientation=0` (Landscape) ✔; 1280×720, `stretch=canvas_items`, `aspect=expand` ✔. Безопасная зона не учитывается ✖.
 
-**Android (обновлено после аудита, 2026-11-08):** установлен Android SDK в `~/Android/Sdk` (platform-tools, build-tools 35.0.1, platform 35, NDK 28.1.13356709, CMake 3.10.2.4988404; лицензии SDK приняты по просьбе владельца), JDK 17, шаблоны экспорта Godot 4.7.2, debug-keystore `~/.android/debug.keystore`, настройки редактора Godot указывают на SDK. Добавлен пресет `client/export_presets.cfg` (arm64-v8a, INTERNET, тесты исключены). Пробная сборка debug-APK прошла: 27 МБ, landscape, подпись v2/v3 подтверждена. **На устройстве или эмуляторе APK не запускался** (нет устройства; эмулятор не настраивался).
+**Android (обновлено после аудита, 2026-11-08):** установлен Android SDK в `~/Android/Sdk` (platform-tools, build-tools 35.0.1, platform 35, NDK 28.1.13356709, CMake 3.10.2.4988404; лицензии SDK приняты по просьбе владельца), JDK 17, шаблоны экспорта Godot 4.7.2, debug-keystore `~/.android/debug.keystore`, настройки редактора Godot указывают на SDK. Добавлен пресет `client/export_presets.cfg` (arm64-v8a, INTERNET, тесты исключены). Пробная сборка debug-APK прошла: 27 МБ, landscape, подпись v2/v3 подтверждена. **На устройстве или эмуляторе APK не запускался** (нет устройства; эмулятор не настраивался). Release-ключ создан (см. SECURITY.md), release-APK собран и подписан им: 26,6 МБ, подпись v2/v3, отпечаток совпал с ключом.
 
 **Сервер (Go):** `GET /health`; `GET /ws` (`hello`, `ping`/`pong`, `error`); админ-API (`/api/login|logout|me|status|audit`) на отдельном порту. **Игровых механик на сервере нет**: ни аккаунтов игроков, ни мира, кораблей, боя, экономики, чата.
 

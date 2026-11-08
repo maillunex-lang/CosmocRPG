@@ -117,7 +117,7 @@ jobs:
       - name: Сборка и запуск сервера для тестов
         run: |
           cd server && go build -o ../server-test ./cmd/server && cd ..
-          COSMOC_DATABASE_URL="$PG_URL" COSMOC_HTTP_ADDR=127.0.0.1:8080 COSMOC_ADMIN_ADDR=off ./server-test > server.log 2>&1 &
+          COSMOC_DATABASE_URL="$PG_URL" COSMOC_HTTP_ADDR=127.0.0.1:8080 COSMOC_ADMIN_ADDR=off COSMOC_FEATURE_QUESTS=true ./server-test > server.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/health && break; sleep 1; done
       - name: Тесты клиента (сеть и экран подключения)
         run: tools/test_client.sh

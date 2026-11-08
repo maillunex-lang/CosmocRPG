@@ -45,4 +45,13 @@ godot --path client                     # запуск с окном
 tools/screenshot.sh                     # скриншот сцены через xvfb
 ```
 
-Запуск сервера и админки появится по мере выполнения шагов 00.3–00.6.
+## Сервер (разработка)
+
+```bash
+cd server
+export COSMOC_DATABASE_URL='postgres://USER:PASS@127.0.0.1:5432/DB?sslmode=disable'
+go run ./cmd/server          # слушает :8080, GET /health, GET /ws
+COSMOC_TEST_DATABASE_URL=... go test -race ./...   # тесты БД стирают схему public: только тестовая база!
+```
+
+Админка и Docker Compose появятся в шагах 00.5–00.6.

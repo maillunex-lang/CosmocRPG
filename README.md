@@ -38,6 +38,7 @@
 - [DEVELOPMENT](docs/DEVELOPMENT.md) — правила разработки
 - [REFERENCES](docs/REFERENCES.md) — внешние источники и референсы
 - [UI](docs/ui/README.md) — документы интерфейса
+- [Корабли и бой (ТЗ)](docs/design/SHIPS_SPEC.md) — корабли, развитие, эскадры, боевые системы
 
 ## Быстрый старт клиента
 

@@ -45,6 +45,12 @@ godot --path client                     # запуск с окном
 tools/screenshot.sh                     # скриншот сцены через xvfb
 ```
 
+Тесты клиента (нужен запущенный сервер):
+
+```bash
+COSMOC_TEST_WS_URL=ws://127.0.0.1:8080/ws tools/test_client.sh [каталог_для_скриншотов]
+```
+
 ## Сервер (разработка)
 
 ```bash

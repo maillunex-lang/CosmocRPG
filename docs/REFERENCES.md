@@ -29,4 +29,4 @@
 - [UIFlow](https://store.godotengine.org/asset/indieshade/uiflow/) (MIT, Godot 4.6) — стек страниц push/pop/replace. Не берём, пишем свой `ScreenRouter`; запасной вариант.
 - AppNavigation (AGPLv3) — копилефт, не берём.
 - Virtual Joystick DX (Repechul/Virtual-Joystick-DX, MIT, Godot 4.6+, тестировался на 4.7) и [Virtual Joystick for Godot 4](https://godotengine.org/asset-library/asset/edit/10466) (MarcoFazioRandom, MIT) — запасные варианты, основной план: свой джойстик.
-- Шрифты: Exo 2 (OFL, кириллица заявлена агрегаторами, проверить по официальному репозиторию); Orbitron и Rajdhani — кириллица не подтверждена.
+- Шрифт: **Golos Text** ([google/fonts](https://github.com/google/fonts/tree/main/ofl/golostext), OFL 1.1) — выбран и добавлен в проект. Exo 2, Orbitron, Rajdhani не используются.

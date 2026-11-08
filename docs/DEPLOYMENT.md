@@ -3,7 +3,7 @@
 ## Окружение
 
 - VPS: `78.17.214.25`, Ubuntu 24.04, 4 CPU, 7.8 ГБ RAM, 59 ГБ диск.
-- Установлено: Docker 29.1.3, Docker Compose 2.40.3, Go 1.22.2, psql 16, Node 26, Godot 4.7.2, Blender 4.0.2.
+- Установлено: Docker 29.1.3, Docker Compose 2.40.3, Go 1.22.2, psql 16, Node 26, Godot 4.7.2, Blender 4.0.2, Android SDK (`~/Android/Sdk`: build-tools 35.0.1, platform 35, NDK 28.1.13356709), JDK 17.
 - Домена нет: доступ по IP, без TLS.
 
 ## План (заполняется по шагам 00.3–00.7)

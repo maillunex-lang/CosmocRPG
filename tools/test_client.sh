@@ -32,7 +32,12 @@ timeout 120 godot --headless --path "$ROOT/client" --script res://tests/ws_clien
 echo "== серверный шлюз и онлайн-космос"
 timeout 120 godot --headless --path "$ROOT/client" --script res://tests/server_gateway_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|COSMOC_TEST)" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
 
-[ -n "${COSMOC_TEST_WS_URL:-}" ] && "$ROOT/tools/cleanup_test_players.sh"
+# очистка только изолированной тестовой базы и только для локального сервера; production не затрагивается
+case "${COSMOC_TEST_WS_URL:-}" in
+  ws://127.0.0.1:*|ws://localhost:*) "$ROOT/tools/cleanup_test_players.sh" dev ;;
+  "") ;;
+  *) echo "(тесты шли не на локальный сервер: тестовых игроков очищайте вручную tools/cleanup_test_players.sh prod)" ;;
+esac
 
 echo "== аккаунт на экране подключения"
 timeout 120 xvfb-run -a -s "-screen 0 1920x1080x24" godot --path "$ROOT/client" --resolution 1280x720 --script res://tests/account_ui_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|COSMOC_TEST)" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1

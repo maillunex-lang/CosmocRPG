@@ -133,3 +133,53 @@ func TestPlayersAreIsolated(t *testing.T) {
 		t.Fatal("покупка одного игрока видна другому")
 	}
 }
+
+func TestVipSevenAndSubscription(t *testing.T) {
+	svc, now := newSvc()
+	ctx := context.Background()
+	// VIP VII (уровень 7) принимается
+	st, err := svc.Buy(ctx, "p", "vip_7", "req-vip70001")
+	if err != nil || st.VipLevel != 7 {
+		t.Fatalf("vip_7: %v %+v", err, st)
+	}
+	// покупка ниже действующего VIP не понижает уровень, продлевает срок
+	if st, err = svc.Buy(ctx, "p", "vip_1", "req-vip10001"); err != nil || st.VipLevel != 7 {
+		t.Fatalf("vip_1 при активном VII: %v %+v", err, st)
+	}
+	// подписка: активируется и продлевается
+	st, err = svc.Buy(ctx, "p", "sub_pilot", "req-sub00001")
+	if err != nil || !st.SubscriptionActive(*now) {
+		t.Fatalf("подписка: %v %+v", err, st)
+	}
+	until := *st.SubscriptionUntil
+	if st, err = svc.Buy(ctx, "p", "sub_pilot", "req-sub00002"); err != nil || !st.SubscriptionUntil.After(until) {
+		t.Fatalf("продление подписки: %v %+v", err, st)
+	}
+}
+
+func TestProfileCosmeticsSlots(t *testing.T) {
+	svc, _ := newSvc()
+	ctx := context.Background()
+	if _, err := svc.Buy(ctx, "p", "vip_2", "req-vip20001"); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"avatar_hunter", "frame_gold", "title_magnate"} {
+		if _, err := svc.Buy(ctx, "p", id, "req-"+id); err != nil {
+			t.Fatalf("покупка %s: %v", id, err)
+		}
+	}
+	if _, err := svc.Equip(ctx, "p", "avatar", "avatar_hunter"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Equip(ctx, "p", "frame", "frame_gold"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Equip(ctx, "p", "title", "title_magnate"); err != nil {
+		t.Fatal(err)
+	}
+	st, _ := svc.State(ctx, "p")
+	c := svc.Cosmetics(st)
+	if c.Avatar != "rocket" || c.Frame != "#ffd24a" || c.Title != "Магнат" {
+		t.Fatalf("косметика профиля: %+v", c)
+	}
+}

@@ -24,17 +24,21 @@ type queryer interface {
 func load(ctx context.Context, q queryer, pid string, now time.Time) (State, error) {
 	var level int
 	var until *time.Time
+	var subUntil *time.Time
 	var eq []byte
-	if err := q.QueryRow(ctx, `SELECT vip_level, vip_until, equipped FROM players WHERE public_id = $1`, pid).Scan(&level, &until, &eq); err != nil {
+	if err := q.QueryRow(ctx, `SELECT vip_level, vip_until, subscription_until, equipped FROM players WHERE public_id = $1`, pid).Scan(&level, &until, &subUntil, &eq); err != nil {
 		return State{}, err
 	}
-	st := State{Owned: []string{}, Equipped: map[string]string{}}
+	st := State{Owned: []string{}, Equipped: map[string]string{}, SubscriptionUntil: subUntil}
 	_ = json.Unmarshal(eq, &st.Equipped)
 	if st.Equipped == nil {
 		st.Equipped = map[string]string{}
 	}
 	if level > 0 && until != nil && until.After(now) {
 		st.VipLevel, st.VipUntil = level, until
+	}
+	if subUntil != nil && !subUntil.After(now) {
+		st.SubscriptionUntil = nil
 	}
 	rows, err := q.Query(ctx, `SELECT item_id FROM player_items WHERE player_id = $1 ORDER BY item_id`, pid)
 	if err != nil {
@@ -84,6 +88,19 @@ func (s *PGStore) Buy(ctx context.Context, pid string, it Item, req string, paid
 		}
 		until := base.Add(time.Duration(it.Days) * 24 * time.Hour)
 		if _, err := tx.Exec(ctx, `UPDATE players SET vip_level = $2, vip_until = $3 WHERE public_id = $1`, pid, level, until); err != nil {
+			return State{}, false, err
+		}
+	} else if it.Kind == "subscription" {
+		var curSub *time.Time
+		if err := tx.QueryRow(ctx, `SELECT subscription_until FROM players WHERE public_id = $1 FOR UPDATE`, pid).Scan(&curSub); err != nil {
+			return State{}, false, err
+		}
+		base := now
+		if curSub != nil && curSub.After(now) {
+			base = *curSub
+		}
+		until := base.Add(time.Duration(it.Days) * 24 * time.Hour)
+		if _, err := tx.Exec(ctx, `UPDATE players SET subscription_until = $2 WHERE public_id = $1`, pid, until); err != nil {
 			return State{}, false, err
 		}
 	} else {

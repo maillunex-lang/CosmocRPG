@@ -1,11 +1,15 @@
 package world
 
-// Cosmetics — внешний вид корабля и ника: значок, цвета, VIP-уровень. Боевых параметров не меняет.
+// Cosmetics — внешний вид корабля, ника и профиля: значок, цвета, аватарка, рамка, титул, VIP-уровень.
+// Боевых параметров не меняет.
 type Cosmetics struct {
 	Vip       int    `json:"vip,omitempty"`
 	Badge     string `json:"badge,omitempty"`
 	NameColor string `json:"name_color,omitempty"`
 	Engine    string `json:"engine,omitempty"`
+	Avatar    string `json:"avatar,omitempty"`
+	Frame     string `json:"frame,omitempty"`
+	Title     string `json:"title,omitempty"`
 }
 
 // SetCosmetics задаёт внешний вид игрока.

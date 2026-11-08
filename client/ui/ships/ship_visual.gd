@@ -24,6 +24,7 @@ var _t := 0.0
 var _thrust := 0.0       # сглаженная тяга 0..2
 var _bank := 0.0
 var _boost_trail: CPUParticles3D
+var _move_trail: CPUParticles3D
 var _flash: Array = []
 var _bolts: Array = []
 var _shell: MeshInstance3D
@@ -54,6 +55,7 @@ func build(sid: String, skin: String = "") -> void:
 	_boom_flash = null
 	_scan_ring = null
 	_boost_trail = null
+	_move_trail = null
 	var def := ShipDef.get_def(sid)
 	bank = Node3D.new()
 	bank.name = "Bank"
@@ -100,6 +102,7 @@ func set_skin(skin: String) -> void:
 	for f in flames:
 		(f as MeshInstance3D).material_override = ShipVfx.glow(Color(_flame_color, 0.85), 1.4)
 	_boost_trail = null
+	_move_trail = null
 	_flash.clear()
 
 
@@ -151,6 +154,17 @@ func update_motion(delta: float, speed_frac: float, turn: float, boosting: bool)
 		_boost_trail.emitting = true
 	elif _boost_trail != null:
 		_boost_trail.emitting = false
+	# лёгкий след на обычном ходу: корабль читается в движении даже без форсажа
+	var moving := speed_frac > 0.25
+	if moving and not boosting:
+		if _move_trail == null:
+			_move_trail = ShipVfx.particles(_flame_color.lightened(0.2), 10, 0.4, 0.12, 0.12, Vector3.ZERO, false)
+			_move_trail.spread = 6.0
+			_move_trail.direction = Vector3(1, 0, 0)
+			(points["Dock_Point"] as Marker3D).add_child(_move_trail)
+		_move_trail.emitting = true
+	elif _move_trail != null:
+		_move_trail.emitting = false
 
 
 # --- события ---

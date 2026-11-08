@@ -820,12 +820,42 @@ func (h *Handler) applyCosmetics(ctx context.Context, pid string) {
 		return
 	}
 	h.setCosmetics(pid, st)
+	h.grantSubscriptionDaily(ctx, pid, st)
 }
 
 func (h *Handler) setCosmetics(pid string, st shop.State) shop.Cosmetics {
 	c := h.opts.Shop.Cosmetics(st)
-	h.opts.World.SetCosmetics(pid, world.Cosmetics{Vip: c.Vip, Badge: c.Badge, NameColor: c.NameColor, Engine: c.Engine})
+	h.opts.World.SetCosmetics(pid, world.Cosmetics{Vip: c.Vip, Badge: c.Badge, NameColor: c.NameColor, Engine: c.Engine, Avatar: c.Avatar, Frame: c.Frame, Title: c.Title})
 	return c
+}
+
+// grantSubscriptionDaily начисляет ежедневную награду подписки при первом входе дня.
+// Идемпотентно: ключ награды содержит дату, повторный вход не даёт дубликатов.
+func (h *Handler) grantSubscriptionDaily(ctx context.Context, pid string, st shop.State) {
+	now := time.Now()
+	if h.opts.Quests == nil || !st.SubscriptionActive(now) {
+		return
+	}
+	daily := 0
+	for _, it := range h.opts.Shop.Config().Items {
+		if it.Kind == "subscription" {
+			daily = max(daily, it.Daily)
+		}
+	}
+	if daily <= 0 {
+		return
+	}
+	key := "sub_daily:" + now.Format("2006-01-02")
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	granted, _, err := h.opts.Quests.Grant(cctx, pid, key, int64(daily))
+	if err != nil {
+		h.log.Error("подписка: ежедневная награда", "player", pid, "err", err)
+		return
+	}
+	if granted {
+		h.log.Info("подписка: ежедневная награда выдана", "player", pid, "credits", daily)
+	}
 }
 
 func shopText(code string) string {

@@ -10,8 +10,8 @@ signal buy_requested(item_id: String)
 signal equip_requested(slot: String, item_id: String)
 signal closed
 
-const SLOT_OF := {"badge": "badge", "engine": "engine", "namecolor": "name"}
-const TABS := [["vip", "VIP", "crown"], ["badge", "Значки", "star"], ["engine", "Двигатели", "flame"], ["namecolor", "Цвет ника", "palette"]]
+const SLOT_OF := {"badge": "badge", "engine": "engine", "namecolor": "name", "avatar": "avatar", "frame": "frame", "title": "title"}
+const TABS := [["vip", "VIP", "crown"], ["subscription", "Пропуск", "zap"], ["engine", "Двигатели", "flame"], ["namecolor", "Цвет ника", "palette"], ["badge", "Значки", "star"], ["avatar", "Аватарки", "user"], ["frame", "Рамки", "gem"], ["title", "Титулы", "badge-check"]]
 const COLUMNS := 3
 
 var tab := "vip"
@@ -80,7 +80,8 @@ func _ready() -> void:
 		b.toggle_mode = true
 		b.text = t[1]
 		Icons.apply(b, t[2], Tokens.ACCENT, 22)
-		b.custom_minimum_size = Vector2(170, 52)
+		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
+		b.custom_minimum_size = Vector2(112, 52)
 		b.pressed.connect(_select_tab.bind(str(t[0])))
 		tabs.add_child(b)
 		_tab_buttons[t[0]] = b
@@ -149,6 +150,10 @@ func action_for(item: Dictionary) -> Dictionary:
 	if kind == "vip":
 		var active := vip_level() > 0
 		return {"text": "Продлить" if active else "Получить", "enabled": true, "kind": "buy"}
+	if kind == "subscription":
+		# подписка покупается повторно для продления; слота экипировки не имеет
+		var sub_active := str(state.get("subscription_until", "")) != ""
+		return {"text": "Продлить" if sub_active else "Получить", "enabled": true, "kind": "buy"}
 	if not _owned(str(item.get("id", ""))):
 		return {"text": "Получить", "enabled": true, "kind": "buy"}
 	if _equipped(item):

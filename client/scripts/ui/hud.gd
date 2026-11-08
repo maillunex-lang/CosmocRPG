@@ -15,6 +15,7 @@ const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 const Icons := preload("res://ui/icons.gd")
 
 signal exit_requested
+signal profile_requested   # тап по карточке игрока: экран профиля
 signal camera_mode_requested   # кнопка «Вид»: следующий режим камеры
 signal world_tapped(pos: Vector2)   # короткое касание в зоне джойстика: выбор объекта под пальцем
 signal hangar_requested   # кнопка «Ангар»
@@ -54,6 +55,9 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 @onready var _player_name: Label = %PlayerName
 @onready var _player_level: Label = %PlayerLevel
 @onready var _ship_name: Label = %ShipName
+@onready var _title_label: Label = %TitleLabel
+@onready var _avatar_rect: TextureRect = %AvatarRect
+@onready var _profile_card: PanelContainer = %ProfileCard
 @onready var _hull: ProgressBar = %HullBar
 @onready var _shield: ProgressBar = %ShieldBar
 @onready var _energy: ProgressBar = %EnergyBar
@@ -102,12 +106,26 @@ func _ready() -> void:
 	_attack.variant = ActionButton.Variant.DANGER
 	_build_skills()
 
+	# иконки боевого кластера: интерфейс легче читается
+	Icons.apply(_attack, "zap", Tokens.DANGER, 22)
+	Icons.apply(_autopilot, "rocket", Tokens.ACCENT, 22)
+	Icons.apply(_exit_button, "x", Tokens.TEXT, 18)
+	_exit_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
+	_exit_button.focus_mode = Control.FOCUS_NONE
+	_avatar_rect.custom_minimum_size = Vector2(26, 26)
+	_avatar_rect.texture = Icons.tex("user")
+	_avatar_rect.modulate = Tokens.TEXT_MUTED
+
 	_joystick.visible = UiSettings.joystick_enabled()
 	_joystick.vector_changed.connect(func(v: Vector2) -> void: _joy = v)
 
 	_reset_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
 	_reset_button.pressed.connect(func() -> void: camera_mode_requested.emit())
 	_joystick.tapped.connect(func(pos: Vector2) -> void: world_tapped.emit(pos))
+	# карточка игрока открывает профиль; кнопки внутри карточки работают как раньше
+	_profile_card.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			profile_requested.emit())
 	%FleetButton.pressed.connect(func() -> void: hangar_requested.emit())
 	%MenuButton.pressed.connect(func() -> void: shop_requested.emit())
 	%MapButton.pressed.connect(func() -> void: map_requested.emit())
@@ -261,6 +279,14 @@ func apply_state(state: Dictionary) -> void:
 	_player_level.text = "Ур. %d" % int(player.get("level", 1))
 	var ship: Dictionary = state.get("ship", {})
 	_ship_name.text = str(ship.get("name", ""))
+	# косметика профиля (R-34): аватарка, рамка, титул — прислал сервер
+	var cos: Dictionary = ship.get("cosmetics", {})
+	var avatar := str(cos.get("avatar", ""))
+	_avatar_rect.texture = Icons.tex(avatar if avatar != "" else "user")
+	_avatar_rect.modulate = Color(str(cos.get("frame", ""))) if str(cos.get("frame", "")) != "" else (Tokens.ACCENT if avatar != "" else Tokens.TEXT_MUTED)
+	var title := str(cos.get("title", ""))
+	_title_label.visible = title != ""
+	_title_label.text = ("«%s»" % title) if title != "" else ""
 	# шкалы и кредиты показываются только если сервер прислал данные
 	_hull.visible = ship.has("hull")
 	_shield.visible = ship.has("shield")

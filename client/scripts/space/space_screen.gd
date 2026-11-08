@@ -16,6 +16,7 @@ const CameraGestures := preload("res://ui/camera/camera_gestures.gd")
 const LoadingOverlay := preload("res://ui/loading_overlay.gd")
 const Hangar := preload("res://ui/ships/hangar.gd")
 const ShopScreen := preload("res://ui/shop_screen.gd")
+const ProfileScreen := preload("res://ui/profile_screen.gd")
 const MapScreen := preload("res://ui/map_screen.gd")
 const WorldDecor := preload("res://scripts/space/world_decor.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
@@ -100,6 +101,7 @@ func _ready() -> void:
 	_hud.hangar_requested.connect(open_hangar)
 	_hud.shop_requested.connect(open_shop)
 	_hud.map_requested.connect(open_map)
+	_hud.profile_requested.connect(open_profile)
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -324,6 +326,37 @@ func open_shop() -> Control:
 		layer.queue_free())
 	gateway.shop_open()
 	return sh
+
+
+## Профиль пилота: аватарка, титул, VIP, подписка, кредиты. Срок подписки подтягивается из магазина.
+func open_profile() -> Control:
+	var existing := get_node_or_null("ProfileLayer/ProfileOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var p: Control = ProfileScreen.new()
+	p.name = "ProfileOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "ProfileLayer"
+	add_child(layer)
+	layer.add_child(p)
+	p.theme = theme
+	p.set_data(gateway.snapshot())
+	p.set_shop_available(gateway.has_shop())
+	var on_shop := func(d: Dictionary) -> void:
+		if is_instance_valid(p):
+			p.set_data(gateway.snapshot(), d.get("state", {}))
+	gateway.shop_updated.connect(on_shop)
+	if gateway.has_shop():
+		gateway.shop_open()   # состояние магазина: срок подписки
+	p.shop_requested.connect(func() -> void:
+		layer.queue_free()
+		open_shop())
+	p.closed.connect(func() -> void:
+		gateway.shop_updated.disconnect(on_shop)
+		layer.queue_free())
+	return p
 
 
 ## Баланс в открытом магазине и повторное открытие ангара после смены корабля.

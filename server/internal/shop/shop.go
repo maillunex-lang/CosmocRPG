@@ -17,8 +17,8 @@ import (
 //go:embed data/shop.json
 var defaultJSON []byte
 
-// Типы товаров и их слоты экипировки.
-var slotOf = map[string]string{"badge": "badge", "engine": "engine", "namecolor": "name"}
+// Типы товаров и их слоты экипировки. Подписка слота не имеет (действует по времени).
+var slotOf = map[string]string{"badge": "badge", "engine": "engine", "namecolor": "name", "avatar": "avatar", "frame": "frame", "title": "title"}
 
 // Ошибки.
 var (
@@ -33,15 +33,16 @@ var (
 // Item — товар каталога.
 type Item struct {
 	ID     string `json:"id"`
-	Kind   string `json:"kind"` // vip | badge | engine | namecolor
+	Kind   string `json:"kind"` // vip | badge | engine | namecolor | avatar | frame | title | subscription
 	Name   string `json:"name"`
 	Desc   string `json:"desc"`
 	Price  int    `json:"price"`
 	VipMin int    `json:"vip_min,omitempty"`
 	Level  int    `json:"level,omitempty"` // для vip
-	Days   int    `json:"days,omitempty"`  // для vip
+	Days   int    `json:"days,omitempty"`  // для vip и subscription
 	Color  string `json:"color,omitempty"`
 	Icon   string `json:"icon"`
+	Daily  int    `json:"daily,omitempty"` // для subscription: кредиты за первый вход дня
 }
 
 // Config — каталог магазина.
@@ -65,17 +66,25 @@ func Parse(data []byte) (Config, error) {
 			return Config{}, fmt.Errorf("shop.json: пустой, длинный или повторяющийся id %q", it.ID)
 		}
 		seen[it.ID] = true
-		if it.Name == "" || it.Price < 0 || it.Price > 1_000_000 || it.VipMin < 0 || it.VipMin > 3 {
+		if it.Name == "" || it.Price < 0 || it.Price > 1_000_000 || it.VipMin < 0 || it.VipMin > 7 {
 			return Config{}, fmt.Errorf("shop.json: %s: некорректные значения", it.ID)
 		}
 		switch it.Kind {
 		case "vip":
-			if it.Level < 1 || it.Level > 3 || it.Days < 1 || it.Days > 365 {
-				return Config{}, fmt.Errorf("shop.json: %s: level 1-3, days 1-365", it.ID)
+			if it.Level < 1 || it.Level > 7 || it.Days < 1 || it.Days > 365 {
+				return Config{}, fmt.Errorf("shop.json: %s: level 1-7, days 1-365", it.ID)
 			}
-		case "engine", "namecolor":
+		case "engine", "namecolor", "frame":
 			if !colorRe.MatchString(it.Color) {
 				return Config{}, fmt.Errorf("shop.json: %s: color вида #rrggbb", it.ID)
+			}
+		case "avatar", "title":
+			if it.Icon == "" {
+				return Config{}, fmt.Errorf("shop.json: %s: нужна иконка", it.ID)
+			}
+		case "subscription":
+			if it.Days < 1 || it.Days > 365 || it.Daily < 0 || it.Daily > 100_000 {
+				return Config{}, fmt.Errorf("shop.json: %s: days 1-365, daily 0-100000", it.ID)
 			}
 		case "badge":
 		default:
@@ -87,10 +96,16 @@ func Parse(data []byte) (Config, error) {
 
 // State — состояние игрока в магазине.
 type State struct {
-	VipLevel int               `json:"vip_level"` // действующий уровень на момент запроса
-	VipUntil *time.Time        `json:"vip_until,omitempty"`
-	Owned    []string          `json:"owned"`
-	Equipped map[string]string `json:"equipped"`
+	VipLevel          int               `json:"vip_level"` // действующий уровень на момент запроса
+	VipUntil          *time.Time        `json:"vip_until,omitempty"`
+	SubscriptionUntil *time.Time        `json:"subscription_until,omitempty"`
+	Owned             []string          `json:"owned"`
+	Equipped          map[string]string `json:"equipped"`
+}
+
+// SubscriptionActive говорит, действует ли подписка на момент now.
+func (s State) SubscriptionActive(now time.Time) bool {
+	return s.SubscriptionUntil != nil && s.SubscriptionUntil.After(now)
 }
 
 // Store — хранилище. Все изменения атомарны.
@@ -194,13 +209,16 @@ func (s *Service) Equip(ctx context.Context, pid, slot, itemID string) (State, e
 	return s.store.Equip(ctx, pid, slot, itemID, now)
 }
 
-// Cosmetics вычисляет внешний вид по состоянию: значок, цвет ника, цвет двигателя и VIP-уровень.
+// Cosmetics вычисляет внешний вид по состоянию: значок, цвет ника, цвет двигателя, профиль и VIP-уровень.
 // Товары, требующие более высокого VIP, чем действует сейчас (VIP истёк), не показываются.
 type Cosmetics struct {
 	Vip       int    `json:"vip,omitempty"`
 	Badge     string `json:"badge,omitempty"`
 	NameColor string `json:"name_color,omitempty"`
 	Engine    string `json:"engine,omitempty"`
+	Avatar    string `json:"avatar,omitempty"` // иконка аватарки
+	Frame     string `json:"frame,omitempty"`  // цвет рамки профиля
+	Title     string `json:"title,omitempty"`  // титул (текст)
 }
 
 func (s *Service) Cosmetics(st State) Cosmetics {
@@ -217,6 +235,12 @@ func (s *Service) Cosmetics(st State) Cosmetics {
 			c.NameColor = it.Color
 		case "engine":
 			c.Engine = it.Color
+		case "avatar":
+			c.Avatar = it.Icon
+		case "frame":
+			c.Frame = it.Color
+		case "title":
+			c.Title = it.Name
 		}
 	}
 	return c
@@ -227,6 +251,7 @@ func (s *Service) Cosmetics(st State) Cosmetics {
 type memPlayer struct {
 	level    int
 	until    time.Time
+	subUntil time.Time
 	owned    map[string]bool
 	equipped map[string]string
 	requests map[string]bool
@@ -256,6 +281,10 @@ func (p *memPlayer) state(now time.Time) State {
 		st.VipLevel = p.level
 		u := p.until
 		st.VipUntil = &u
+	}
+	if p.subUntil.After(now) {
+		su := p.subUntil
+		st.SubscriptionUntil = &su
 	}
 	for id := range p.owned {
 		st.Owned = append(st.Owned, id)
@@ -287,6 +316,12 @@ func (m *MemStore) Buy(_ context.Context, pid string, it Item, req string, _ int
 			base, level = p.until, max(it.Level, p.level)
 		}
 		p.until, p.level = base.Add(time.Duration(it.Days)*24*time.Hour), level
+	} else if it.Kind == "subscription" {
+		base := now
+		if p.subUntil.After(now) {
+			base = p.subUntil
+		}
+		p.subUntil = base.Add(time.Duration(it.Days) * 24 * time.Hour)
 	} else {
 		if p.owned[it.ID] {
 			return p.state(now), false, ErrOwned

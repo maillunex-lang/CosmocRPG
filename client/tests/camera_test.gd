@@ -384,6 +384,53 @@ func _run() -> void:
 	_check(dx_by_zoom[25.0] > dx_by_zoom[100.0] * 3.0, "параллакс масштабируется вместе с зумом (%.1f против %.1f px)" % [dx_by_zoom[25.0], dx_by_zoom[100.0]])
 	h.queue_free()
 
+	# ============ режимы камеры: свободный, сверху, сзади ============
+	var hm := _holder()
+	var rm := _make_rig(hm)
+	await process_frame
+	var changes: Array = []
+	rm.mode_changed.connect(func(m: int) -> void: changes.append(m))
+	_check(rm.mode() == 0 and rm.mode_name() == "Свободный", "по умолчанию свободный режим")
+	rm.set_view(0, 45, 50)
+	rm.cycle_mode()
+	_check(rm.mode() == 1 and rm.mode_name() == "Сверху", "первое нажатие: вид сверху")
+	var hd := Vector2(1, 0)   # корабль летит вдоль +X
+	_settle(rm, 3.0, Vector3.ZERO, hd, 5.0)
+	_check(absf(rm.tilt_deg()) < 0.2, "вид сверху: камера строго сверху (наклон %.2f°)" % rm.tilt_deg())
+	var fwd: Vector3 = rm.screen_axes()["forward"]
+	_check(fwd.dot(Vector3(1, 0, 0)) > 0.99, "вид сверху: курс корабля направлен вверх по экрану")
+	var hd2 := Vector2(0, 1)   # корабль повернул к +Z
+	_settle(rm, 3.0, Vector3.ZERO, hd2, 5.0)
+	fwd = rm.screen_axes()["forward"]
+	_check(fwd.dot(Vector3(0, 0, 1)) > 0.99, "вид сверху: камера развернулась вслед за кораблём")
+	var tl0: float = rm.tilt_target_deg()
+	var yt0: float = rm.yaw_target_rad()
+	rm.orbit(300.0, 200.0)
+	_check(rm.tilt_target_deg() == tl0 and rm.yaw_target_rad() == yt0, "вид сверху: вращение и наклон жестом отключены")
+	var zm0: float = rm.zoom_target()
+	rm.zoom_by(1.5)
+	_check(rm.zoom_target() < zm0, "вид сверху: масштаб работает")
+	rm.cycle_mode()
+	_check(rm.mode() == 2 and rm.mode_name() == "Сзади", "второе нажатие: вид сзади")
+	_settle(rm, 3.0, Vector3.ZERO, hd, 5.0)
+	_check(absf(rm.tilt_deg() - rm.config.chase_tilt) < 0.3 and rm.tilt_deg() > 45.0, "вид сзади: камера низко, наклон %.1f°" % rm.tilt_deg())
+	fwd = rm.screen_axes()["forward"]
+	_check(fwd.dot(Vector3(1, 0, 0)) > 0.99, "вид сзади: камера позади корабля")
+	_settle(rm, 2.0, Vector3.ZERO, Vector2(-1, 0), 5.0)
+	fwd = rm.screen_axes()["forward"]
+	_check(fwd.dot(Vector3(-1, 0, 0)) > 0.99, "вид сзади: камера разворачивается при повороте корабля на 180°")
+	tl0 = rm.tilt_target_deg()
+	rm.orbit(300.0, 200.0)
+	_check(rm.tilt_target_deg() == tl0, "вид сзади: вращение жестом отключено")
+	rm.cycle_mode()
+	_check(rm.mode() == 0, "третье нажатие: свободный 3D")
+	_check(rm.tilt_target_deg() == rm.config.tilt_initial and rm.zoom_target() == rm.config.zoom_initial, "возврат в свободный режим: стандартный наклон и масштаб")
+	var yt1: float = rm.yaw_target_rad()
+	rm.orbit(100.0, 0.0)
+	_check(rm.yaw_target_rad() != yt1, "в свободном режиме вращение снова работает")
+	_check(changes == [1, 2, 0], "сигнал mode_changed: 1, 2, 0 (%s)" % str(changes))
+	hm.queue_free()
+
 	# ============ жесты ============
 	await _gestures_tests()
 

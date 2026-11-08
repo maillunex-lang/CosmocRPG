@@ -25,6 +25,13 @@ var auto_center_enabled := false
 var auto_center_delay := 2.5     # секунд без ручного управления до выравнивания
 var auto_center_rate := 1.8
 var auto_center_min_speed := 1.0 # выравнивать только при движении корабля, ед/с
+# режимы с закреплённой камерой (кнопка «Вид»): сверху и сзади корабля; углы от вертикали
+var top_tilt := 0.0              # 0°: строго сверху
+var top_zoom := 32.0
+var chase_tilt := 70.0           # 70° от вертикали: камера на 20° выше горизонта, позади корабля
+var chase_zoom := 24.0
+var chase_offset_y := 0.18       # корабль ниже центра: впереди больше обзора (доли размера обзора)
+var locked_yaw_rate := 5.0       # скорость разворота камеры за курсом корабля, 1/с
 var snapshot_delay := 0.12       # задержка интерполяции снимков состояния, с
 
 var warnings: PackedStringArray = PackedStringArray()
@@ -79,6 +86,12 @@ static func from_dict(d: Dictionary) -> Resource:
 	c.auto_center_delay = _num(d, "auto_center_delay", 2.5, 0.2, 30.0, w)
 	c.auto_center_rate = _num(d, "auto_center_rate", 1.8, 0.2, 20.0, w)
 	c.auto_center_min_speed = _num(d, "auto_center_min_speed", 1.0, 0.0, 50.0, w)
+	c.top_tilt = _num(d, "top_tilt", 0.0, 0.0, 30.0, w)
+	c.top_zoom = clampf(_num(d, "top_zoom", 32.0, 5.0, 500.0, w), c.zoom_min, c.zoom_max)
+	c.chase_tilt = _num(d, "chase_tilt", 70.0, 45.0, 85.0, w)
+	c.chase_zoom = clampf(_num(d, "chase_zoom", 24.0, 5.0, 500.0, w), c.zoom_min, c.zoom_max)
+	c.chase_offset_y = _num(d, "chase_offset_y", 0.18, -0.4, 0.4, w)
+	c.locked_yaw_rate = _num(d, "locked_yaw_rate", 5.0, 0.5, 30.0, w)
 	c.snapshot_delay = _num(d, "snapshot_delay", 0.12, 0.0, 0.5, w)
 	c.warnings = w
 	return c
@@ -93,6 +106,8 @@ func to_dict() -> Dictionary:
 		"wheel_zoom_step": wheel_zoom_step, "focus_offset": [focus_offset.x, focus_offset.y],
 		"auto_center_enabled": auto_center_enabled, "auto_center_delay": auto_center_delay,
 		"auto_center_rate": auto_center_rate, "auto_center_min_speed": auto_center_min_speed,
+		"top_tilt": top_tilt, "top_zoom": top_zoom, "chase_tilt": chase_tilt, "chase_zoom": chase_zoom,
+		"chase_offset_y": chase_offset_y, "locked_yaw_rate": locked_yaw_rate,
 		"snapshot_delay": snapshot_delay,
 	}
 

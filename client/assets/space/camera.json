@@ -15,10 +15,19 @@
   "tilt_sensitivity": 0.18,
   "pinch_sensitivity": 1.0,
   "wheel_zoom_step": 0.12,
-  "focus_offset": [0.12, 0.0],
+  "focus_offset": [
+    0.12,
+    0.0
+  ],
   "auto_center_enabled": false,
   "auto_center_delay": 2.5,
   "auto_center_rate": 1.8,
   "auto_center_min_speed": 1.0,
-  "snapshot_delay": 0.12
+  "snapshot_delay": 0.12,
+  "top_tilt": 0.0,
+  "top_zoom": 32.0,
+  "chase_tilt": 70.0,
+  "chase_zoom": 24.0,
+  "chase_offset_y": 0.18,
+  "locked_yaw_rate": 5.0
 }

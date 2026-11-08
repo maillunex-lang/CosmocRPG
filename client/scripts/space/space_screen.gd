@@ -88,7 +88,10 @@ func _ready() -> void:
 	if gateway.get_parent() == null:
 		add_child(gateway)
 	_hud.bind(gateway)
-	_hud.camera_reset_requested.connect(_rig.reset)
+	_hud.camera_mode_requested.connect(_rig.cycle_mode)
+	_hud.world_tapped.connect(select_at)
+	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
+	_hud.set_camera_mode_name(_rig.mode_name())
 	_hud.modal_opened.connect(gestures.cancel)  # окно подтверждения прерывает жест камеры
 	stats.mark("HUD", float(Time.get_ticks_msec() - t_ready))
 	_hud.exit_requested.connect(_on_exit)

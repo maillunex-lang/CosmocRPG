@@ -88,7 +88,8 @@ func _rect(c: Dictionary, path: String) -> Rect2:
 
 func _free_point(c: Dictionary) -> Vector2:
 	var center := _rect(c, "%DemoBar").get_center()
-	return Vector2(center.x, 300.0)  # центральная колонка между плашкой «Демо» и панелью FPS
+	var zone_end: float = c["hud"].get_node("%Joystick").get_global_rect().end.x
+	return Vector2(maxf(center.x, zone_end + 100.0), 300.0)  # свободная область правее зоны джойстика
 
 
 func _state(c: Dictionary) -> Array:
@@ -157,14 +158,15 @@ func _run() -> void:
 	_mouse(c, MOUSE_BUTTON_LEFT, true, reset_btn)
 	_check(screen.gestures.touch_count() == 0, "нажатие на кнопку HUD камера не получает")
 	_mouse(c, MOUSE_BUTTON_LEFT, false, reset_btn)
+	rig.set_mode(0)   # настоящее нажатие переключило режим камеры: возвращаем свободный
 
 	# ============ джойстик ============
 	var joy: Control = c["hud"].get_node("%Joystick")
-	var jc := joy.get_global_rect().get_center()
+	var jc := Vector2(joy.get_global_rect().size.x * 0.3, 560.0)   # свободное место в зоне джойстика
 	var s_j := _state(c)
-	_touch(c, 0, true, jc + Vector2(60, 0))
-	_drag(c, 0, jc + Vector2(80, 0))
-	_drag(c, 0, jc + Vector2(80, -60))
+	_touch(c, 0, true, jc)
+	_drag(c, 0, jc + Vector2(30, 0))
+	_drag(c, 0, jc + Vector2(30, -60))
 	_check(joy.vector.length() > 0.5 and _state(c) == s_j, "джойстик управляет кораблём и не вращает камеру")
 	_check(screen.gestures.touch_count() == 0, "касание джойстика не попадает в распознавание жестов камеры")
 	# палец джойстика закреплён за ним, второй палец вращает камеру независимо
@@ -278,7 +280,9 @@ func _run() -> void:
 	rig.set_view(0, 45, 50)
 	rig.orbit(800.0, 100.0)
 	rig.zoom_by(2.5)
-	c["hud"].camera_reset_requested.emit()
+	c["hud"].camera_mode_requested.emit()
+	c["hud"].camera_mode_requested.emit()
+	c["hud"].camera_mode_requested.emit()   # круг: сверху, сзади, снова свободный (со сбросом)
 	_check(rig.tilt_target_deg() == 45.0 and rig.zoom_target() == 50.0, "кнопка «Вид»: целевые наклон и масштаб стандартные")
 	var gtarget_before: String = gw.snapshot()["target_id"]
 	var ship_before: Vector2 = gw.snapshot()["ship"]["pos"]
@@ -291,7 +295,9 @@ func _run() -> void:
 	rig.zoom_by(2.0)
 	_mouse(c, MOUSE_BUTTON_LEFT, true, reset_btn)
 	_mouse(c, MOUSE_BUTTON_LEFT, false, reset_btn)
-	_check(rig.zoom_target() == 50.0, "нажатие на кнопку «Вид» запускает сброс")
+	_check(rig.mode() == 1 and rig.tilt_target_deg() == 0.0 and rig.zoom_target() == 32.0, "настоящее нажатие на кнопку «Вид» включает вид сверху")
+	_check(c["hud"].get_node("%ResetButton").text == "Вид: Сверху", "подпись кнопки показывает текущий режим")
+	rig.set_mode(0)
 	_free(c)
 
 	# ============ фон и параллакс ============

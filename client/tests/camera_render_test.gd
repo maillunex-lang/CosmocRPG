@@ -195,6 +195,20 @@ func _run() -> void:
 		_check(await _ship_px(s_img, sp5) >= 150, "система %d: корабль виден при повёрнутой камере" % k)
 	_check(_mean_diff(shots[0], shots[1]) > 0.01, "смена системы реально меняет фон при повёрнутой камере")
 
+	# режимы кнопки «Вид»: сверху и сзади (в движении, камера разворачивается за курсом)
+	await _spawn()
+	for mode in [1, 2]:
+		_screen.get_node("%Hud").camera_mode_requested.emit()
+		_gw.move_input(Vector2(-0.7, 0.7))
+		for i in 240:
+			_gw.tick(1.0 / 60.0)
+			await process_frame
+		var m_img := await _grab()
+		_save(m_img, "14_mode_%d" % mode)
+		var sp6: Vector2 = _screen._camera.unproject_position(_screen.ship_view("me").global_position)
+		_check(await _ship_px(m_img, sp6) >= 150 and sp6.x > 200 and sp6.x < 1100 and sp6.y > 100 and sp6.y < 620, "режим камеры %d: корабль виден в свободной области экрана (%.0f, %.0f)" % [mode, sp6.x, sp6.y])
+	_gw.move_input(Vector2.ZERO)
+
 	UiSettings.override("reduce_motion", null)
 	UiSettings.override("graphics_preset", null)
 	UiSettings.override("debug_overlay", null)

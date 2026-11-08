@@ -258,7 +258,7 @@ func _run() -> void:
 	hud = c["hud"]
 	gw = c["gw"]
 	var joy: Control = _n(c, "%Joystick")
-	_check(joy.visible and joy.custom_minimum_size.x >= 150.0, "джойстик показан по умолчанию")
+	_check(joy.visible and joy.size.x >= joy.radius * 4.0 and joy.size.y >= joy.radius * 6.0, "джойстик показан по умолчанию и занимает всю левую часть (%s)" % str(joy.size))
 	var got: Array = []
 	joy.vector_changed.connect(func(v: Vector2) -> void: got.append(v))
 	var centre := joy.size * 0.5
@@ -267,10 +267,15 @@ func _run() -> void:
 	t.pressed = true
 	t.position = centre + Vector2(joy.radius, 0)
 	joy._gui_input(t)
-	_check(joy.vector.is_equal_approx(Vector2(1, 0)) and joy.is_active(), "джойстик: касание на краю даёт вектор (1, 0)")
+	_check(joy.vector == Vector2.ZERO and joy.is_active(), "плавающий джойстик: касание в любом месте зоны задаёт центр, вектор нулевой")
+	var d0 := InputEventScreenDrag.new()
+	d0.index = 0
+	d0.position = t.position + Vector2(joy.radius, 0)
+	joy._gui_input(d0)
+	_check(joy.vector.is_equal_approx(Vector2(1, 0)), "джойстик: смещение на радиус от точки касания даёт вектор (1, 0)")
 	var d := InputEventScreenDrag.new()
 	d.index = 0
-	d.position = centre + Vector2(0, -joy.radius * 3.0)
+	d.position = t.position + Vector2(0, -joy.radius * 3.0)
 	joy._gui_input(d)
 	_check(joy.vector.is_equal_approx(Vector2(0, -1)), "джойстик: вектор ограничен единичной длиной")
 	var other := InputEventScreenTouch.new()
@@ -399,7 +404,7 @@ func _verify_layout(size: Vector2i, insets: Vector4i, label: String, scenario: S
 	var squeezed := []
 	var small := []
 	for ctl: Control in all:
-		if ctl.name in [&"Hud", &"SafeArea", &"Confirm", &"Columns"] or ctl.get_parent().name == &"SafeArea":
+		if ctl.name in [&"Hud", &"SafeArea", &"Confirm", &"Columns", &"Joystick"] or ctl.get_parent().name == &"SafeArea":
 			continue
 		var r := ctl.get_global_rect()
 		if r.size.x <= 0.0 or r.size.y <= 0.0:
@@ -425,7 +430,7 @@ func _verify_layout(size: Vector2i, insets: Vector4i, label: String, scenario: S
 
 	# блоки не пересекаются между собой
 	var blocks := []
-	for nm in ["ProfileCard", "QuestsCard", "ChatCard", "Joystick", "DemoBar", "AlertBar", "DebugSlot", "BottomNav", "TopRight", "TargetCard", "AttackButton", "SkillsGrid", "ToggleRow"]:
+	for nm in ["ProfileCard", "QuestsCard", "ChatCard", "DemoBar", "AlertBar", "DebugSlot", "BottomNav", "TopRight", "TargetCard", "AttackButton", "SkillsGrid", "ToggleRow"]:
 		var node := hud.find_child(nm, true, false) as Control
 		if node != null and node.visible and node.size.x > 0.0 and node.size.y > 0.0:
 			blocks.append(node)

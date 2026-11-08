@@ -9,6 +9,13 @@ extends Node3D
 
 const Config := preload("res://ui/camera/space_camera_config.gd")
 
+## Режимы камеры (кнопка «Вид»): свободный 3D, фиксированный вид сверху (разворот за курсом),
+## вид сзади чуть сверху (разворот за курсом). В закреплённых режимах вращение и наклон жестом отключены, масштаб работает.
+enum Mode { FREE, TOP, CHASE }
+const MODE_NAMES := ["Свободный", "Сверху", "Сзади"]
+
+signal mode_changed(mode: int)
+
 const CAMERA_DISTANCE := 150.0   # у ортографической камеры расстояние влияет только на отсечение
 
 var config: Resource = Config.from_dict({})
@@ -27,6 +34,8 @@ var _have_target := false
 var _idle := 0.0         # секунд без ручного управления
 var _parallax_px := Vector2.ZERO   # накопленный экранный сдвиг для параллакса фона, px
 var _heading := Vector2(0, -1)
+var _mode: int = Mode.FREE
+var _offset_y := 0.0     # текущее вертикальное смещение корабля на экране (доли обзора)
 var viewport_height := 720.0       # высота экрана в px (для перевода сдвига в пиксели)
 
 @onready var _yaw_node: Node3D = $Yaw
@@ -53,7 +62,8 @@ func apply_config(c: Resource, snap: bool = false) -> void:
 		_yaw = 0.0
 		_yaw_target = 0.0
 	else:
-		_tilt_target = clampf(_tilt_target, config.tilt_min, config.tilt_max)
+		if _mode == Mode.FREE:
+			_tilt_target = clampf(_tilt_target, config.tilt_min, config.tilt_max)
 		_size_target = clampf(_size_target, config.zoom_min, config.zoom_max)
 	_apply_transform()
 
@@ -62,6 +72,8 @@ func apply_config(c: Resource, snap: bool = false) -> void:
 
 ## Поворот и наклон жестом: dx, dy в пикселях. Свайп вправо вращает мир по часовой стрелке, свайп вниз поднимает камеру.
 func orbit(dx_px: float, dy_px: float) -> void:
+	if _mode != Mode.FREE:
+		return   # в закреплённых режимах вид задаёт курс корабля
 	_yaw_target += deg_to_rad(dx_px * config.orbit_sensitivity)
 	_tilt_target = clampf(_tilt_target - dy_px * config.tilt_sensitivity, config.tilt_min, config.tilt_max)
 	_idle = 0.0
@@ -73,6 +85,37 @@ func zoom_by(factor: float) -> void:
 		return
 	_size_target = clampf(_size_target / factor, config.zoom_min, config.zoom_max)
 	_idle = 0.0
+
+
+func mode() -> int:
+	return _mode
+
+
+func mode_name() -> String:
+	return MODE_NAMES[_mode]
+
+
+## Следующий режим по кругу: свободный → сверху → сзади → свободный.
+func cycle_mode() -> void:
+	set_mode((_mode + 1) % MODE_NAMES.size())
+
+
+func set_mode(m: int) -> void:
+	m = clampi(m, 0, MODE_NAMES.size() - 1)
+	var changed := m != _mode
+	_mode = m
+	match _mode:
+		Mode.FREE:
+			reset()   # возврат в свободный режим: стандартный наклон и масштаб, камера за кораблём
+		Mode.TOP:
+			_tilt_target = config.top_tilt
+			_size_target = config.top_zoom
+		Mode.CHASE:
+			_tilt_target = config.chase_tilt
+			_size_target = config.chase_zoom
+	_idle = 0.0
+	if changed:
+		mode_changed.emit(_mode)
 
 
 ## Сброс: стандартный наклон и масштаб, плавное выравнивание за кораблём по кратчайшему пути.
@@ -187,12 +230,18 @@ func update(delta: float, target: Vector3, heading: Vector2, speed: float = 0.0)
 		var want := _yaw + angle_difference(_yaw, behind_yaw(_heading))
 		_yaw_target = lerpf(_yaw_target, want, _alpha(config.auto_center_rate, delta))
 
+	# закреплённые режимы: камера разворачивается за курсом корабля
+	var yaw_rate: float = config.yaw_rate
+	if _mode != Mode.FREE:
+		_yaw_target = _yaw + angle_difference(_yaw, behind_yaw(_heading))
+		yaw_rate = config.locked_yaw_rate
 	# поворот сглаживается, а угловая скорость ограничена: на больших углах (сброс, 720°) нет рывка при старте
 	var yaw_limit := deg_to_rad(config.yaw_max_speed) * delta
-	_yaw += clampf((_yaw_target - _yaw) * _alpha(config.yaw_rate, delta), -yaw_limit, yaw_limit)
+	_yaw += clampf((_yaw_target - _yaw) * _alpha(yaw_rate, delta), -yaw_limit, yaw_limit)
 	_tilt = lerpf(_tilt, _tilt_target, _alpha(config.tilt_rate, delta))
 	# масштаб сглаживается в логарифмическом пространстве: ощущение одинаково на любом уровне
 	_size = _size * pow(_size_target / _size, _alpha(config.zoom_rate, delta))
+	_offset_y = lerpf(_offset_y, config.chase_offset_y if _mode == Mode.CHASE else 0.0, _alpha(config.tilt_rate, delta))
 	_apply_transform()
 
 
@@ -208,4 +257,4 @@ func _apply_transform() -> void:
 	camera.size = _size
 	# смещение корабля на экране задаётся в экранных координатах и не зависит от поворота
 	camera.h_offset = config.focus_offset.x * _size
-	camera.v_offset = config.focus_offset.y * _size
+	camera.v_offset = (config.focus_offset.y + _offset_y) * _size

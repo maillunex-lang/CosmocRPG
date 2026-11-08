@@ -13,7 +13,8 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 
 signal exit_requested
-signal camera_reset_requested
+signal camera_mode_requested   # кнопка «Вид»: следующий режим камеры
+signal world_tapped(pos: Vector2)   # короткое касание в зоне джойстика: выбор объекта под пальцем
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -82,7 +83,8 @@ func _ready() -> void:
 	_joystick.vector_changed.connect(func(v: Vector2) -> void: _joy = v)
 
 	_reset_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
-	_reset_button.pressed.connect(func() -> void: camera_reset_requested.emit())
+	_reset_button.pressed.connect(func() -> void: camera_mode_requested.emit())
+	_joystick.tapped.connect(func(pos: Vector2) -> void: world_tapped.emit(pos))
 	_confirm.opened.connect(func() -> void: modal_opened.emit())
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())
@@ -92,6 +94,11 @@ func _ready() -> void:
 	_quests_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("quests", c))
 	_chat_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("chat", c))
 	_set_target_empty()
+
+
+## Подпись кнопки «Вид» показывает текущий режим камеры.
+func set_camera_mode_name(mode_name: String) -> void:
+	_reset_button.text = "Вид: " + mode_name
 
 
 ## Привязка к шлюзу данных (демо или сервер).

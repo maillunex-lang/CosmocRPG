@@ -41,3 +41,6 @@ server/bin/
 
 # образец переменных можно коммитить
 !.env.example
+client/android/build/src/main/assets/
+client/android/build/src/debug/
+client/android/build/src/release/

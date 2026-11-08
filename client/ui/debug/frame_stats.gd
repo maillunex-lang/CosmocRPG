@@ -211,8 +211,16 @@ func _input(event: InputEvent) -> void:
 		toggle()
 
 
+## Часы жеста (мс); в тестах подменяются, чтобы проверки не зависели от скорости машины.
+var clock: Callable = Callable()
+
+
+func _now_ms() -> int:
+	return int(clock.call()) if clock.is_valid() else Time.get_ticks_msec()
+
+
 func _track_touch(event: InputEventScreenTouch) -> void:
-	var now := Time.get_ticks_msec()
+	var now := _now_ms()
 	if event.pressed:
 		_touch_start[event.index] = {"t": now, "pos": event.position, "moved": false}
 		if _touch_start.size() >= 3:

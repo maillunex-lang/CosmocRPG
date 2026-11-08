@@ -18,6 +18,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/ws"
 )
@@ -146,9 +147,18 @@ func run() error {
 	}
 	log.Info("запуск зафиксирован", "boots_total", boots, "version", version)
 
+	gameWorld := world.New()
+	var quests *quest.Service
+	if cfg.FeatureQuests {
+		quests = quest.NewService(log, quest.NewPGStore(pool), gameWorld.ObjectPos)
+		if err := quests.Init(ctx); err != nil {
+			return err
+		}
+		log.Info("контракты включены (COSMOC_FEATURE_QUESTS)")
+	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: world.New(), Store: world.NewPGStore(pool),
+		World: gameWorld, Store: world.NewPGStore(pool), Quests: quests,
 	})
 	worldDone := make(chan struct{})
 	go func() {

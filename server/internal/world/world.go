@@ -346,3 +346,14 @@ func (w *World) Time() float64 {
 	defer w.mu.Unlock()
 	return w.t
 }
+
+// Dist возвращает расстояние между точками.
+func Dist(a, b Vec) float64 { return a.sub(b).length() }
+
+// ObjectPos возвращает положение объекта мира (станции или корабля) по идентификатору.
+func (w *World) ObjectPos(id string) (Vec, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, _, ok := w.objectPos(id)
+	return p, ok
+}

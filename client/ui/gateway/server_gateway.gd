@@ -18,6 +18,8 @@ signal join_failed(reason: String)
 
 var url := ""
 var player_name := ""
+## Имя при создании игрока (по умолчанию сервер даёт «Пилот-NNNN»); нужно тестам, чтобы отличать своих игроков.
+var join_name := ""
 var system: Dictionary = {}
 
 var _client: Node
@@ -79,7 +81,10 @@ func close() -> void:
 
 func _join() -> void:
 	_token = PlayerIdentity.token()
-	_client.send_message("join", {"token": _token, "protocol": PROTOCOL})
+	var payload := {"token": _token, "protocol": PROTOCOL}
+	if join_name != "":
+		payload["name"] = join_name
+	_client.send_message("join", payload)
 
 
 func _process(delta: float) -> void:
@@ -118,6 +123,9 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			joined.emit()
 		"state":
 			_apply_state(payload)
+		"quest_completed":
+			var reward: Dictionary = payload.get("reward", {})
+			notification.emit("Задание выполнено: %s. Награда: %d кредитов" % [str(payload.get("title", "")), int(reward.get("credits", 0))])
 		"error":
 			_on_error(payload)
 
@@ -174,6 +182,13 @@ func _apply_state(p: Dictionary) -> void:
 		"attacking": false, "auto_skills": false, "target_in_range": false,
 		"quests": [], "chat": [],
 	}
+	# кредиты и задания показываются, только если сервер их прислал (контракты включены флагом на сервере)
+	if p.has("credits"):
+		_state["credits"] = int(p["credits"])
+	var quests: Array = []
+	for q in p.get("quests", []):
+		quests.append({"title": str(q.get("title", "")), "progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
+	_state["quests"] = quests
 	state_updated.emit(_state)
 
 

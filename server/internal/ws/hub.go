@@ -15,6 +15,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
@@ -39,8 +40,9 @@ type Options struct {
 	MaxMessage int64 // максимальный размер входящего сообщения, байт
 	RatePerSec int   // допустимое число сообщений в секунду на сессию
 	Version    string
-	World      *world.World // игровой мир; nil: игровые сообщения отключены (Этап 00)
-	Store      world.Store  // хранилище игроков; nil: позиции не сохраняются
+	World      *world.World   // игровой мир; nil: игровые сообщения отключены (Этап 00)
+	Store      world.Store    // хранилище игроков; nil: позиции не сохраняются
+	Quests     *quest.Service // контракты и награды; nil: функция выключена
 }
 
 // Handler обслуживает WebSocket-соединения.
@@ -58,6 +60,7 @@ type session struct {
 	conn   *websocket.Conn
 	cancel context.CancelFunc
 	states chan Message
+	events chan Message // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
 	pid    string
 }
 
@@ -100,7 +103,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ss := &session{conn: c, cancel: cancel, states: make(chan Message, 2)}
+	ss := &session{conn: c, cancel: cancel, states: make(chan Message, 2), events: make(chan Message, 16)}
 	defer h.leave(ss, log)
 
 	limiter := newLimiter(h.opts.RatePerSec)
@@ -243,6 +246,13 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "server_full", "сервер переполнен"))
 			return false
 		}
+		if h.opts.Quests != nil {
+			qctx, qcancel := context.WithTimeout(ctx, 5*time.Second)
+			if err := h.opts.Quests.Join(qctx, rec.ID); err != nil {
+				log.Error("ws: контракты игрока", "player", rec.ID, "err", err)
+			}
+			qcancel()
+		}
 		sys := w.System()
 		reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(map[string]any{
 			"player_id": rec.ID, "name": rec.Name, "system": sys,
@@ -303,13 +313,29 @@ func (h *Handler) pump(ctx context.Context, ss *session) {
 				ss.cancel()
 				return
 			}
+		case m := <-ss.events:
+			if err := writeJSON(ctx, ss.conn, m); err != nil {
+				ss.cancel()
+				return
+			}
 		}
 	}
 }
 
 // pushState кладёт снимок в очередь; если клиент отстал, старый снимок выбрасывается.
 func (h *Handler) pushState(ss *session, st world.State) {
-	m := Message{Type: "state", Payload: mustJSON(st)}
+	out := struct {
+		world.State
+		Credits *int64            `json:"credits,omitempty"`
+		Quests  []quest.QuestView `json:"quests,omitempty"`
+	}{State: st}
+	if h.opts.Quests != nil {
+		if v, ok := h.opts.Quests.View(ss.pid); ok {
+			out.Credits = &v.Credits
+			out.Quests = v.Quests
+		}
+	}
+	m := Message{Type: "state", Payload: mustJSON(out)}
 	for {
 		select {
 		case ss.states <- m:
@@ -336,6 +362,9 @@ func (h *Handler) leave(ss *session, log *slog.Logger) {
 	h.mu.Unlock()
 	if !current {
 		return // игрока уже ведёт новая сессия
+	}
+	if h.opts.Quests != nil {
+		h.opts.Quests.Leave(ss.pid)
 	}
 	if rec, ok := h.opts.World.Disconnect(ss.pid, time.Now()); ok {
 		h.save(rec)
@@ -374,9 +403,14 @@ func (h *Handler) Tick(n int, now time.Time) {
 	}
 	h.mu.Unlock()
 	for _, t := range targets {
-		if st, ok := w.Snapshot(t.pid); ok {
-			h.pushState(t.s, st)
+		st, ok := w.Snapshot(t.pid)
+		if !ok {
+			continue
 		}
+		if h.opts.Quests != nil {
+			h.evaluateQuests(t.s, t.pid, st)
+		}
+		h.pushState(t.s, st)
 	}
 }
 
@@ -404,6 +438,22 @@ func (h *Handler) Run(ctx context.Context) {
 			for _, rec := range h.opts.World.Records() {
 				h.save(rec)
 			}
+		}
+	}
+}
+
+// evaluateQuests проверяет контракты игрока и сообщает о выполненных. Награду выдаёт сервис (атомарно и однократно).
+func (h *Handler) evaluateQuests(ss *session, pid string, st world.State) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	for _, c := range h.opts.Quests.Evaluate(ctx, pid, world.Vec{X: st.Ship.Pos[0], Y: st.Ship.Pos[1]}) {
+		m := Message{Type: "quest_completed", Payload: mustJSON(map[string]any{
+			"id": c.QuestID, "title": c.Title, "reward": map[string]int64{"credits": c.Credits}, "credits": c.Total,
+		})}
+		select {
+		case ss.events <- m:
+		default:
+			h.log.Warn("ws: очередь событий переполнена", "player", pid)
 		}
 	}
 }

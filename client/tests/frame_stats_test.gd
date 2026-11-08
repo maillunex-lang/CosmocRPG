@@ -8,6 +8,7 @@ const Session := preload("res://ui/session.gd")
 const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 
+var _fake_ms := 1000
 var _failures := 0
 var _checks := 0
 
@@ -28,6 +29,7 @@ func _check(cond: bool, name: String) -> void:
 func _stats_node() -> CanvasLayer:
 	UiSettings.override("debug_overlay", true)
 	var n: CanvasLayer = FrameStats.new()
+	n.clock = func() -> int: return _fake_ms
 	root.add_child(n)
 	return n
 
@@ -116,6 +118,7 @@ func _run() -> void:
 	UiSettings.override("debug_overlay", null)
 	UiSettings.set_bool("debug_overlay", true)
 	n = FrameStats.new()
+	n.clock = func() -> int: return _fake_ms
 	root.add_child(n)
 	_check(n.visible, "состояние берётся из настроек (включено)")
 	var f3 := InputEventKey.new()
@@ -153,7 +156,7 @@ func _run() -> void:
 	held.index = 0
 	held.pressed = true
 	n._input(held)
-	await create_timer(0.4).timeout
+	_fake_ms += 400
 	for idx in [1, 2]:
 		var late := InputEventScreenTouch.new()
 		late.index = idx
@@ -171,7 +174,7 @@ func _run() -> void:
 		tl.index = idx
 		tl.pressed = true
 		n._input(tl)
-	await create_timer(0.7).timeout
+	_fake_ms += 700
 	for idx in [0, 1, 2]:
 		var ul := InputEventScreenTouch.new()
 		ul.index = idx

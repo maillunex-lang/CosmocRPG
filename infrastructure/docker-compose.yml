@@ -35,6 +35,7 @@ services:
       COSMOC_ADMIN_COOKIE_SECURE: "true"
       COSMOC_ADMIN_TRUST_PROXY: "true"       # за прокси только Caddy
       COSMOC_LOG_LEVEL: ${LOG_LEVEL:-info}
+      COSMOC_FEATURE_QUESTS: ${FEATURE_QUESTS:-true}   # контракты и награды (Этап С-01); false выключает
     ports:
       - "${GAME_BIND:-0.0.0.0}:8080:8080"    # игровой порт (HTTP/WS без TLS до появления домена)
     networks: [db, edge]

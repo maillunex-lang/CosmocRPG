@@ -17,6 +17,8 @@ type Config struct {
 	WSMaxMessage    int64         // COSMOC_WS_MAX_MESSAGE, байт, по умолчанию 4096
 	WSRatePerSec    int           // COSMOC_WS_RATE_PER_SEC, сообщений в секунду, по умолчанию 20
 
+	FeatureQuests bool // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
+
 	AdminAddr         string        // COSMOC_ADMIN_ADDR, адрес админ-API (по умолчанию 127.0.0.1:8081); значение off выключает
 	AdminCookieSecure bool          // COSMOC_ADMIN_COOKIE_SECURE, по умолчанию true (админка за HTTPS)
 	AdminTrustProxy   bool          // COSMOC_ADMIN_TRUST_PROXY, доверять X-Forwarded-For от прокси, по умолчанию false
@@ -72,7 +74,7 @@ func Load(getenv func(string) string) (Config, error) {
 	for _, b := range []struct {
 		name string
 		dst  *bool
-	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}} {
+	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}, {"COSMOC_FEATURE_QUESTS", &c.FeatureQuests}} {
 		if v := getenv(b.name); v != "" {
 			x, err := strconv.ParseBool(v)
 			if err != nil {

@@ -48,6 +48,14 @@ func _run() -> void:
 	_check(not s["ship"].has("hull") and not s.has("credits") and not s["player"].has("level"), "данных, которых сервер не присылает, нет (ничего не выдумано)")
 	_check(s["skills"].is_empty() and not s["combat_available"], "способностей и боя пока нет")
 	_check(not gw.is_demo(), "серверный шлюз не демо")
+	gw._apply_state({"time": 4.0, "ship": {"name": "П", "pos": [0, 0], "dir": [1, 0], "speed": 0.0}, "objects": [],
+		"credits": 500, "quests": [{"id": "first_flight", "title": "Первый полёт", "text": "…", "progress": 0, "goal": 1}]})
+	var s2: Dictionary = got[1]
+	_check(s2["credits"] == 500 and s2["quests"][0]["title"] == "Первый полёт" and s2["quests"][0]["goal"] == 1, "кредиты и задания с сервера преобразованы")
+	var notes: Array = []
+	gw.notification.connect(func(t: String) -> void: notes.append(t))
+	gw._on_message("quest_completed", {"id": "first_flight", "title": "Первый полёт", "reward": {"credits": 500}}, "")
+	_check(notes.size() == 1 and notes[0].contains("500"), "уведомление о выполнении контракта")
 	gw.queue_free()
 
 	# --- онлайн ---
@@ -59,11 +67,12 @@ func _run() -> void:
 	var tag := str(Time.get_ticks_usec())
 	PlayerIdentity.set_override("testa" + tag.pad_zeros(16))
 	var a := ServerGateway.new()
+	a.join_name = "[тест] A " + tag.right(6)
 	root.add_child(a)
 	a.connect_to_server(url)
 	_check(await _wait(a, func() -> bool: return not a.snapshot().is_empty()), "вход выполнен, пришло состояние")
 	var st: Dictionary = a.snapshot()
-	_check(str(st["player"]["name"]).begins_with("Пилот-"), "имя по умолчанию «Пилот-NNNN» (%s)" % str(st["player"]["name"]))
+	_check(str(st["player"]["name"]).begins_with("[тест]"), "имя из join применено (%s)" % str(st["player"]["name"]))
 	_check(st["system"].get("id", "") == "xi", "система Кси")
 	var has_station := false
 	for o in st["objects"]:
@@ -87,9 +96,18 @@ func _run() -> void:
 	await _wait(a, func() -> bool: return a.snapshot()["autopilot"])
 	_check(a.snapshot()["autopilot"], "автопилот включён")
 
+	# контракт «Первый полёт»: автопилот приводит к станции, сервер выдаёт награду
+	_check(a.snapshot().get("quests", []).size() == 1 and a.snapshot()["credits"] == 0, "контракт выдан, кредитов 0")
+	var notes_live: Array = []
+	a.notification.connect(func(t: String) -> void: notes_live.append(t))
+	await _wait(a, func() -> bool: return int(a.snapshot().get("credits", 0)) == 500, 30.0)
+	_check(int(a.snapshot().get("credits", 0)) == 500 and a.snapshot()["quests"].is_empty(), "награда 500 кредитов получена, контракт закрыт")
+	_check(notes_live.size() == 1, "уведомление о выполнении пришло один раз")
+
 	# второй клиент
 	PlayerIdentity.set_override("testb" + tag.pad_zeros(16))
 	var b := ServerGateway.new()
+	b.join_name = "[тест] B " + tag.right(6)
 	root.add_child(b)
 	b.connect_to_server(url)
 	await _wait(b, func() -> bool: return not b.snapshot().is_empty())

@@ -30,7 +30,7 @@ func _check(cond: bool, name: String) -> void:
 
 
 func _grab() -> Image:
-	for i in 4:
+	for i in 3:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var img := root.get_texture().get_image()
@@ -200,8 +200,8 @@ func _run() -> void:
 	for mode in [1, 2]:
 		_screen.get_node("%Hud").camera_mode_requested.emit()
 		_gw.move_input(Vector2(-0.7, 0.7))
-		for i in 240:
-			_gw.tick(1.0 / 60.0)
+		for i in 60:
+			_gw.tick(0.1)   # 6 с игрового времени за 60 кадров: на медленных машинах (CI) тест не растягивается
 			await process_frame
 		var m_img := await _grab()
 		_save(m_img, "14_mode_%d" % mode)

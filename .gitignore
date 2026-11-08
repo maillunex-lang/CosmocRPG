@@ -25,3 +25,15 @@ client/.import/
 Thumbs.db
 # локальные настройки Claude Code
 .claude/settings.local.json
+
+# Node / админка
+node_modules/
+admin/dist/
+*.tsbuildinfo
+
+# Go
+server/bin/
+*.test
+
+# образец переменных можно коммитить
+!.env.example

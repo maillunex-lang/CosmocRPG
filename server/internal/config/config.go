@@ -16,6 +16,11 @@ type Config struct {
 	ShutdownTimeout time.Duration // COSMOC_SHUTDOWN_TIMEOUT, по умолчанию 10s
 	WSMaxMessage    int64         // COSMOC_WS_MAX_MESSAGE, байт, по умолчанию 4096
 	WSRatePerSec    int           // COSMOC_WS_RATE_PER_SEC, сообщений в секунду, по умолчанию 20
+
+	AdminAddr         string        // COSMOC_ADMIN_ADDR, адрес админ-API (по умолчанию 127.0.0.1:8081); значение off выключает
+	AdminCookieSecure bool          // COSMOC_ADMIN_COOKIE_SECURE, по умолчанию true (админка за HTTPS)
+	AdminTrustProxy   bool          // COSMOC_ADMIN_TRUST_PROXY, доверять X-Forwarded-For от прокси, по умолчанию false
+	AdminSessionTTL   time.Duration // COSMOC_ADMIN_SESSION_TTL, по умолчанию 12h
 }
 
 // Load собирает конфигурацию через функцию getenv (например, os.Getenv).
@@ -27,6 +32,13 @@ func Load(getenv func(string) string) (Config, error) {
 		ShutdownTimeout: 10 * time.Second,
 		WSMaxMessage:    4096,
 		WSRatePerSec:    20,
+
+		AdminCookieSecure: true,
+		AdminSessionTTL:   12 * time.Hour,
+	}
+	c.AdminAddr = def(getenv("COSMOC_ADMIN_ADDR"), "127.0.0.1:8081")
+	if c.AdminAddr == "off" {
+		c.AdminAddr = "" // админ-API выключен
 	}
 	if c.DatabaseURL == "" {
 		return Config{}, errors.New("COSMOC_DATABASE_URL не задана")
@@ -56,6 +68,25 @@ func Load(getenv func(string) string) (Config, error) {
 			return Config{}, fmt.Errorf("COSMOC_WS_RATE_PER_SEC: некорректное значение %q", v)
 		}
 		c.WSRatePerSec = n
+	}
+	for _, b := range []struct {
+		name string
+		dst  *bool
+	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}} {
+		if v := getenv(b.name); v != "" {
+			x, err := strconv.ParseBool(v)
+			if err != nil {
+				return Config{}, fmt.Errorf("%s: некорректное значение %q", b.name, v)
+			}
+			*b.dst = x
+		}
+	}
+	if v := getenv("COSMOC_ADMIN_SESSION_TTL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d <= 0 {
+			return Config{}, fmt.Errorf("COSMOC_ADMIN_SESSION_TTL: некорректное значение %q", v)
+		}
+		c.AdminSessionTTL = d
 	}
 	return c, nil
 }

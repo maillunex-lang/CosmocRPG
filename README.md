@@ -36,6 +36,7 @@
 - [DEPLOYMENT](docs/DEPLOYMENT.md) — развёртывание
 - [HANDOFF](docs/HANDOFF.md) — журнал передачи задач
 - [DEVELOPMENT](docs/DEVELOPMENT.md) — правила разработки
+- [REFERENCES](docs/REFERENCES.md) — внешние источники и референсы
 
 ## Быстрый старт клиента
 

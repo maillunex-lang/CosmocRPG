@@ -83,7 +83,11 @@ func _run() -> void:
 	# --- проект: версия и ключ ---
 	var pem := Updater.PUBLIC_KEY_PEM
 	var pk := CryptoKey.new()
-	_c(FileAccess.get_file_as_string(Updater.PUBLIC_KEY_PATH).strip_edges() == pem.strip_edges(), "вшитый в код ключ совпадает с файлом ключа")
+	# файл ключа (*.pem) не хранится в git: в CI его нет, сверка только там, где файл есть (на машине разработчика)
+	if FileAccess.file_exists(Updater.PUBLIC_KEY_PATH):
+		_c(FileAccess.get_file_as_string(Updater.PUBLIC_KEY_PATH).strip_edges() == pem.strip_edges(), "вшитый в код ключ совпадает с файлом ключа")
+	else:
+		print("SKIP  файл ключа отсутствует (CI): сверка пропущена")
 	_c(pem.begins_with("-----BEGIN PUBLIC KEY-----") and pk.load_from_string(pem, true) == OK, "вшитый публичный ключ загружается")
 	_c(not pem.contains("PRIVATE"), "в приложении нет приватного ключа")
 	var cfg := ConfigFile.new()

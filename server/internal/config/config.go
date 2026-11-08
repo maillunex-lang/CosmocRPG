@@ -18,6 +18,7 @@ type Config struct {
 	WSRatePerSec    int           // COSMOC_WS_RATE_PER_SEC, сообщений в секунду, по умолчанию 20
 
 	FeatureLiving bool // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
+	FeatureAI     bool // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
 	FeatureQuests bool // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
 
 	AdminAddr         string        // COSMOC_ADMIN_ADDR, адрес админ-API (по умолчанию 127.0.0.1:8081); значение off выключает
@@ -75,7 +76,7 @@ func Load(getenv func(string) string) (Config, error) {
 	for _, b := range []struct {
 		name string
 		dst  *bool
-	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}, {"COSMOC_FEATURE_QUESTS", &c.FeatureQuests}, {"COSMOC_FEATURE_LIVING", &c.FeatureLiving}} {
+	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}, {"COSMOC_FEATURE_QUESTS", &c.FeatureQuests}, {"COSMOC_FEATURE_LIVING", &c.FeatureLiving}, {"COSMOC_FEATURE_AI", &c.FeatureAI}} {
 		if v := getenv(b.name); v != "" {
 			x, err := strconv.ParseBool(v)
 			if err != nil {

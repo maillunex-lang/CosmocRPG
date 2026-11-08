@@ -36,6 +36,7 @@ services:
       COSMOC_ADMIN_TRUST_PROXY: "true"       # за прокси только Caddy
       COSMOC_LOG_LEVEL: ${LOG_LEVEL:-info}
       COSMOC_FEATURE_QUESTS: ${FEATURE_QUESTS:-true}   # контракты и награды (Этап С-01); false выключает
+      COSMOC_FEATURE_AI: ${FEATURE_AI:-true}   # ИИ-игроки в мире (R-42); false выключает
       COSMOC_FEATURE_LIVING: ${FEATURE_LIVING:-true}   # живые локации (враги, добыча, исследование, большая карта); false выключает
     ports:
       - "${GAME_BIND:-0.0.0.0}:8080:8080"    # игровой порт (HTTP/WS без TLS до появления домена)

@@ -1,0 +1,105 @@
+// Package aiagent — «агент мира» ИИ-игроков (R-40, R-42, этап ИИ-1): решает, сколько ИИ-капитанов держать онлайн и кого именно
+// (из профилей AI Studio), и добавляет их в мир. Правила R-42: ИИ учитываются отдельно от живых игроков (лимит ИИ 200),
+// без живых игроков ИИ нет онлайн, при живых игроках около 20–50, скорость набора и снятия ограничена.
+package aiagent
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sort"
+)
+
+// Behavior-ключи поведения (совпадают с world.AI*).
+var behaviors = []string{"miner", "trader", "scout", "patrol", "support"}
+
+// Settings — настройки ИИ-игроков (правятся из админки).
+type Settings struct {
+	Enabled       bool           `json:"enabled"`         // выключатель: выключено — ИИ нет онлайн
+	Paused        bool           `json:"paused"`          // пауза: число ИИ не меняется (ни набора, ни снятия)
+	MinOnline     int            `json:"min_online"`      // сколько ИИ при появлении первого живого игрока
+	MaxOnline     int            `json:"max_online"`      // сколько ИИ при PlayersForMax и более живых игроках
+	AbsMax        int            `json:"abs_max"`         // жёсткий потолок ИИ (лимит 200 по R-42)
+	PlayersForMax int            `json:"players_for_max"` // при скольких живых игроках достигается MaxOnline
+	SpawnPerMin   int            `json:"spawn_per_min"`   // не больше стольких появлений в минуту
+	DespawnPerMin int            `json:"despawn_per_min"` // не больше стольких уходов в минуту
+	EmptyGraceSec int            `json:"empty_grace_sec"` // сколько секунд ИИ остаются после ухода последнего игрока
+	ViewRadius    float64        `json:"view_radius"`     // радиус видимости ИИ для игрока
+	Shares        map[string]int `json:"shares"`          // доли поведений (в процентах, сумма не обязана быть 100)
+}
+
+// DefaultSettings — решения владельца R-42: 20–50 ИИ при живых игроках, потолок 200.
+func DefaultSettings() Settings {
+	return Settings{Enabled: true, MinOnline: 20, MaxOnline: 50, AbsMax: 200, PlayersForMax: 10, SpawnPerMin: 12, DespawnPerMin: 30,
+		EmptyGraceSec: 30, ViewRadius: 450, Shares: map[string]int{"miner": 30, "trader": 20, "scout": 20, "patrol": 15, "support": 15}}
+}
+
+// Validate проверяет настройки и возвращает понятную ошибку.
+func (s Settings) Validate() error {
+	switch {
+	case s.AbsMax < 0 || s.AbsMax > 200:
+		return errors.New("потолок ИИ должен быть от 0 до 200")
+	case s.MinOnline < 0 || s.MaxOnline < s.MinOnline:
+		return errors.New("минимум ИИ не может быть больше максимума")
+	case s.MaxOnline > s.AbsMax:
+		return fmt.Errorf("максимум ИИ (%d) выше потолка (%d)", s.MaxOnline, s.AbsMax)
+	case s.PlayersForMax < 1 || s.PlayersForMax > 50:
+		return errors.New("«игроков для максимума» — от 1 до 50")
+	case s.SpawnPerMin < 1 || s.SpawnPerMin > 600 || s.DespawnPerMin < 1 || s.DespawnPerMin > 600:
+		return errors.New("скорость набора и снятия — от 1 до 600 в минуту")
+	case s.EmptyGraceSec < 0 || s.EmptyGraceSec > 3600:
+		return errors.New("задержка снятия — от 0 до 3600 секунд")
+	case s.ViewRadius < 100 || s.ViewRadius > 2000:
+		return errors.New("радиус видимости — от 100 до 2000")
+	}
+	total := 0
+	for k, v := range s.Shares {
+		ok := false
+		for _, b := range behaviors {
+			ok = ok || b == k
+		}
+		if !ok || v < 0 || v > 100 {
+			return fmt.Errorf("доля «%s» некорректна", k)
+		}
+		total += v
+	}
+	if total <= 0 {
+		return errors.New("хотя бы одна доля поведения должна быть больше нуля")
+	}
+	return nil
+}
+
+// Target — сколько ИИ держать онлайн при live живых игроках (до проверки лимитов набора). Нет игроков или ИИ выключены — 0.
+func (s Settings) Target(live int) int {
+	if !s.Enabled || live <= 0 {
+		return 0
+	}
+	span := s.MaxOnline - s.MinOnline
+	k := live
+	if k > s.PlayersForMax {
+		k = s.PlayersForMax
+	}
+	t := s.MinOnline + span*k/s.PlayersForMax
+	if t > s.AbsMax {
+		t = s.AbsMax
+	}
+	return t
+}
+
+// ShareList возвращает поведения с положительными долями в стабильном порядке.
+func (s Settings) shareList() []string {
+	var out []string
+	for k, v := range s.Shares {
+		if v > 0 {
+			out = append(out, k)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// SettingsStore — хранилище настроек.
+type SettingsStore interface {
+	Load(ctx context.Context) (Settings, bool, error)
+	Save(ctx context.Context, s Settings, admin string) error
+}

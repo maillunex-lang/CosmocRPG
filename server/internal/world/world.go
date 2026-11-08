@@ -120,6 +120,7 @@ type Object struct {
 	Hull    *float64   `json:"hull,omitempty"`
 	HullMax *float64   `json:"hull_max,omitempty"`
 	Dead    bool       `json:"dead,omitempty"`
+	AI      bool       `json:"ai,omitempty"` // ИИ-капитан (метка иконкой, R-42)
 
 	// косметика (VIP, значок, цвета): только внешний вид
 	Vip       int    `json:"vip,omitempty"`
@@ -202,6 +203,9 @@ type World struct {
 	deposits []*deposit
 	safe     []safeZone
 	rewards  []Reward
+	ais      []*aiShip          // ИИ-капитаны (R-42): не игроки, не сохраняются, не влияют на экономику
+	aiByID   map[string]*aiShip // они же по идентификатору
+	aiView   float64            // радиус видимости ИИ-кораблей для игрока (область интереса)
 	layout   worldgen.Layout
 	wcfg     worldgen.Config
 	radius   float64 // радиус системы: из раскладки, иначе Radius
@@ -369,6 +373,9 @@ func (w *World) objectPos(id string) (Vec, string, bool) {
 	if p, ok := w.players[id]; ok {
 		return p.Pos, p.Name, true
 	}
+	if a, ok := w.aiByID[id]; ok {
+		return a.Pos, a.Name, true
+	}
 	return Vec{}, "", false
 }
 
@@ -431,6 +438,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 	}
 	w.stepNPCs()
 	w.stepLiving(dt)
+	w.stepAIs(dt)
 	sort.Slice(removed, func(i, j int) bool { return removed[i].ID < removed[j].ID })
 	return removed
 }
@@ -480,6 +488,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 			Pos: [2]float64{p.Pos.X, p.Pos.Y}, Dir: [2]float64{p.Dir.X, p.Dir.Y}, Ship: p.ShipType, Skin: p.Skin, Dead: p.deadUntil > w.t,
 			Vip: p.cosmetics.Vip, Badge: p.cosmetics.Badge, NameColor: p.cosmetics.NameColor, Engine: p.cosmetics.Engine})
 	}
+	st.Objects = append(st.Objects, w.aiObjects(me.Pos)...)
 	return st, true
 }
 

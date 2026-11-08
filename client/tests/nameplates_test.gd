@@ -86,5 +86,21 @@ func _run() -> void:
 	node.update_plates(items.slice(0, 2), area)
 	await process_frame
 	_c(node.visible_count() == 2, "после ухода объектов подписи снимаются")
+	# метка ИИ-капитана: иконка перед именем, отступ слева; у обычных подписей иконки нет
+	var np: Control = Nameplates.new()
+	root.add_child(np)
+	await process_frame
+	np.update_plates([
+		{"id": "ai1", "text": "Валун", "anchor": Vector2(300, 300), "priority": 10.0, "icon": "bot"},
+		{"id": "pl1", "text": "Игрок", "anchor": Vector2(700, 300), "priority": 9.0}], area)
+	await process_frame
+	var l_ai := np._labels["ai1"] as Label
+	var l_pl := np._labels["pl1"] as Label
+	_c(l_ai.get_node_or_null("Icon") != null and (l_ai.get_node("Icon") as TextureRect).visible and (l_ai.get_node("Icon") as TextureRect).texture != null, "у ИИ-капитана перед именем иконка")
+	_c(l_pl.get_node_or_null("Icon") == null, "у обычной подписи иконки нет")
+	_c(l_ai.size.x > l_pl.size.x - 1.0 and np._measure("Валун", 17, true).x - np._measure("Валун", 17, false).x == Nameplates.ICON_SPACE, "под иконку отводится место")
+	np.update_plates([{"id": "ai1", "text": "Валун", "anchor": Vector2(300, 300), "priority": 10.0}], area)
+	await process_frame
+	_c(not (l_ai.get_node("Icon") as TextureRect).visible, "иконка пропадает, когда метки нет")
 	print("Итого: проверок %d, провалов %d" % [_n, _f])
 	quit(1 if _f > 0 else 0)

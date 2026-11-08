@@ -16,6 +16,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/admin"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
@@ -286,6 +287,11 @@ func run() error {
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
 		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
+	if cfg.FeatureAI {
+		agent := aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: aistudio.NewService(aistudio.NewPGStore(pool))}, aiagent.NewPGStore(pool), log)
+		go agent.Run(ctx, 2*time.Second)
+		log.Info("ИИ-игроки включены (COSMOC_FEATURE_AI)")
+	}
 	worldDone := make(chan struct{})
 	go func() {
 		wsHandler.Run(ctx) // симуляция мира; при остановке сохраняет позиции всех кораблей

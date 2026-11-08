@@ -199,7 +199,7 @@ func _update_ship_labels(_delta: float, me: Node3D) -> void:
 		if prio < 0.0 or (not sel and not v.me and d > maxd):
 			continue
 		var alpha := 1.0 if (sel or v.me) else clampf(1.0 - 0.6 * d / maxd, 0.4, 1.0)
-		items.append({"id": id, "text": v._label.text, "anchor": anchor, "priority": prio, "force": sel or v.me, "alpha": alpha, "color": col, "big": sel or v.me})
+		items.append({"id": id, "text": v._label.text, "anchor": anchor, "priority": prio, "force": sel or v.me, "alpha": alpha, "color": col, "big": sel or v.me, "icon": "bot" if kind == "ai" else ""})
 	_plates.update_plates(items, area)
 
 

@@ -6,10 +6,13 @@ extends Control
 
 const Tokens := preload("res://ui/theme/tokens.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
+const Icons := preload("res://ui/icons.gd")
 
 const MAX_PLATES := 7
 const PADDING := 3.0
 const MAX_NAME_CHARS := 22
+const ICON_SIZE := 16.0   # иконка перед именем (метка ИИ-капитана, R-42)
+const ICON_SPACE := 20.0
 
 var _labels: Dictionary = {}   # id -> Label (пул по идентификатору)
 var _font := UiTheme.make_font(600)
@@ -85,8 +88,8 @@ func _plate(id: String) -> Label:
 	return l
 
 
-func _measure(text: String, font_size: int) -> Vector2:
-	return _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size) + Vector2(10, 6)
+func _measure(text: String, font_size: int, icon := false) -> Vector2:
+	return _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size) + Vector2(10 + (ICON_SPACE if icon else 0.0), 6)
 
 
 ## Обновление подписей. items: [{id, text, anchor, priority, force, alpha, color, big}] (без size: размер считается по тексту).
@@ -96,9 +99,10 @@ func update_plates(items: Array, area: Rect2) -> void:
 	for it in items:
 		var fs := 22 if bool(it.get("big", false)) else 17
 		var text := short_name(str(it["text"]))
-		var d := {"id": str(it["id"]), "anchor": it["anchor"], "size": _measure(text, fs), "priority": float(it["priority"]), "force": bool(it.get("force", false))}
+		var icon := str(it.get("icon", ""))
+		var d := {"id": str(it["id"]), "anchor": it["anchor"], "size": _measure(text, fs, icon != ""), "priority": float(it["priority"]), "force": bool(it.get("force", false))}
 		prepared.append(d)
-		by_id[d["id"]] = {"text": text, "fs": fs, "alpha": float(it.get("alpha", 1.0)), "color": it.get("color", Tokens.TEXT)}
+		by_id[d["id"]] = {"icon": icon, "text": text, "fs": fs, "alpha": float(it.get("alpha", 1.0)), "color": it.get("color", Tokens.TEXT)}
 	var placed := place(prepared, area)
 	for id in _labels.keys():
 		if not placed.has(id):
@@ -114,6 +118,7 @@ func update_plates(items: Array, area: Rect2) -> void:
 		l.position = r.position
 		l.size = r.size
 		l.visible = true
+		_apply_icon(l, str(info["icon"]), info["color"])
 	# подписи исчезнувших объектов освобождаются
 	var alive := {}
 	for it in items:
@@ -122,6 +127,31 @@ func update_plates(items: Array, area: Rect2) -> void:
 		if not alive.has(id):
 			(_labels[id] as Label).queue_free()
 			_labels.erase(id)
+
+
+## Иконка перед именем: у подписи есть дочерний TextureRect «Icon», отступ слева даёт стиль «normal».
+func _apply_icon(l: Label, icon: String, color: Color) -> void:
+	var tr := l.get_node_or_null("Icon") as TextureRect
+	if icon == "":
+		if tr != null:
+			tr.visible = false
+		l.remove_theme_stylebox_override("normal")
+		return
+	if tr == null:
+		tr = TextureRect.new()
+		tr.name = "Icon"
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		l.add_child(tr)
+	tr.texture = Icons.tex(icon)
+	tr.modulate = color
+	tr.size = Vector2(ICON_SIZE, ICON_SIZE)
+	tr.position = Vector2(5.0, (l.size.y - ICON_SIZE) * 0.5)
+	tr.visible = true
+	var sb := StyleBoxEmpty.new()
+	sb.content_margin_left = ICON_SPACE
+	l.add_theme_stylebox_override("normal", sb)
 
 
 func visible_count() -> int:

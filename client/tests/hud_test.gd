@@ -425,7 +425,7 @@ func _verify_layout(size: Vector2i, insets: Vector4i, label: String, scenario: S
 
 	# блоки не пересекаются между собой
 	var blocks := []
-	for nm in ["%ProfileCard" if false else "ProfileCard", "QuestsCard", "ChatCard", "Joystick", "DemoBar", "AlertBar", "BottomNav", "TopRight", "TargetCard", "AttackButton", "SkillsGrid", "ToggleRow"]:
+	for nm in ["ProfileCard", "QuestsCard", "ChatCard", "Joystick", "DemoBar", "AlertBar", "DebugSlot", "BottomNav", "TopRight", "TargetCard", "AttackButton", "SkillsGrid", "ToggleRow"]:
 		var node := hud.find_child(nm, true, false) as Control
 		if node != null and node.visible and node.size.x > 0.0 and node.size.y > 0.0:
 			blocks.append(node)

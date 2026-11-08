@@ -8,6 +8,7 @@ const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const ShipView := preload("res://scripts/space/ship_view.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 const BackgroundLibrary := preload("res://ui/space_bg/background_library.gd")
+const FrameStats := preload("res://ui/debug/frame_stats.gd")
 
 signal exit_requested
 
@@ -24,6 +25,7 @@ var gateway: UiGateway
 var _ships: Dictionary = {}       # id -> ShipView
 var _cam_goal := Vector3.ZERO
 var _bg_id := ""
+var stats: CanvasLayer   # отладочная панель производительности
 
 @onready var _hud: Control = %Hud
 @onready var _bg: Control = %SpaceBackground
@@ -45,6 +47,14 @@ static func nearest_id(points: Dictionary, pos: Vector2, radius: float) -> Strin
 
 
 func _ready() -> void:
+	var t_ready := Time.get_ticks_msec()
+	stats = FrameStats.new()
+	add_child(stats)
+	stats.attach_to(_hud.get_node("%DebugSlot"))
+	if Session.opened_msec >= 0:
+		# от нажатия кнопки до начала _ready: загрузка и создание сцены, HUD и текстур
+		stats.mark("сцена", float(t_ready - Session.opened_msec))
+		Session.opened_msec = -1
 	theme = UiTheme.build()
 	_camera.position = Vector3(0, 28, 20)
 	_camera.look_at(_rig.global_position)
@@ -52,9 +62,12 @@ func _ready() -> void:
 	if gateway.get_parent() == null:
 		add_child(gateway)
 	_hud.bind(gateway)
+	stats.mark("HUD", float(Time.get_ticks_msec() - t_ready))
 	_hud.exit_requested.connect(_on_exit)
 	gateway.state_updated.connect(_on_state)
+	var t_state := Time.get_ticks_msec()
 	_on_state(gateway.snapshot())
+	stats.mark("мир+фон", float(Time.get_ticks_msec() - t_state))
 
 
 func _process(delta: float) -> void:

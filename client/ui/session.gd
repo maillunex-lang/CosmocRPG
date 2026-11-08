@@ -5,3 +5,6 @@ extends RefCounted
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 
 static var gateway: UiGateway = null
+## Момент (мс движка), когда экран подключения запросил открытие космоса, для замера времени загрузки
+## сцены. -1: не задан (прямой запуск сцены).
+static var opened_msec := -1

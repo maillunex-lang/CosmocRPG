@@ -176,6 +176,12 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
+[node name="DebugSlot" type="VBoxContainer" parent="SafeArea/Columns/CenterStack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
 [node name="BottomNav" type="HBoxContainer" parent="SafeArea/Columns/CenterStack"]
 unique_name_in_owner = true
 layout_mode = 2

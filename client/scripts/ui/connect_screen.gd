@@ -47,6 +47,7 @@ func _ready() -> void:
 ## Демонстрационный космос: данные не с сервера (интерфейс сам покажет плашку «Демо»).
 func _open_demo_space() -> void:
 	Session.gateway = DemoGateway.new()
+	Session.opened_msec = Time.get_ticks_msec()
 	get_tree().change_scene_to_file("res://scenes/space.tscn")
 
 

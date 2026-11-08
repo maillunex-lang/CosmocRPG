@@ -62,6 +62,8 @@ func _ready() -> void:
 	side.add_child(title)
 	_coords = Label.new()
 	_coords.theme_type_variation = &"MutedLabel"
+	_coords.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # длинная строка не должна раздвигать панель за край экрана
+	_coords.custom_minimum_size = Vector2(0, 44)
 	side.add_child(_coords)
 	_info = Label.new()
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

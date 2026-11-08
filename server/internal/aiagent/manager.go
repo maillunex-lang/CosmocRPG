@@ -58,6 +58,9 @@ type Manager struct {
 	despawnBudget float64
 	rng           uint32
 	lastTarget    int
+	loggedOnline  int
+	loggedTarget  int
+	loggedAt      time.Time
 }
 
 type onlineAI struct {
@@ -157,6 +160,7 @@ func (m *Manager) Tick(ctx context.Context) {
 		target = len(m.online) // короткая задержка после ухода последнего игрока
 	}
 	m.lastTarget = target
+	defer m.logChange(now, live)
 	if s.Paused {
 		return
 	}
@@ -184,6 +188,16 @@ func (m *Manager) Tick(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// logChange записывает в журнал изменение числа ИИ или цели (не чаще раза в 10 секунд).
+func (m *Manager) logChange(now time.Time, live int) {
+	online := len(m.online)
+	if (online == m.loggedOnline && m.lastTarget == m.loggedTarget) || now.Sub(m.loggedAt) < 10*time.Second {
+		return
+	}
+	m.loggedOnline, m.loggedTarget, m.loggedAt = online, m.lastTarget, now
+	m.log.Info("ИИ-игроки", "онлайн", online, "цель", m.lastTarget, "игроков", live)
 }
 
 func (m *Manager) countByBehavior() map[string]int {

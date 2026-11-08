@@ -18,6 +18,7 @@ signal join_failed(reason: String)
 
 var url := ""
 var player_name := ""
+var player_id := ""
 ## Имя при создании игрока (по умолчанию сервер даёт «Пилот-NNNN»); нужно тестам, чтобы отличать своих игроков.
 var join_name := ""
 var system: Dictionary = {}
@@ -35,10 +36,16 @@ var _sent_move := Vector2.ZERO
 var _move_cd := 0.0
 var _move_dirty := false
 var _token := ""
+var _ability_ids: Array = []   # слот способности (кнопка HUD) -> идентификатор на сервере
 
 
 func is_demo() -> bool:
 	return false
+
+
+## Публичный идентификатор своего игрока (в событиях боя).
+func own_id() -> String:
+	return player_id
 
 
 func snapshot() -> Dictionary:
@@ -117,12 +124,17 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			_retry = 0
 			_retry_in = -1.0
 			player_name = str(payload.get("name", ""))
+			player_id = str(payload.get("player_id", ""))
 			system = payload.get("system", {})
 			alert_cleared.emit(ALERT_LINK)
 			_sent_move = Vector2.INF   # после входа заново сообщаем движение
 			joined.emit()
 		"state":
 			_apply_state(payload)
+		"combat_events":
+			for e in payload.get("events", []):
+				if e is Dictionary:
+					combat_event.emit(e)
 		"quest_completed":
 			var reward: Dictionary = payload.get("reward", {})
 			notification.emit("Задание выполнено: %s. Награда: %d кредитов" % [str(payload.get("title", "")), int(reward.get("credits", 0))])
@@ -143,10 +155,20 @@ func _on_error(payload: Dictionary) -> void:
 				alert_raised.emit(ALERT_LINK, text)
 			else:
 				join_failed.emit(text)
-		"bad_target", "no_target":
+		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec":
 			command_failed.emit("space", text)
 		_:
 			command_failed.emit("server", text)
+
+
+func _ship_dict(ship: Dictionary) -> Dictionary:
+	var d := {"name": str(ship.get("name", "")), "pos": _vec(ship.get("pos")), "dir": _vec(ship.get("dir")), "speed": float(ship.get("speed", 0.0)),
+		"type": str(ship.get("type", "")), "skin": str(ship.get("skin", "")), "spec": str(ship.get("spec", "")),
+		"boosting": bool(ship.get("boosting", false)), "dead": bool(ship.get("dead", false))}
+	if ship.has("hull"):   # шкалы показываются только если сервер прислал значения
+		for k in ["hull", "hull_max", "shield", "shield_max", "energy", "energy_max", "armor", "cargo"]:
+			d[k] = float(ship.get(k, 0.0))
+	return d
 
 
 func _vec(a: Variant) -> Vector2:
@@ -160,26 +182,46 @@ func _apply_state(p: Dictionary) -> void:
 	var ship: Dictionary = p.get("ship", {})
 	var objects: Array = []
 	for o in p.get("objects", []):
-		objects.append({
+		var obj := {
 			"id": str(o.get("id", "")), "kind": str(o.get("kind", "")), "stance": str(o.get("stance", "neutral")),
 			"name": str(o.get("name", "")), "pos": _vec(o.get("pos")), "dir": _vec(o.get("dir")),
-		})
+			"ship": str(o.get("ship", "")), "skin": str(o.get("skin", "")), "dead": bool(o.get("dead", false)),
+		}
+		if o.has("hull"):
+			obj["hull"] = float(o["hull"])
+			obj["hull_max"] = float(o.get("hull_max", o["hull"]))
+		objects.append(obj)
 	_target_id = str(p.get("target_id", ""))
 	_autopilot = bool(p.get("autopilot", false))
+	var abilities: Array = ship.get("abilities", [])
+	var skills: Array = []
+	_ability_ids.clear()
+	for i in abilities.size():
+		var ab: Dictionary = abilities[i]
+		_ability_ids.append(str(ab.get("id", "")))
+		skills.append({"slot": i, "name": str(ab.get("name", "")), "energy_cost": float(ab.get("energy_cost", 0)), "cooldown": float(ab.get("cooldown", 0)),
+			"cooldown_left": float(ab.get("cooldown_left", 0)), "needs_target": bool(ab.get("needs_target", false))})
+	var has_combat := ship.has("hull")
+	var tpos: Variant = null
+	for o in objects:
+		if o["id"] == _target_id:
+			tpos = o["pos"]
+	var in_range := false
+	if tpos != null and has_combat:
+		in_range = (_vec(ship.get("pos")) as Vector2).distance_to(tpos) <= float(ship.get("pulse_range", 0.0))
 	_state = {
 		"mode": "server",
 		"time": float(p.get("time", 0.0)),
 		"player": {"name": player_name},
 		"system": system,
-		"ship": {"name": str(ship.get("name", "")), "pos": _vec(ship.get("pos")), "dir": _vec(ship.get("dir")),
-			"speed": float(ship.get("speed", 0.0))},
+		"ship": _ship_dict(ship),
 		"objects": objects,
 		"target_id": _target_id,
 		"autopilot": _autopilot,
-		"combat_available": false,
-		"skills": [],
-		"combat": {"in_combat": false},
-		"attacking": false, "auto_skills": false, "target_in_range": false,
+		"combat_available": has_combat,
+		"skills": skills,
+		"combat": {"in_combat": bool(p.get("attacking", false))},
+		"attacking": bool(p.get("attacking", false)), "auto_skills": false, "target_in_range": in_range,
 		"quests": [], "chat": [],
 	}
 	# кредиты и задания показываются, только если сервер их прислал (контракты включены флагом на сервере)
@@ -218,16 +260,33 @@ func _send_move() -> void:
 	_client.send_message("move", {"x": _move.x, "y": _move.y})
 
 
-func attack(_id: String) -> void:
-	command_failed.emit("combat.attack", "Бой появится на следующем этапе")
+func attack(id: String) -> void:
+	if not _joined:
+		return
+	if id != "" and id != _target_id:
+		_client.send_message("target", {"id": id})
+	_client.send_message("attack", {"on": true})
 
 
 func stop_attack() -> void:
-	pass
+	if _joined:
+		_client.send_message("attack", {"on": false})
 
 
-func use_skill(_slot: int) -> void:
-	command_failed.emit("combat.skill", "Способности появятся на следующем этапе")
+func use_skill(slot: int) -> void:
+	if _joined and slot >= 0 and slot < _ability_ids.size():
+		_client.send_message("ability", {"id": _ability_ids[slot]})
+
+
+## Выбор облика и специализации корабля (сохраняется сервером).
+func set_skin(skin_id: String) -> void:
+	if _joined:
+		_client.send_message("set_skin", {"value": skin_id})
+
+
+func set_spec(spec_id: String) -> void:
+	if _joined:
+		_client.send_message("set_spec", {"value": spec_id})
 
 
 func set_auto_skills(_on: bool) -> void:

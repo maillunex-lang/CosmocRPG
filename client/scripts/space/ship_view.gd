@@ -9,8 +9,9 @@ const LABEL_ZOOM_HIDE := 26.0   # размер обзора, при которо
 const LABEL_ZOOM_SHOW := 40.0   # и при котором полностью видны
 const LABEL_NEAR_HIDE := 5.0    # расстояние до корабля игрока (ед. мира): скрыта
 const LABEL_NEAR_SHOW := 11.0   # видна
-const MODEL_PATH := "res://assets/ships/ship_test.glb"
-const MODEL_SCALE := 2.2
+const BASE_SPEED := 14.0        # обычная скорость, ед/с: по ней считается тяга двигателей
+const ShipVisual := preload("res://ui/ships/ship_visual.gd")
+const ShipDef := preload("res://ui/ships/ship_def.gd")
 const SnapshotBuffer := preload("res://scripts/space/snapshot_buffer.gd")
 
 var object_id := ""
@@ -23,6 +24,15 @@ var _ring: MeshInstance3D
 var _label: Label3D
 var _label_alpha := 1.0
 var me := false
+var visual: Node3D        # визуальный адаптер корабля (ShipVisual); у станции нет
+var ship_type := ""
+var skin := ""
+var boosting := false
+var _last_t := -1.0
+var _last_pos := Vector2.ZERO
+var _last_dir := Vector2.ZERO
+var _turn := 0.0
+var _speed_frac := 0.0
 
 
 static func color_for(kind_: String, stance: String, is_me: bool) -> Color:
@@ -53,17 +63,12 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 		_add_box(Vector3(9.0, 0.2, 1.0), Vector3(0, 0.3, 0), mat)
 		_add_box(Vector3(1.0, 0.2, 9.0), Vector3(0, 0.3, 0), mat)
 	else:
-		var model := _load_model()
-		if model != null:
-			add_child(model)
-		else:
-			_add_box(Vector3(0.7, 0.3, 2.2), Vector3.ZERO, mat)            # корпус
-			_add_box(Vector3(2.4, 0.1, 0.8), Vector3(0, 0, 0.4), mat)      # крылья
-			_add_box(Vector3(0.12, 0.5, 0.5), Vector3(0, 0.3, 0.9), mat)   # киль
+		# облик по умолчанию: у разных объектов чередуются два облика «Стрижа» (сервер присылает настоящий через set_ship)
+		set_ship(ShipDef.DEFAULT_ID, str(ShipDef.skin_ids()[int(hash(id)) % 2]))
 		var glow := MeshInstance3D.new()
 		var sph := SphereMesh.new()
-		sph.radius = 0.22
-		sph.height = 0.44
+		sph.radius = 0.1
+		sph.height = 0.2
 		glow.mesh = sph
 		var gm := StandardMaterial3D.new()
 		gm.albedo_color = col
@@ -71,7 +76,7 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 		gm.emission = col
 		gm.emission_energy_multiplier = 2.0
 		glow.material_override = gm
-		glow.position = Vector3(0, 0, 1.2)
+		glow.position = Vector3(0, 0.45, 0.0)   # маркер принадлежности над кабиной
 		add_child(glow)
 
 	_ring = MeshInstance3D.new()
@@ -105,17 +110,29 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 	add_child(_label)
 
 
-## Модель корабля из GLB (нос модели смотрит в -X, поворачиваем в локальный -Z). Нет файла: null, рисуем заглушку.
-func _load_model() -> Node3D:
-	if not ResourceLoader.exists(MODEL_PATH):
-		return null
-	var ps := load(MODEL_PATH) as PackedScene
-	if ps == null:
-		return null
-	var m := ps.instantiate() as Node3D
-	m.rotation_degrees.y = -90.0
-	m.scale = Vector3.ONE * MODEL_SCALE
-	return m
+## Корабль и облик (по данным сервера). Повторный вызов с тем же обликом ничего не делает.
+func set_ship(type_id: String, skin_id: String) -> void:
+	if type_id == "" or not ShipDef.PATHS.has(type_id):
+		type_id = ShipDef.DEFAULT_ID
+	if visual != null and ship_type == type_id and skin == skin_id:
+		return
+	if visual == null or ship_type != type_id:
+		if visual != null:
+			visual.queue_free()
+		visual = ShipVisual.new()
+		visual.ship_id = type_id
+		add_child(visual)
+		visual.build(type_id, skin_id)
+	else:
+		visual.set_skin(skin_id)
+	ship_type = type_id
+	skin = visual.skin_id
+
+
+## Событие сервера → эффект («Fire», «HitShield», «HitHull», «Death», «Boost», «Scan», «Respawn», «Dock»).
+func play(effect: String, arg: Variant = null) -> void:
+	if visual != null:
+		visual.play(effect, arg)
 
 
 func _add_box(size: Vector3, pos: Vector3, mat: Material) -> void:
@@ -160,6 +177,17 @@ func update_interp(local_now: float) -> void:
 	if s["valid"]:
 		set_world_position(s["pos"])
 		set_direction(s["dir"])
+	if visual != null:
+		var dt := local_now - _last_t if _last_t >= 0.0 else 0.0
+		if dt > 0.0001 and dt < 0.5:
+			var spd := world_pos.distance_to(_last_pos) / dt
+			_speed_frac = lerpf(_speed_frac, spd / BASE_SPEED, clampf(dt * 10.0, 0.0, 1.0))
+			if _last_dir != Vector2.ZERO:
+				_turn = lerpf(_turn, angle_difference(_last_dir.angle(), heading.angle()) / dt, clampf(dt * 8.0, 0.0, 1.0))
+			visual.update_motion(dt, _speed_frac, -_turn, boosting)
+		_last_t = local_now
+		_last_pos = world_pos
+		_last_dir = heading
 
 
 ## Направление носа в мировых координатах.

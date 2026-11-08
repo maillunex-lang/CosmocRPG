@@ -48,9 +48,23 @@ func _run() -> void:
 	_check(not s["ship"].has("hull") and not s.has("credits") and not s["player"].has("level"), "данных, которых сервер не присылает, нет (ничего не выдумано)")
 	_check(s["skills"].is_empty() and not s["combat_available"], "способностей и боя пока нет")
 	_check(not gw.is_demo(), "серверный шлюз не демо")
+	var combat_got: Array = []
+	gw.combat_event.connect(func(e: Dictionary) -> void: combat_got.append(e))
+	gw._on_message("combat_events", {"events": [{"type": "fire", "from": "a", "to": "b"}, {"type": "hit_shield", "to": "b", "amount": 44}]}, "")
+	_check(combat_got.size() == 2 and combat_got[0]["type"] == "fire", "боевые события сервера передаются эффектам")
+	gw._apply_state({"time": 5.0, "ship": {"name": "П", "pos": [0, 0], "dir": [1, 0], "speed": 0.0, "type": "FTR-001", "skin": "b", "spec": "scout",
+		"hull": 1200, "hull_max": 1200, "shield": 600, "shield_max": 600, "energy": 100, "energy_max": 100, "armor": 120, "cargo": 8, "pulse_range": 30,
+		"boosting": true, "abilities": [{"id": "boost", "name": "Форсаж", "energy_cost": 20, "cooldown": 12, "cooldown_left": 3, "needs_target": false},
+			{"id": "scan", "name": "Импульсный сканер", "energy_cost": 25, "cooldown": 20, "cooldown_left": 0, "needs_target": false}]},
+		"objects": [{"id": "dr1", "kind": "hostile", "stance": "hostile", "name": "Дрон", "pos": [10, 0], "dir": [0, -1], "hull": 1500, "hull_max": 1500}],
+		"target_id": "dr1", "attacking": true})
+	var s3: Dictionary = got[got.size() - 1]
+	_check(s3["ship"]["hull_max"] == 1200 and s3["ship"]["skin"] == "b" and s3["ship"]["boosting"], "корабль: характеристики, облик и форсаж от сервера")
+	_check(s3["skills"].size() == 2 and s3["skills"][0]["cooldown_left"] == 3.0 and s3["combat_available"], "способности сервера показаны кнопками с перезарядкой")
+	_check(s3["attacking"] and s3["target_in_range"] and s3["objects"][0]["hull"] == 1500, "атака, дальность и корпус цели")
 	gw._apply_state({"time": 4.0, "ship": {"name": "П", "pos": [0, 0], "dir": [1, 0], "speed": 0.0}, "objects": [],
 		"credits": 500, "quests": [{"id": "first_flight", "title": "Первый полёт", "text": "…", "progress": 0, "goal": 1}]})
-	var s2: Dictionary = got[1]
+	var s2: Dictionary = got[got.size() - 1]
 	_check(s2["credits"] == 500 and s2["quests"][0]["title"] == "Первый полёт" and s2["quests"][0]["goal"] == 1, "кредиты и задания с сервера преобразованы")
 	var notes: Array = []
 	gw.notification.connect(func(t: String) -> void: notes.append(t))
@@ -95,6 +109,24 @@ func _run() -> void:
 	a.set_autopilot(true)
 	await _wait(a, func() -> bool: return a.snapshot()["autopilot"])
 	_check(a.snapshot()["autopilot"], "автопилот включён")
+
+	# корабль «Стриж»: паспорт, способности, форсаж и облик от сервера
+	var sh: Dictionary = a.snapshot()["ship"]
+	_check(sh.get("type") == "FTR-001" and sh.get("hull_max") == 1200.0 and sh.get("shield_max") == 600.0 and sh.get("armor") == 120.0 and sh.get("cargo") == 8.0, "паспорт Стрижа с сервера (корпус 1200, щит 600, броня 120, груз 8)")
+	_check(a.snapshot()["skills"].size() == 2 and a.snapshot()["combat_available"], "кнопки способностей: форсаж и специализация")
+	var fx: Array = []
+	a.combat_event.connect(func(e: Dictionary) -> void: fx.append(e["type"]))
+	a.use_skill(0)
+	await _wait(a, func() -> bool: return a.snapshot()["ship"]["boosting"])
+	_check(a.snapshot()["ship"]["boosting"] and "boost" in fx, "форсаж включён сервером, событие получено")
+	a.use_skill(0)
+	var errs: Array = []
+	a.command_failed.connect(func(_a: String, r: String) -> void: errs.append(r))
+	await _wait(a, func() -> bool: return errs.size() > 0, 3.0)
+	_check(errs.size() > 0 and "перезаряж" in errs[0], "повтор форсажа отклонён сервером: %s" % str(errs))
+	a.set_skin("b")
+	await _wait(a, func() -> bool: return a.snapshot()["ship"]["skin"] == "b")
+	_check(a.snapshot()["ship"]["skin"] == "b", "облик «b» принят и сохранён сервером")
 
 	# контракт «Первый полёт»: автопилот приводит к станции, сервер выдаёт награду
 	_check(a.snapshot().get("quests", []).size() == 1 and a.snapshot()["credits"] == 0, "контракт выдан, кредитов 0")

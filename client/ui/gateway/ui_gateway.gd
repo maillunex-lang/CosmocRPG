@@ -15,6 +15,8 @@ signal alert_cleared(id: String)
 signal notification(text: String)
 ## Команда отклонена (причина для игрока).
 signal command_failed(action: String, reason: String)
+## Боевое или визуальное событие (решение уже принято источником данных): {type, from, to, amount, radius}.
+signal combat_event(event: Dictionary)
 
 
 ## Данные демонстрационные (не с сервера): интерфейс обязан показывать плашку «Демо».

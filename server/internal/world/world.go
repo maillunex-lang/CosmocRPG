@@ -101,24 +101,25 @@ type Object struct {
 
 // Ship — собственный корабль в снимке.
 type Ship struct {
-	Name      string        `json:"name"`
-	Pos       [2]float64    `json:"pos"`
-	Dir       [2]float64    `json:"dir"`
-	Speed     float64       `json:"speed"`
-	Type      string        `json:"type"`
-	Skin      string        `json:"skin"`
-	Spec      string        `json:"spec"`
-	Hull      float64       `json:"hull"`
-	HullMax   float64       `json:"hull_max"`
-	Shield    float64       `json:"shield"`
-	ShieldMax float64       `json:"shield_max"`
-	Energy    float64       `json:"energy"`
-	EnergyMax float64       `json:"energy_max"`
-	Armor     float64       `json:"armor"`
-	Cargo     float64       `json:"cargo"`
-	Boosting  bool          `json:"boosting"`
-	Dead      bool          `json:"dead"`
-	Abilities []AbilityInfo `json:"abilities"`
+	Name       string        `json:"name"`
+	Pos        [2]float64    `json:"pos"`
+	Dir        [2]float64    `json:"dir"`
+	Speed      float64       `json:"speed"`
+	Type       string        `json:"type"`
+	Skin       string        `json:"skin"`
+	Spec       string        `json:"spec"`
+	Hull       float64       `json:"hull"`
+	HullMax    float64       `json:"hull_max"`
+	Shield     float64       `json:"shield"`
+	ShieldMax  float64       `json:"shield_max"`
+	Energy     float64       `json:"energy"`
+	EnergyMax  float64       `json:"energy_max"`
+	Armor      float64       `json:"armor"`
+	Cargo      float64       `json:"cargo"`
+	PulseRange float64       `json:"pulse_range"`
+	Boosting   bool          `json:"boosting"`
+	Dead       bool          `json:"dead"`
+	Abilities  []AbilityInfo `json:"abilities"`
 }
 
 // State — снимок состояния для одного игрока.
@@ -378,7 +379,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Time: w.t,
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
-			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, Boosting: me.boostUntil > w.t,
+			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
 			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,

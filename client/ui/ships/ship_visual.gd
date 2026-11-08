@@ -1,0 +1,289 @@
+extends Node3D
+## Визуальный адаптер корабля (сцена-обёртка над GLB, оригинальные файлы не правятся): облик, точки привязки,
+## двигатели и эффекты. Без скелета: анимации задаются кодом (твины и параметры).
+## Состояния: Idle, Move, Turn, Boost; события: Fire, HitShield, HitHull, Death, Dock.
+## Игровую логику не содержит: показывает то, что решил сервер.
+
+const ShipDef := preload("res://ui/ships/ship_def.gd")
+const ShipVfx := preload("res://ui/ships/ship_vfx.gd")
+
+const POINT_NAMES := ["Engine_L", "Engine_R", "Weapon_L", "Weapon_R", "Missile_01", "Hit_Center", "Camera_Focus", "Dock_Point"]
+
+var ship_id := ShipDef.DEFAULT_ID
+var skin_id := ""
+var bank: Node3D       # наклон при манёвре (крен)
+var model: Node3D      # ориентация и масштаб GLB
+var points: Dictionary = {}   # имя -> Marker3D
+var flames: Array = []
+var anim_state := "Idle"
+var alive := true
+
+var _skin_root: Node
+var _flame_color := Color(0.35, 0.9, 1.0)
+var _t := 0.0
+var _thrust := 0.0       # сглаженная тяга 0..2
+var _bank := 0.0
+var _boost_trail: CPUParticles3D
+var _flash: Array = []
+var _bolts: Array = []
+var _shell: MeshInstance3D
+var _sparks: CPUParticles3D
+var _boom: CPUParticles3D
+var _boom_flash: MeshInstance3D
+var _scan_ring: MeshInstance3D
+var _dock_tween: Tween
+
+
+func _ready() -> void:
+	if model == null:
+		build(ship_id, skin_id)
+
+
+## Строит иерархию: Bank > Model (ориентация, масштаб) > GLB + точки + двигатели. Повторный вызов пересобирает.
+func build(sid: String, skin: String = "") -> void:
+	ship_id = sid
+	for c in get_children():
+		c.queue_free()
+	points.clear()
+	flames.clear()
+	_flash.clear()
+	_bolts.clear()
+	_shell = null
+	_sparks = null
+	_boom = null
+	_boom_flash = null
+	_scan_ring = null
+	_boost_trail = null
+	var def := ShipDef.get_def(sid)
+	bank = Node3D.new()
+	bank.name = "Bank"
+	add_child(bank)
+	model = Node3D.new()
+	model.name = "Model"
+	model.rotation_degrees.y = -90.0   # нос GLB смотрит в -X: поворачиваем в локальный -Z
+	model.scale = Vector3.ONE * float(def.get("visual_scale", 2.2))
+	bank.add_child(model)
+	var pts: Dictionary = def.get("points", {})
+	for n in POINT_NAMES:
+		var m := Marker3D.new()
+		m.name = n
+		var v: Array = pts.get(n, [0, 0, 0])
+		m.position = Vector3(v[0], v[1], v[2])
+		model.add_child(m)
+		points[n] = m
+	set_skin(skin if skin != "" else str(ShipDef.skin_ids(sid)[0]))
+	for n in ["Engine_L", "Engine_R"]:
+		var f := ShipVfx.flame(_flame_color)
+		f.position = Vector3(0.2, 0, 0)
+		f.name = "Flame"
+		(points[n] as Marker3D).add_child(f)
+		flames.append(f)
+
+
+## Смена облика: меняется только GLB и цвет двигателей, характеристики у всех обликов одинаковые.
+func set_skin(skin: String) -> void:
+	if not (ShipDef.get_def(ship_id).get("skins", {}) as Dictionary).has(skin):
+		return   # неизвестный облик: выбор не меняется
+	var sk := ShipDef.skin(ship_id, skin)
+	skin_id = skin
+	if _skin_root != null and is_instance_valid(_skin_root):
+		_skin_root.queue_free()
+	var ps := load(str(sk.get("glb", ""))) as PackedScene
+	if ps != null:
+		_skin_root = ps.instantiate()
+		model.add_child(_skin_root)
+	var fc: Array = sk.get("flame", [0.35, 0.9, 1.0])
+	_flame_color = Color(fc[0], fc[1], fc[2])
+	for f in flames:
+		(f as MeshInstance3D).material_override = ShipVfx.glow(Color(_flame_color, 0.85), 1.4)
+	_boost_trail = null
+	_flash.clear()
+
+
+func point(n: String) -> Marker3D:
+	return points.get(n)
+
+
+# --- состояния ---
+
+## Вызывать каждый кадр: speed — доля от обычной скорости (0..1+), turn — угловая скорость, рад/с (знак — направление), boosting — форсаж.
+func update_motion(delta: float, speed_frac: float, turn: float, boosting: bool) -> void:
+	if not alive:
+		return
+	_t += delta
+	var target := 0.45 + clampf(speed_frac, 0.0, 1.0) * 0.6
+	if boosting:
+		target = 2.0
+	_thrust = lerpf(_thrust, target, clampf(delta * 8.0, 0.0, 1.0))
+	anim_state = "Boost" if boosting else ("Turn" if absf(turn) > 0.6 else ("Move" if speed_frac > 0.05 else "Idle"))
+	var pulse := 1.0 + 0.08 * sin(_t * 9.0)
+	for f in flames:
+		var fm := f as MeshInstance3D
+		fm.scale = Vector3(_thrust * pulse, 1.0 + (_thrust - 0.45) * 0.25, 1.0 + (_thrust - 0.45) * 0.25)
+		fm.position.x = 0.2 * _thrust
+	var want_bank := clampf(-turn * 0.35, -0.55, 0.55)
+	_bank = lerpf(_bank, want_bank, clampf(delta * 6.0, 0.0, 1.0))
+	bank.rotation.z = _bank
+	if boosting:
+		if _boost_trail == null:
+			_boost_trail = ShipVfx.particles(_flame_color, 28, 0.55, 0.16, 0.2, Vector3.ZERO, false)
+			_boost_trail.spread = 8.0
+			_boost_trail.direction = Vector3(1, 0, 0)
+			(points["Dock_Point"] as Marker3D).add_child(_boost_trail)
+		_boost_trail.emitting = true
+	elif _boost_trail != null:
+		_boost_trail.emitting = false
+
+
+# --- события ---
+
+func _tween_flash(mi: MeshInstance3D, scale_to: float, seconds: float) -> void:
+	mi.visible = true
+	mi.scale = Vector3.ONE * 0.3
+	var tw := create_tween()
+	tw.tween_property(mi, "scale", Vector3.ONE * scale_to, seconds * 0.6)
+	tw.tween_callback(func() -> void: mi.visible = false).set_delay(seconds * 0.4)
+
+
+## Fire: вспышки на обеих пушках и два заряда к цели (target — мировая позиция).
+func play_fire(target: Variant = null) -> void:
+	if not alive:
+		return
+	if _flash.is_empty():
+		for n in ["Weapon_L", "Weapon_R"]:
+			var f := ShipVfx.flash(_flame_color.lightened(0.3), 0.05)
+			(points[n] as Marker3D).add_child(f)
+			_flash.append(f)
+			var b := ShipVfx.bolt(_flame_color.lightened(0.3))
+			add_child(b)
+			_bolts.append(b)
+	for i in _flash.size():
+		_tween_flash(_flash[i], 1.6, 0.1)
+		if target is Vector3:
+			var b: MeshInstance3D = _bolts[i]
+			var from: Vector3 = (points["Weapon_L" if i == 0 else "Weapon_R"] as Marker3D).global_position
+			b.top_level = true
+			b.global_position = from
+			b.look_at(target, Vector3.UP) if from.distance_to(target) > 0.01 else null
+			b.visible = true
+			var tw := create_tween()
+			tw.tween_property(b, "global_position", target, 0.14)
+			tw.tween_callback(func() -> void: b.visible = false)
+
+
+## HitShield: сине-голубая оболочка вокруг корабля на долю секунды.
+func play_hit_shield() -> void:
+	if not alive:
+		return
+	if _shell == null:
+		_shell = ShipVfx.shield_shell(0.95)
+		(points["Hit_Center"] as Marker3D).add_child(_shell)
+	_shell.visible = true
+	_shell.scale = Vector3.ONE * 0.9
+	var tw := create_tween()
+	tw.tween_property(_shell, "scale", Vector3.ONE * 1.12, 0.22)
+	tw.tween_callback(func() -> void: _shell.visible = false)
+
+
+## HitHull: искры и короткая встряска.
+func play_hit_hull() -> void:
+	if not alive:
+		return
+	if _sparks == null:
+		_sparks = ShipVfx.particles(Color(1.0, 0.7, 0.3), 14, 0.45, 0.07, 2.2, Vector3.ZERO)
+		(points["Hit_Center"] as Marker3D).add_child(_sparks)
+	_sparks.restart()
+	_sparks.emitting = true
+	var tw := create_tween()
+	tw.tween_property(bank, "position:x", 0.04, 0.03)
+	tw.tween_property(bank, "position:x", -0.04, 0.05)
+	tw.tween_property(bank, "position:x", 0.0, 0.04)
+
+
+## Death: вспышка, ограниченные по времени обломки, корабль скрывается до respawn().
+func play_death() -> void:
+	if not alive:
+		return
+	alive = false
+	anim_state = "Death"
+	if _boom == null:
+		_boom = ShipVfx.particles(Color(1.0, 0.55, 0.2), 22, 1.2, 0.12, 3.0, Vector3.ZERO)
+		(points["Hit_Center"] as Marker3D).add_child(_boom)
+		_boom_flash = ShipVfx.flash(Color(1.0, 0.6, 0.25), 0.6, 0.35, 1.2)
+		(points["Hit_Center"] as Marker3D).add_child(_boom_flash)
+	_boom.restart()
+	_boom.emitting = true
+	_tween_flash(_boom_flash, 2.2, 0.5)
+	for f in flames:
+		(f as MeshInstance3D).visible = false
+	var tw := create_tween()
+	tw.tween_property(bank, "scale", Vector3.ONE * 0.01, 0.35)
+	tw.tween_callback(func() -> void: bank.visible = false)
+
+
+func respawn() -> void:
+	alive = true
+	anim_state = "Idle"
+	bank.visible = true
+	bank.scale = Vector3.ONE
+	bank.position = Vector3.ZERO
+	for f in flames:
+		(f as MeshInstance3D).visible = true
+
+
+## Boost: короткая вспышка двигателей (устойчивое усиление задаёт update_motion с boosting).
+func play_boost() -> void:
+	_thrust = 2.0
+
+
+## Dock: корабль плавно «втягивается» в док: уменьшается и тускнеет; undock() возвращает.
+func play_dock() -> void:
+	if _dock_tween != null and _dock_tween.is_valid():
+		_dock_tween.kill()
+	anim_state = "Dock"
+	if _scan_ring == null:
+		_scan_ring = ShipVfx.ring(Color(0.5, 0.9, 1.0))
+		_scan_ring.rotation_degrees.x = 90
+		(points["Hit_Center"] as Marker3D).add_child(_scan_ring)
+	_scan_ring.visible = true
+	_scan_ring.scale = Vector3.ONE * 1.6
+	_dock_tween = create_tween().set_parallel(true)
+	_dock_tween.tween_property(bank, "scale", Vector3.ONE * 0.35, 1.0)
+	_dock_tween.tween_property(bank, "position:z", -0.6, 1.0)
+	_dock_tween.tween_property(_scan_ring, "scale", Vector3.ONE * 0.5, 1.0)
+
+
+func undock() -> void:
+	if _dock_tween != null and _dock_tween.is_valid():
+		_dock_tween.kill()
+	bank.scale = Vector3.ONE
+	bank.position = Vector3.ZERO
+	anim_state = "Idle"
+	if _scan_ring != null:
+		_scan_ring.visible = false
+
+
+## Кольцо сканера (радиус в мировых единицах).
+func play_scan(radius: float) -> void:
+	if _scan_ring == null:
+		_scan_ring = ShipVfx.ring(Color(0.5, 0.9, 1.0))
+		_scan_ring.rotation_degrees.x = 90
+		(points["Hit_Center"] as Marker3D).add_child(_scan_ring)
+	_scan_ring.visible = true
+	_scan_ring.scale = Vector3.ONE * 0.5
+	var tw := create_tween()
+	tw.tween_property(_scan_ring, "scale", Vector3.ONE * radius * 0.5, 0.8)
+	tw.tween_callback(func() -> void: _scan_ring.visible = false)
+
+
+## Воспроизвести событие по имени («Fire», «HitShield», …) — единая точка входа для сетевых событий.
+func play(name: String, arg: Variant = null) -> void:
+	match name:
+		"Fire": play_fire(arg)
+		"HitShield": play_hit_shield()
+		"HitHull": play_hit_hull()
+		"Death": play_death()
+		"Boost": play_boost()
+		"Dock": play_dock()
+		"Scan": play_scan(float(arg) if arg != null else 20.0)
+		"Respawn": respawn()

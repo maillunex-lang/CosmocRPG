@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 rc=0
 
 echo "== интерфейс: тема, безопасная зона, раскладка, компоненты, шлюз, HUD космоса"
-for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test background_test art_standard_test frame_stats_test camera_test camera_input_test labels_test loading_overlay_test; do
+for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test background_test art_standard_test frame_stats_test camera_test camera_input_test labels_test loading_overlay_test ship_visual_test hangar_test; do
   echo "-- $t"
   timeout 180 godot --headless --path "$ROOT/client" --script "res://tests/$t.gd" 2>&1 \
     | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"

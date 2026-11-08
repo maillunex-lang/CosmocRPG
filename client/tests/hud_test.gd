@@ -99,10 +99,16 @@ func _run() -> void:
 	_check((_n(c, "%AutopilotButton") as Button).disabled, "автопилот без цели недоступен")
 
 	# ============ «Скоро»: нереализованное не притворяется рабочим ============
-	for nm in ["%MapButton", "%FleetButton", "%MenuButton", "%SettingsButton"]:
+	for nm in ["%MapButton", "%MenuButton", "%SettingsButton"]:
 		var b := _n(c, nm) as ActionButton
 		_check(b.disabled and b.text.ends_with("скоро") and b.tooltip_text != "", "«Скоро»: %s неактивна и помечена" % nm)
 	_check((_n(c, "%MapButton") as ActionButton).text.count("скоро") == 1, "«Скоро» не дублируется в тексте кнопки")
+	var fleet := _n(c, "%FleetButton") as ActionButton
+	_check(not fleet.disabled and fleet.text == "Ангар", "кнопка «Ангар» активна: ангар реализован")
+	var hangar_asked := [false]
+	(c["hud"] as Control).hangar_requested.connect(func() -> void: hangar_asked[0] = true)
+	fleet.pressed.emit()
+	_check(hangar_asked[0], "нажатие «Ангар» запрашивает ангар")
 
 	# ============ мир: корабли, цвета, ориентация ============
 	var screen: Control = c["screen"]

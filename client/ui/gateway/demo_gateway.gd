@@ -99,6 +99,15 @@ func tick(dt: float) -> void:
 	state_updated.emit(snapshot())
 
 
+## Корабль игрока для интерфейса: облик «Стрижа» и признак форсажа (демо-данные).
+func _ship_view() -> Dictionary:
+	var d: Dictionary = _ship.duplicate()
+	d["type"] = "FTR-001"
+	d["skin"] = "a"
+	d["boosting"] = _boost_left > 0.0
+	return d
+
+
 func in_combat() -> bool:
 	return _t - _last_combat < COMBAT_TIMEOUT
 
@@ -114,7 +123,7 @@ func snapshot() -> Dictionary:
 		"time": _t,
 		"player": {"name": "Капитан Демо", "level": 7},
 		"system": _systems[_system_idx].duplicate(),
-		"ship": _ship.duplicate(),
+		"ship": _ship_view(),
 		"credits": _credits,
 		"objects": objects,
 		"target_id": _target_id,
@@ -260,11 +269,14 @@ func _attack_step(dt: float) -> void:
 
 
 func _damage_object(target: Dictionary, amount: float) -> void:
+	combat_event.emit({"type": "fire", "from": "me", "to": target["id"]})
+	combat_event.emit({"type": "hit_hull", "from": "me", "to": target["id"], "amount": amount})
 	target["hull"] = maxf(0.0, target["hull"] - amount)
 	target["provoked"] = true
 	if target["hull"] > 0.0:
 		return
 	var id: String = target["id"]
+	combat_event.emit({"type": "death", "to": id})
 	_objects.erase(id)
 	if id == _target_id:
 		_target_id = ""
@@ -298,6 +310,7 @@ func _pirates_step(dt: float) -> void:
 
 func _damage_player(amount: float) -> void:
 	var absorbed := minf(_ship["shield"], amount)
+	combat_event.emit({"type": "hit_shield" if absorbed > 0.0 else "hit_hull", "to": "me", "amount": amount})
 	_ship["shield"] -= absorbed
 	_ship["hull"] = maxf(0.0, _ship["hull"] - (amount - absorbed))
 	if _ship["hull"] <= 0.0:
@@ -342,6 +355,7 @@ func _try_skill(slot: int, announce: bool) -> bool:
 			_ship["hull"] = minf(_ship["hull_max"], _ship["hull"] + 120.0)
 		3:
 			_boost_left = 3.0
+			combat_event.emit({"type": "boost", "from": "me"})
 	return true
 
 

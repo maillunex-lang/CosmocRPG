@@ -15,6 +15,7 @@ const FrameStats := preload("res://ui/debug/frame_stats.gd")
 const CameraConfig := preload("res://ui/camera/space_camera_config.gd")
 const CameraGestures := preload("res://ui/camera/camera_gestures.gd")
 const LoadingOverlay := preload("res://ui/loading_overlay.gd")
+const Hangar := preload("res://ui/ships/hangar.gd")
 
 signal exit_requested
 
@@ -92,6 +93,7 @@ func _ready() -> void:
 	_hud.bind(gateway)
 	_hud.camera_mode_requested.connect(_rig.cycle_mode)
 	_hud.world_tapped.connect(select_at)
+	_hud.hangar_requested.connect(open_hangar)
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -99,6 +101,7 @@ func _ready() -> void:
 	stats.mark("HUD", float(Time.get_ticks_msec() - t_ready))
 	_hud.exit_requested.connect(_on_exit)
 	gateway.state_updated.connect(_on_state)
+	gateway.combat_event.connect(_on_combat_event)
 	var t_state := Time.get_ticks_msec()
 	_on_state(gateway.snapshot())
 	stats.mark("мир+фон", float(Time.get_ticks_msec() - t_state))
@@ -144,10 +147,10 @@ func _on_state(state: Dictionary) -> void:
 	var seen := {}
 	var ship: Dictionary = state.get("ship", {})
 	if not ship.is_empty():
-		_sync_ship(ME, "ship", "friendly", str(ship.get("name", "")), ship["pos"], ship["dir"], true, sim_t, now, new_snapshot)
+		_sync_ship(ME, "ship", "friendly", str(ship.get("name", "")), ship["pos"], ship["dir"], true, sim_t, now, new_snapshot, ship)
 		seen[ME] = true
 	for o in state.get("objects", []):
-		_sync_ship(str(o["id"]), str(o["kind"]), str(o["stance"]), str(o["name"]), o["pos"], o["dir"], false, sim_t, now, new_snapshot)
+		_sync_ship(str(o["id"]), str(o["kind"]), str(o["stance"]), str(o["name"]), o["pos"], o["dir"], false, sim_t, now, new_snapshot, o)
 		seen[o["id"]] = true
 	for id in _ships.keys():
 		if not seen.has(id):
@@ -159,7 +162,7 @@ func _on_state(state: Dictionary) -> void:
 
 
 func _sync_ship(id: String, kind: String, stance: String, display_name: String, pos: Vector2, dir: Vector2,
-		is_me: bool, sim_t: float, now: float, new_snapshot: bool) -> void:
+		is_me: bool, sim_t: float, now: float, new_snapshot: bool, info: Dictionary = {}) -> void:
 	var v: Node3D = _ships.get(id)
 	if v == null:
 		v = ShipView.new()
@@ -174,6 +177,14 @@ func _sync_ship(id: String, kind: String, stance: String, display_name: String, 
 			var first := Vector3(pos.x, 0.0, pos.y)
 			_rig.snap_to(first)
 		new_snapshot = true
+	if v.visual != null:
+		# облик и тип корабля приходят от сервера; характеристики у всех обликов одинаковые
+		if str(info.get("skin", "")) != "":
+			v.set_ship(str(info.get("ship", info.get("type", ""))), str(info["skin"]))
+		v.boosting = bool(info.get("boosting", false))
+		var dead := bool(info.get("dead", false))
+		if not dead and not v.visual.alive:
+			v.visual.respawn()
 	if new_snapshot:
 		v.push_snapshot(sim_t, now, pos, dir)
 
@@ -185,6 +196,75 @@ func screen_to_world_move(v: Vector2) -> Vector2:
 	var f: Vector3 = axes["forward"]
 	var up := -v.y
 	return Vector2(r.x * v.x + f.x * up, r.z * v.x + f.z * up).limit_length(1.0)
+
+
+## Ангар поверх сцены (соединение с сервером остаётся). Выбор облика и специализации уходит на сервер.
+func open_hangar() -> Control:
+	if get_node_or_null("HangarLayer/HangarOverlay") != null:
+		return get_node_or_null("HangarLayer/HangarOverlay")
+	gestures.cancel()
+	var h: Control = Hangar.new()
+	h.name = "HangarOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "HangarLayer"
+	add_child(layer)
+	layer.add_child(h)
+	h.theme = theme
+	var ship: Dictionary = gateway.snapshot().get("ship", {})
+	h.set_data(ship)
+	h.skin_selected.connect(func(k: String) -> void:
+		if gateway.has_method("set_skin"):
+			gateway.set_skin(k)
+		var me: Node3D = _ships.get(ME)
+		if me != null:
+			me.set_ship(str(ship.get("type", "FTR-001")), k))
+	h.spec_selected.connect(func(k: String) -> void:
+		if gateway.has_method("set_spec"):
+			gateway.set_spec(k))
+	h.closed.connect(func() -> void: layer.queue_free())
+	return h
+
+
+## События боя от сервера (или демо) → эффекты. Решения о попаданиях и уроне уже приняты источником данных.
+func _on_combat_event(e: Dictionary) -> void:
+	var from_id := str(e.get("from", ""))
+	var to_id := str(e.get("to", ""))
+	var from_v: Node3D = _ships.get(_alias(from_id))
+	var to_v: Node3D = _ships.get(_alias(to_id))
+	match str(e.get("type", "")):
+		"fire":
+			if from_v != null:
+				from_v.play("Fire", to_v.global_position if to_v != null else null)
+		"hit_shield":
+			if to_v != null:
+				to_v.play("HitShield")
+		"hit_hull":
+			if to_v != null:
+				to_v.play("HitHull")
+		"death":
+			if to_v != null:
+				to_v.play("Death")
+		"respawn":
+			if to_v != null:
+				to_v.play("Respawn")
+		"boost":
+			if from_v != null:
+				from_v.play("Boost")
+		"intercept":
+			if from_v != null:
+				from_v.play("Boost")
+				from_v.play("Fire", to_v.global_position if to_v != null else null)
+		"scan":
+			if from_v != null:
+				from_v.play("Scan", float(e.get("radius", 20.0)) / 2.0)
+
+
+## Идентификатор игрока в событиях сервера — публичный id; свой корабль в сцене хранится под ME.
+func _alias(id: String) -> String:
+	if id == "me" or (gateway != null and gateway.has_method("own_id") and id == gateway.own_id()):
+		return ME
+	return id
 
 
 ## Положения объектов на экране (для выбора касанием).

@@ -15,6 +15,7 @@ const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 signal exit_requested
 signal camera_mode_requested   # кнопка «Вид»: следующий режим камеры
 signal world_tapped(pos: Vector2)   # короткое касание в зоне джойстика: выбор объекта под пальцем
+signal hangar_requested   # кнопка «Ангар»
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -94,6 +95,7 @@ func _ready() -> void:
 	_reset_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
 	_reset_button.pressed.connect(func() -> void: camera_mode_requested.emit())
 	_joystick.tapped.connect(func(pos: Vector2) -> void: world_tapped.emit(pos))
+	%FleetButton.pressed.connect(func() -> void: hangar_requested.emit())
 	_confirm.opened.connect(func() -> void: modal_opened.emit())
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())

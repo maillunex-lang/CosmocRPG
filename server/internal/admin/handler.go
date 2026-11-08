@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 )
 
 const (
@@ -26,7 +28,8 @@ type Options struct {
 	TrustProxy   bool // доверять заголовку X-Forwarded-For от обратного прокси (Caddy)
 	Version      string
 	StartedAt    time.Time
-	WSSessions   func() int64 // число активных игровых сессий
+	WSSessions   func() int64      // число активных игровых сессий
+	AI           *aistudio.Service // AI Civilization Training Studio (nil: раздел выключен)
 }
 
 // Handler — HTTP-обработчик админ-API (/api/...).
@@ -63,6 +66,9 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("GET /api/me", h.auth(h.me))
 	mux.HandleFunc("GET /api/status", h.auth(h.status))
 	mux.HandleFunc("GET /api/audit", h.auth(h.audit))
+	if h.opts.AI != nil {
+		h.aiRoutes(mux)
+	}
 	return securityHeaders(mux)
 }
 

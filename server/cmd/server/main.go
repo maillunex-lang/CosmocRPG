@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/admin"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
@@ -189,10 +190,11 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)),
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       10 * time.Second,
-			WriteTimeout:      15 * time.Second,
+			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ
+			WriteTimeout:      60 * time.Second,
 		}
 		servers = append(servers, adminSrv)
 		go serve("admin", adminSrv)

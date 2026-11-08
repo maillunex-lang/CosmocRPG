@@ -14,9 +14,7 @@
     "ask": [],
     "deny": [
       "Edit(~/projects/ufa5/**)",
-      "Write(~/projects/ufa5/**)",
-      "Edit(~/projects/ufacity/**)",
-      "Write(~/projects/ufacity/**)"
+      "Edit(~/projects/ufacity/**)"
     ]
   }
 }

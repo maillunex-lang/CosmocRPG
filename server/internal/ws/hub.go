@@ -17,6 +17,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
@@ -43,11 +44,13 @@ type Options struct {
 	MaxMessage int64 // максимальный размер входящего сообщения, байт
 	RatePerSec int   // допустимое число сообщений в секунду на сессию
 	Version    string
-	World      *world.World     // игровой мир; nil: игровые сообщения отключены (Этап 00)
-	Store      world.Store      // хранилище игроков; nil: позиции не сохраняются
-	Quests     *quest.Service   // контракты и награды; nil: функция выключена
-	Accounts   *account.Service // аккаунты (логин и пароль); nil: функция выключена
-	Shop       *shop.Service    // VIP и магазин косметики; nil: функция выключена
+	World      *world.World       // игровой мир; nil: игровые сообщения отключены (Этап 00)
+	Store      world.Store        // хранилище игроков; nil: позиции не сохраняются
+	Quests     *quest.Service     // контракты и награды; nil: функция выключена
+	Accounts   *account.Service   // аккаунты (логин и пароль); nil: функция выключена
+	Shop       *shop.Service      // VIP и магазин косметики; nil: функция выключена
+	Chat       *chat.Service      // чат (общий и личные сообщения); nil: функция выключена
+	OnChat     func(chat.Message) // наблюдатель отправленных сообщений (ответы ИИ-капитанов); может быть nil
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
 	RequireCharacter bool
 }
@@ -70,6 +73,8 @@ type session struct {
 	pending *world.Record // игрок вошёл, но ещё не создал персонажа
 	events  chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
 	pid     string
+	name    string       // игровое имя (для чата)
+	chat    chan Message // сообщения чата: отдельная очередь, чтобы не мешать снимкам состояния
 }
 
 // NewHandler создаёт обработчик.
@@ -111,7 +116,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ss := &session{conn: c, cancel: cancel, states: make(chan Message, 2), events: make(chan Message, 16)}
+	ss := &session{conn: c, cancel: cancel, states: make(chan Message, 2), events: make(chan Message, 16), chat: make(chan Message, 64)}
 	defer h.leave(ss, log)
 
 	limiter := newLimiter(h.opts.RatePerSec)
@@ -139,7 +144,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -258,6 +263,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.gameShip(ctx, c, ss, m)
 	case "shop", "shop_buy", "shop_equip":
 		h.shopMsg(ctx, c, ss, m)
+	case "chat_send", "chat_history":
+		h.chatMsg(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
 		if err := json.Unmarshal(m.Payload, &p); err != nil || math.IsNaN(p.X+p.Y) || math.IsInf(p.X+p.Y, 0) {
@@ -449,6 +456,11 @@ func (h *Handler) pump(ctx context.Context, ss *session) {
 				return
 			}
 		case m := <-ss.events:
+			if err := writeJSON(ctx, ss.conn, m); err != nil {
+				ss.cancel()
+				return
+			}
+		case m := <-ss.chat:
 			if err := writeJSON(ctx, ss.conn, m); err != nil {
 				ss.cancel()
 				return
@@ -736,6 +748,7 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 		}
 		qcancel()
 	}
+	ss.name = rec.Name
 	h.applyCosmetics(ctx, rec.ID)
 	sys := w.System()
 	welcome := map[string]any{
@@ -938,4 +951,101 @@ func (h *Handler) shopMsg(ctx context.Context, c *websocket.Conn, ss *session, m
 	}
 	cos := h.setCosmetics(ss.pid, st)
 	reply(Message{Type: "shop", ID: m.ID, Payload: mustJSON(map[string]any{"catalog": h.opts.Shop.Config(), "state": st, "cosmetics": cos})})
+}
+
+func chatText(code string) string {
+	switch code {
+	case "chat_disabled":
+		return "чат выключен администратором"
+	case "chat_empty":
+		return "пустое сообщение"
+	case "chat_too_long":
+		return "сообщение слишком длинное"
+	case "chat_rate":
+		return "слишком часто: подождите пару секунд"
+	case "chat_duplicate":
+		return "это сообщение вы уже отправляли"
+	case "chat_links":
+		return "ссылки в чате запрещены"
+	case "chat_bad_words":
+		return "сообщение содержит недопустимые слова"
+	case "chat_muted":
+		return "вам запрещено писать в чат"
+	case "chat_no_player":
+		return "такого игрока нет"
+	case "chat_self":
+		return "нельзя написать самому себе"
+	case "chat_bad_channel":
+		return "неизвестный канал"
+	}
+	return "сообщение не отправлено"
+}
+
+// PushChat доставляет сообщение чата подключённым игрокам: общий и системный канал всем, личное адресату и отправителю.
+func (h *Handler) PushChat(m chat.Message) {
+	out := Message{Type: "chat", Payload: mustJSON(map[string]any{"message": m})}
+	h.mu.Lock()
+	var targets []*session
+	for pid, s := range h.active {
+		if m.Channel != chat.DM || pid == m.ToID || pid == m.FromID {
+			targets = append(targets, s)
+		}
+	}
+	h.mu.Unlock()
+	for _, s := range targets {
+		select {
+		case s.chat <- out:
+		default: // очередь переполнена: медленный клиент пропускает сообщение, остальные не страдают
+		}
+	}
+}
+
+// chatMsg обрабатывает chat_history (история и параметры) и chat_send (отправка).
+func (h *Handler) chatMsg(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
+	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
+	if h.opts.Chat == nil {
+		reply(errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
+		return
+	}
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	switch m.Type {
+	case "chat_history":
+		g, d, err := h.opts.Chat.History(cctx, ss.pid)
+		if err != nil {
+			h.log.Error("чат: история", "player", ss.pid, "err", err)
+			reply(errMsg(m.ID, "internal", "история недоступна"))
+			return
+		}
+		st := h.opts.Chat.Settings()
+		reply(Message{Type: "chat_history", ID: m.ID, Payload: mustJSON(map[string]any{"general": g, "dms": d,
+			"settings": map[string]any{"enabled": st.Enabled, "max_len": st.MaxLen, "min_interval_ms": st.MinIntervalMs}})})
+	case "chat_send":
+		var p struct {
+			Channel string `json:"channel"`
+			To      string `json:"to"`
+			Text    string `json:"text"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || len(p.To) > 64 || len(p.Text) > 4000 {
+			reply(errMsg(m.ID, "bad_message", "некорректное сообщение"))
+			return
+		}
+		msg, err := h.opts.Chat.Send(cctx, chat.Sender{ID: ss.pid, Name: ss.name}, p.Channel, p.To, p.Text)
+		if err != nil {
+			code := err.Error()
+			switch err {
+			case chat.ErrDisabled, chat.ErrEmpty, chat.ErrTooLong, chat.ErrRate, chat.ErrDuplicate, chat.ErrLinks, chat.ErrBadWords, chat.ErrMuted,
+				chat.ErrNoRecipient, chat.ErrSelfDM, chat.ErrBadChannel:
+			default:
+				h.log.Error("чат: отправка", "player", ss.pid, "err", err)
+				code = "internal"
+			}
+			reply(errMsg(m.ID, code, chatText(code)))
+			return
+		}
+		h.PushChat(msg)
+		if h.opts.OnChat != nil {
+			h.opts.OnChat(msg)
+		}
+	}
 }

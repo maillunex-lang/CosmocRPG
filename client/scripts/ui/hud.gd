@@ -12,6 +12,7 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
+const ChatPanel := preload("res://ui/chat_panel.gd")
 const Icons := preload("res://ui/icons.gd")
 
 signal exit_requested
@@ -43,6 +44,7 @@ var _speed_prev_pos := Vector2.INF
 var _speed_prev_time := 0.0
 var _quests_sig := ""
 var _chat_sig := ""
+var chat_panel: VBoxContainer
 var _mine_button: ActionButton
 var _sell_button: ActionButton
 var _cargo_row: HBoxContainer
@@ -196,6 +198,20 @@ func _ready() -> void:
 	_quests_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("quests", c))
 	_chat_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("chat", c))
 	_set_target_empty()
+
+
+## Окно чата внутри карточки «Чат» (на сервере); в демо остаются демонстрационные строки.
+func _setup_chat(gw: UiGateway) -> void:
+	if chat_panel != null:
+		return
+	chat_panel = ChatPanel.new()
+	chat_panel.name = "ChatPanel"
+	_chat_lines.get_parent().add_child(chat_panel)
+	chat_panel.bind(gw)
+	_chat_lines.visible = not gw.has_chat()
+	chat_panel.visible = gw.has_chat()
+	chat_panel.unread_changed.connect(func(n: int) -> void:
+		_chat_card.title = "Чат" if n <= 0 else "Чат · %d" % n)
 
 
 ## Короткое сообщение игроку (всплывающая плашка).

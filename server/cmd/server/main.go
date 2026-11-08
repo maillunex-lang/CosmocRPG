@@ -17,6 +17,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/admin"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
@@ -257,9 +258,31 @@ func run() error {
 	if err := ships.Init(ctx); err != nil {
 		return err
 	}
+	chatSvc := chat.NewService(chat.NewPGStore(pool))
+	if err := chatSvc.Load(ctx); err != nil {
+		return err
+	}
+	go func() { // история чата хранится ограниченный срок (настройка retention_days)
+		t := time.NewTicker(30 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				pctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				if n, err := chatSvc.Purge(pctx); err != nil {
+					log.Error("чат: очистка истории", "err", err)
+				} else if n > 0 {
+					log.Info("чат: удалены старые сообщения", "count", n)
+				}
+				cancel()
+			}
+		}
+	}()
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)),
+		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc,
 	})
 	worldDone := make(chan struct{})
 	go func() {
@@ -290,7 +313,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ

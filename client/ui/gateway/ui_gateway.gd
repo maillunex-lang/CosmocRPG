@@ -58,6 +58,9 @@ func move_input(_v: Vector2) -> void:
 
 
 ## Добыча, продажа и магазин: есть только у серверного шлюза; в демо магазин и добыча недоступны.
+signal chat_received(message: Dictionary)
+signal chat_history_loaded(general: Array, dms: Array, settings: Dictionary)
+signal chat_failed(text: String)
 signal ships_updated(ships: Array)
 signal shop_updated(data: Dictionary)
 signal shop_failed(text: String)
@@ -65,6 +68,18 @@ signal shop_failed(text: String)
 
 ## Игровая настройка (например, автоответ на атаку). В демо без сервера ничего не делает.
 func set_option(_name: String, _value: bool) -> void:
+	pass
+
+
+func has_chat() -> bool:
+	return false
+
+
+func chat_send(_channel: String, _to: String, _text: String) -> void:
+	chat_failed.emit("Чат доступен только при игре на сервере")
+
+
+func request_chat_history() -> void:
 	pass
 
 

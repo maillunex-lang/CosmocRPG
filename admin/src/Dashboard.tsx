@@ -4,7 +4,7 @@ import { ChangePassword } from "./ChangePassword";
 
 const REFRESH_MS = 5000;
 
-export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips, onOpenWorld }: { username: string; onLoggedOut: () => void; onOpenStudio?: () => void; onOpenShips?: () => void; onOpenWorld?: () => void }) {
+export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips, onOpenWorld, onOpenChat }: { username: string; onLoggedOut: () => void; onOpenStudio?: () => void; onOpenShips?: () => void; onOpenWorld?: () => void; onOpenChat?: () => void }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [error, setError] = useState("");
@@ -47,6 +47,7 @@ export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips, on
           {onOpenStudio && <button onClick={onOpenStudio}>AI Studio</button>}
           {onOpenShips && <button onClick={onOpenShips}>Корабли</button>}
           {onOpenWorld && <button onClick={onOpenWorld}>Локации</button>}
+          {onOpenChat && <button onClick={onOpenChat}>Чат</button>}
           <button onClick={() => void logout()}>Выйти</button>
         </div>
       </header>

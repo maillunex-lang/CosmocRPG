@@ -69,3 +69,11 @@
 Подробности: `docs/design/LIVING_LOCATIONS.md`, `docs/design/SHOP_VIP.md`.
 
 Админ-API (требует входа): `GET /admin/api/world`, `POST /admin/api/world/preview`, `PUT /admin/api/world`, `POST /admin/api/world/versions/{id}/rollback`.
+
+## Чат (2026-11-08)
+
+Клиент → сервер: `chat_send {channel: "general"|"dm", to?, text}` (`to` — ник или идентификатор адресата для `dm`), `chat_history {}`.
+Сервер → клиент: `chat {message}` (общий канал всем, личное только отправителю и адресату), `chat_history {general[], dms[], settings{enabled, max_len, min_interval_ms}}`.
+`message`: `{id, channel, from_id, from_name, from_ai?, to_id?, to_name?, text, at}` (`at` — unix, мс; `from_ai: true` у ИИ-капитанов, клиент показывает иконку). Отправитель всегда берётся из сессии сервера, подделать его в сообщении нельзя.
+Ошибки: `chat_disabled`, `chat_empty`, `chat_too_long`, `chat_rate`, `chat_duplicate`, `chat_links`, `chat_bad_words`, `chat_muted`, `chat_no_player`, `chat_self`, `chat_bad_channel`.
+Правила по умолчанию: длина до 200 символов, не чаще 1 сообщения в 2 секунды, повтор того же текста в течение 30 с отклоняется, ссылки запрещены, фильтр недопустимых слов включён, история 7 дней. Всё настраивается в админке («Чат»). Админ-API: `GET /admin/api/chat/messages`, `GET/PUT /admin/api/chat/settings`, `GET/POST /admin/api/chat/mutes`, `DELETE /admin/api/chat/mutes/{id}`.

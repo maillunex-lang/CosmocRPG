@@ -142,6 +142,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			alert_cleared.emit(ALERT_LINK)
 			_sent_move = Vector2.INF   # после входа заново сообщаем движение
 			joined.emit()
+			request_chat_history()
 			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
 		"state":
 			_apply_state(payload)
@@ -156,6 +157,11 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			var credits := int(payload.get("credits", 0))
 			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
 			notification.emit("%s: +%d кредитов" % [what, credits])
+		"chat":
+			if payload.get("message") is Dictionary:
+				chat_received.emit(payload["message"])
+		"chat_history":
+			chat_history_loaded.emit(payload.get("general", []), payload.get("dms", []), payload.get("settings", {}))
 		"ships":
 			ships_updated.emit(payload.get("ships", []))
 		"shop":
@@ -169,6 +175,9 @@ func _on_error(payload: Dictionary) -> void:
 	var text := str(payload.get("message", "ошибка"))
 	if code in ["bad_nick", "nick_reserved", "nick_taken", "bad_gender", "bad_pilot_spec", "character_exists"]:
 		character_failed.emit(text)
+		return
+	if code.begins_with("chat_"):
+		chat_failed.emit(text)
 		return
 	if code in ["no_item", "already_owned", "vip_required", "not_owned", "bad_slot", "bad_request"]:
 		shop_failed.emit(text)
@@ -334,6 +343,20 @@ func set_skin(skin_id: String) -> void:
 func set_spec(spec_id: String) -> void:
 	if _joined:
 		_client.send_message("set_spec", {"value": spec_id})
+
+
+func has_chat() -> bool:
+	return true
+
+
+func chat_send(channel: String, to: String, text: String) -> void:
+	if _joined:
+		_client.send_message("chat_send", {"channel": channel, "to": to, "text": text})
+
+
+func request_chat_history() -> void:
+	if _joined:
+		_client.send_message("chat_history", {})
 
 
 func has_shop() -> bool:

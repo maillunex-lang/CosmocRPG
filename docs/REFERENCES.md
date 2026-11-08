@@ -22,3 +22,11 @@
 ## Ресурсы (проверить лицензию каждого файла)
 - Kenney — наборы CC0, включая skybox (космос, звёзды); [Quaternius LowPoly Spaceships](https://quaternius.itch.io/lowpoly-spaceships); [OpenGameArt: space skyboxes](https://opengameart.org/content/space-skyboxes-0) (CC0 по описанию).
 - Аудио (Kenney audio, музыка): отдельный поиск не делался.
+
+## Интерфейс (UI/UX), найдено 2026-11-08
+Не проверено: файлы не скачивались, наличие и условия лицензий уточнить при загрузке.
+- [Kenney UI Pack Sci-Fi](https://www.kenney.nl/assets/ui-pack-sci-fi) — 130 файлов, панели, кнопки, слайдеры, CC0. План: основа скинов, перекрасить под палитру UI-11. Возможна проблема со ссылкой скачивания на сайте; запасной вариант — [зеркало на itch.io](https://kenney-assets.itch.io/ui-pack).
+- [UIFlow](https://store.godotengine.org/asset/indieshade/uiflow/) (MIT, Godot 4.6) — стек страниц push/pop/replace. Не берём, пишем свой `ScreenRouter`; запасной вариант.
+- AppNavigation (AGPLv3) — копилефт, не берём.
+- Virtual Joystick DX (Repechul/Virtual-Joystick-DX, MIT, Godot 4.6+, тестировался на 4.7) и [Virtual Joystick for Godot 4](https://godotengine.org/asset-library/asset/edit/10466) (MarcoFazioRandom, MIT) — запасные варианты, основной план: свой джойстик.
+- Шрифты: Exo 2 (OFL, кириллица заявлена агрегаторами, проверить по официальному репозиторию); Orbitron и Rajdhani — кириллица не подтверждена.

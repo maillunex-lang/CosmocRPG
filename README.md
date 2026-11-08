@@ -37,6 +37,7 @@
 - [HANDOFF](docs/HANDOFF.md) — журнал передачи задач
 - [DEVELOPMENT](docs/DEVELOPMENT.md) — правила разработки
 - [REFERENCES](docs/REFERENCES.md) — внешние источники и референсы
+- [UI](docs/ui/README.md) — документы интерфейса
 
 ## Быстрый старт клиента
 

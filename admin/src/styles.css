@@ -35,3 +35,14 @@ th { color: var(--muted); font-weight: 500; }
 .center { text-align: center; margin-top: 20vh; }
 .error { color: var(--error); }
 .ok { color: var(--ok); }
+.stack { display: flex; flex-direction: column; gap: 1rem; max-width: 420px; }
+.row { display: flex; gap: .75rem; }
+button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+/* узкие экраны (телефон): без горизонтальной прокрутки таблицы журнала */
+@media (max-width: 640px) {
+  .dashboard header { flex-wrap: wrap; gap: .5rem; }
+  .dashboard header h1 { font-size: 1.25rem; }
+  table { display: table; font-size: .8rem; }
+  th, td { white-space: normal; padding: .35rem .3rem; word-break: break-word; }
+}

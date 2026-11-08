@@ -117,6 +117,31 @@ func (s *Store) SessionUser(ctx context.Context, raw string) (User, error) {
 	return u, err
 }
 
+// SetPassword меняет пароль администратора. Проверяет минимальную длину и хранит только хеш.
+func (s *Store) SetPassword(ctx context.Context, adminID int64, newPassword string) error {
+	if len([]rune(newPassword)) < MinPasswordLen {
+		return fmt.Errorf("пароль короче %d символов", MinPasswordLen)
+	}
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	tag, err := s.pool.Exec(ctx, "UPDATE admin_users SET password_hash=$2 WHERE id=$1", adminID, hash)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// DeleteOtherSessions завершает все сессии администратора, кроме текущей (после смены пароля).
+func (s *Store) DeleteOtherSessions(ctx context.Context, adminID int64, keepRaw string) (int64, error) {
+	tag, err := s.pool.Exec(ctx, "DELETE FROM admin_sessions WHERE admin_id=$1 AND token_hash <> $2", adminID, hashToken(keepRaw))
+	return tag.RowsAffected(), err
+}
+
 // DeleteSession завершает сессию.
 func (s *Store) DeleteSession(ctx context.Context, raw string) error {
 	_, err := s.pool.Exec(ctx, "DELETE FROM admin_sessions WHERE token_hash=$1", hashToken(raw))

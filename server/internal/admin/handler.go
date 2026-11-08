@@ -59,6 +59,7 @@ func (h *Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/login", h.login)
 	mux.HandleFunc("POST /api/logout", h.auth(h.logout))
+	mux.HandleFunc("POST /api/password", h.auth(h.changePassword))
 	mux.HandleFunc("GET /api/me", h.auth(h.me))
 	mux.HandleFunc("GET /api/status", h.auth(h.status))
 	mux.HandleFunc("GET /api/audit", h.auth(h.audit))
@@ -211,6 +212,74 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request, u User) {
 	h.setCookie(w, "", time.Unix(0, 0))
 	h.audit_(r.Context(), u.ID, u.Username, "logout", h.clientIP(r), nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+type passwordRequest struct {
+	Current string `json:"current"`
+	New     string `json:"new"`
+}
+
+// changePassword меняет пароль текущего администратора. Требует текущий пароль (защита от
+// чужого открытого окна), ограничивает число неверных попыток и завершает остальные сессии.
+// Неверный текущий пароль отдаёт 403, а не 401: 401 интерфейс трактует как истёкшую сессию.
+func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, u User) {
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		writeErr(w, http.StatusUnsupportedMediaType, "ожидается application/json")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	var req passwordRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "некорректный запрос")
+		return
+	}
+	ip, now, key := h.clientIP(r), h.now(), "pw:"+u.Username
+	if h.byUsr.blocked(key, now) {
+		h.audit_(r.Context(), u.ID, u.Username, "password_change_blocked", ip, nil)
+		w.Header().Set("Retry-After", strconv.Itoa(int(failWindow.Seconds())))
+		writeErr(w, http.StatusTooManyRequests, "слишком много попыток, попробуйте позже")
+		return
+	}
+	ok, err := VerifyPassword(req.Current, u.Hash)
+	if err != nil {
+		h.log.Error("admin: проверка пароля при смене", "err", err)
+		writeErr(w, http.StatusInternalServerError, "внутренняя ошибка")
+		return
+	}
+	if !ok {
+		h.byUsr.fail(key, now)
+		h.audit_(r.Context(), u.ID, u.Username, "password_change_failed", ip, nil)
+		writeErr(w, http.StatusForbidden, "неверный текущий пароль")
+		return
+	}
+	switch {
+	case len([]rune(req.New)) < MinPasswordLen:
+		writeErr(w, http.StatusBadRequest, "новый пароль короче "+strconv.Itoa(MinPasswordLen)+" символов")
+		return
+	case req.New == req.Current:
+		writeErr(w, http.StatusBadRequest, "новый пароль совпадает с текущим")
+		return
+	case NormalizeUsername(req.New) == u.Username:
+		writeErr(w, http.StatusBadRequest, "пароль не должен совпадать с именем пользователя")
+		return
+	}
+	if err := h.store.SetPassword(r.Context(), u.ID, req.New); err != nil {
+		h.log.Error("admin: смена пароля", "err", err)
+		writeErr(w, http.StatusInternalServerError, "внутренняя ошибка")
+		return
+	}
+	// остальные сессии (в том числе возможно украденные) завершаются, текущая остаётся
+	revoked := int64(0)
+	if c, cerr := r.Cookie(cookieName); cerr == nil {
+		if revoked, err = h.store.DeleteOtherSessions(r.Context(), u.ID, c.Value); err != nil {
+			h.log.Error("admin: завершение остальных сессий", "err", err)
+		}
+	}
+	h.byUsr.reset(key)
+	h.audit_(r.Context(), u.ID, u.Username, "password_changed", ip, map[string]any{"other_sessions_revoked": revoked})
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "other_sessions_revoked": revoked})
 }
 
 func (h *Handler) me(w http.ResponseWriter, _ *http.Request, u User) {

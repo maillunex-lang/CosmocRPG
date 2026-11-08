@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, formatUptime, type AuditEntry, type Status } from "./api";
+import { ChangePassword } from "./ChangePassword";
 
 const REFRESH_MS = 5000;
 
@@ -72,6 +73,8 @@ export function Dashboard({ username, onLoggedOut }: { username: string; onLogge
           <p className="muted">Загрузка…</p>
         )}
       </section>
+
+      <ChangePassword />
 
       <section className="card" aria-label="Журнал действий">
         <h2>Журнал административных действий</h2>

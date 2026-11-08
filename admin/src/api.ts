@@ -60,6 +60,8 @@ export const api = {
   login: (username: string, password: string) => request<{ username: string }>("POST", `${API}/login`, { username, password }),
   logout: () => request<{ status: string }>("POST", `${API}/logout`),
   me: () => request<{ username: string }>("GET", `${API}/me`),
+  changePassword: (current: string, next: string) =>
+    request<{ status: string; other_sessions_revoked: number }>("POST", `${API}/password`, { current, new: next }),
   status: () => request<Status>("GET", `${API}/status`),
   audit: (limit = 20) => request<{ entries: AuditEntry[] }>("GET", `${API}/audit?limit=${limit}`),
 };

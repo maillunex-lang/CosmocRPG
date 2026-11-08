@@ -21,6 +21,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/ws"
 )
@@ -159,6 +160,11 @@ func run() error {
 		}
 		log.Info("контракты включены (COSMOC_FEATURE_QUESTS)")
 	}
+	// каталог кораблей: версии в базе, активный каталог применяется к миру на лету
+	ships := shipcatalog.NewService(shipcatalog.NewPGStore(pool), gameWorld.SetCatalog)
+	if err := ships.Init(ctx); err != nil {
+		return err
+	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
 		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true,
@@ -192,7 +198,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)),
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ

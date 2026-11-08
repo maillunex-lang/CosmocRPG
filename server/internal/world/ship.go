@@ -245,3 +245,15 @@ func sortedKeys[V any](m map[string]V) []string {
 	sort.Strings(out)
 	return out
 }
+
+// DefaultDoc возвращает встроенный каталог (начальные данные версии «seed»).
+func DefaultDoc() Doc { return defaultCatalog.Clone().Doc() }
+
+// CatalogFromDoc проверяет документ каталога и строит каталог.
+func CatalogFromDoc(d Doc) (Catalog, error) {
+	b, err := json.Marshal(d)
+	if err != nil {
+		return Catalog{}, err
+	}
+	return LoadCatalog(b)
+}

@@ -2,10 +2,11 @@ extends Control
 ## HUD космоса (решение UI-02). Только отображение и ввод: все числа приходят из шлюза данных,
 ## команды уходят в шлюз. Никаких расчётов боя, энергии и наград на клиенте.
 ##
-## Схема (Landscape): сверху слева профиль и состояние корабля, под ним задания и чат;
-## сверху по центру тревоги и плашка «Демо»; сверху справа валюты и настройки; справа внизу цель,
-## атака, способности, автопилот; снизу слева джойстик; снизу по центру «Карта», «Флот», «Меню».
-## В бою задания и чат сворачиваются, тревоги остаются.
+## Схема (Landscape, R-33): сверху слева карточка игрока (ник, корабль, «Выйти») и тонкий трекер
+## заданий; сверху по центру только тревоги и плашка «Демо» (в игре с сервером пусто);
+## сверху справа валюты; справа внизу кластер «большого пальца»: цель, атака, добыча, автопилот;
+## снизу по центру слоты способностей с полосами состояния и тоггл «Авто»; снизу слева чат
+## над зоной джойстика и кнопка вида камеры. В бою задания и чат сворачиваются, тревоги остаются.
 
 const Tokens := preload("res://ui/theme/tokens.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
@@ -80,7 +81,8 @@ func _ready() -> void:
 	# компактность: шрифт кнопок нижней панели чуть меньше
 	for b in _bottom_nav.get_children():
 		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
-	%SettingsButton.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
+	# «Настройки» ещё не реализованы: скрыты, чтобы не занимали топ-бар (узел остаётся для тестов)
+	%SettingsButton.visible = false
 	# чат по умолчанию свёрнут: космос занимает основную площадь
 	_pref_collapsed["chat"] = true
 	_chat_card.set_collapsed(true, false)
@@ -90,6 +92,10 @@ func _ready() -> void:
 	_shield.fill_color = Tokens.ACCENT
 	_energy.fill_color = Tokens.ACCENT_2
 	_target_hull.fill_color = Tokens.DANGER
+
+	# тоггл «Авто» стоит в ряду слотов: компактная подпись
+	_auto_skills.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
+	_auto_skills.tooltip_text = "Автоматически применять способности в бою"
 
 	for b in [_attack, _autopilot, _auto_skills]:
 		b.disabled = true
@@ -138,8 +144,8 @@ func bind(gw: UiGateway) -> void:
 	gw.alert_cleared.connect(func(id: String) -> void: _alerts.clear_alert(id))
 	gw.notification.connect(func(text: String) -> void: _alerts.toast(text))
 	gw.command_failed.connect(_on_command_failed)
-	# плашка с кнопками «Выйти» нужна всегда; пометка «Демо» и смена системы только в демо
-	_demo_bar.visible = true
+	# плашка «Демо» нужна только в демо; в игре с сервером топ-центр остаётся свободным (тревоги)
+	_demo_bar.visible = gw.is_demo()
 	%DemoLabel.visible = gw.is_demo()
 	_system_button.visible = gw.is_demo()
 	apply_state(gw.snapshot())
@@ -401,7 +407,7 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 	_autopilot.disabled = not has_target and not state.get("autopilot", false)
 	_set_toggle(_autopilot, "Автопилот", bool(state.get("autopilot", false)))
 	_auto_skills.disabled = not combat_ok
-	_set_toggle(_auto_skills, "Авто-навыки" if combat_ok else "Авто-навыки · скоро", bool(state.get("auto_skills", false)))
+	_set_toggle(_auto_skills, "Авто" if combat_ok else "Авто · скоро", bool(state.get("auto_skills", false)))
 
 
 func _set_toggle(b: ActionButton, label: String, on: bool) -> void:
@@ -445,7 +451,7 @@ func _apply_lists(state: Dictionary) -> void:
 			l.theme_type_variation = &"MutedLabel"
 			l.add_theme_color_override("font_color", Tokens.TEXT)
 			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			l.custom_minimum_size.x = 260
+			l.custom_minimum_size.x = 220
 			l.tooltip_text = l.text
 			_quests_list.add_child(l)
 	var chat: Array = state.get("chat", [])
@@ -466,7 +472,7 @@ func _add_muted(parent: Control, text: String) -> void:
 	l.text = text
 	l.theme_type_variation = &"MutedLabel"
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	l.custom_minimum_size.x = 260
+	l.custom_minimum_size.x = 220
 	l.tooltip_text = text
 	parent.add_child(l)
 

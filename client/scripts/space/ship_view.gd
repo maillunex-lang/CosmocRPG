@@ -27,6 +27,8 @@ var heading := Vector2(1, 0)         # текущее отображаемое �
 var _ring: MeshInstance3D
 var _label: Label3D
 var _label_alpha := 1.0
+var _label_base_y := 1.8    # исходная высота подписи над объектом (задаётся в setup)
+var _label_lift := 0.0      # временное вертикальное смещение от стекинга (мир. ед.)
 var me := false
 var visual: Node3D        # визуальный адаптер корабля (ShipVisual); у станции нет
 var ship_type := ""
@@ -115,6 +117,7 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 	_label.position = Vector3(0, 1.8, 0) if kind_ != "station" else Vector3(0, 2.5, 0)
 	if kind_ in OBJECT_KINDS:
 		_label.position = Vector3(0, 2.6, 0)
+	_label_base_y = _label.position.y
 	add_child(_label)
 
 
@@ -257,7 +260,29 @@ func update_label(delta: float, zoom_size: float, dist_to_me: float) -> float:
 	_label.visible = _label_alpha > 0.02
 	_label.modulate.a = _label_alpha
 	_label.outline_modulate.a = _label_alpha
+	# стекинг: смещение к целевой высоте возвращается плавно, без дёрганья
+	_label.position.y = lerpf(_label.position.y, _label_base_y + _label_lift, clampf(delta * 8.0, 0.0, 1.0))
 	return _label_alpha
+
+
+## Подпись сейчас на экране (с учётом прозрачности). Для стекинга.
+func label_on_screen() -> bool:
+	return _label.visible and _label_alpha > 0.5
+
+
+## Экранная позиция якоря подписи (в пикселях вьюпорта камеры). Для стекинга подписей.
+func label_screen_pos(cam: Camera3D) -> Vector2:
+	return cam.unproject_position(_label.global_position)
+
+
+## Половина ширины текста подписи на экране, px (оценка по длине текста).
+func label_half_width_px() -> float:
+	return _label.text.length() * 10.0
+
+
+## Вертикальное смещение подписи от стекинга (мировые единицы; 0 = исходная высота).
+func set_label_lift(lift: float) -> void:
+	_label_lift = lift
 
 
 func set_world_position(p: Vector2) -> void:

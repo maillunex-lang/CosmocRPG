@@ -132,10 +132,46 @@ func _process(delta: float) -> void:
 		_rig.update(delta, Vector3(p.x, 0.0, p.y), me.heading, _ship_speed)
 		if _decor != null:
 			_decor.update(p, delta)
+	_update_ship_labels(delta, me)
 	# фон: сдвиг только от перемещения корабля в экранных осях; вращение, наклон и масштаб камеры фон не трогают
 	var prof: Resource = _bg.profile
 	if prof != null:
 		_bg.set_camera(_rig.parallax_px() / prof.px_per_unit)
+
+
+## Подписи кораблей: прозрачность по зуму и близости к игроку; стекинг — наложившиеся
+## подписи сдвигаются вниз (как имена в MMO: толпа кораблей не слипается в одну строку).
+func _update_ship_labels(delta: float, me: Node3D) -> void:
+	var cam: Camera3D = _rig.camera
+	if cam == null:
+		return
+	var vp_h := cam.get_viewport().get_visible_rect().size.y
+	if vp_h <= 0.0:
+		return
+	var zoom: float = _rig.zoom_size()
+	var me_pos: Vector2 = me.world_pos if me != null else Vector2.ZERO
+	var items := []   # [{v, pos}]
+	for id in _ships:
+		var v: Node3D = _ships[id]
+		v.update_label(delta, zoom, v.world_pos.distance_to(me_pos))
+		if v.label_on_screen():
+			items.append({"v": v, "pos": v.label_screen_pos(cam)})
+		else:
+			v.set_label_lift(0.0)
+	items.sort_custom(func(x, y): return x["pos"].y < y["pos"].y)
+	var placed := []   # Vector2: x центра подписи и нижняя граница занятой экранной полосы, px
+	for it in items:
+		var v: Node3D = it["v"]
+		var p: Vector2 = it["pos"]
+		var top := p.y
+		for q in placed:
+			if absf(p.x - q.x) < v.label_half_width_px() + 40.0 and top < q.y:
+				top = q.y
+		v.set_label_lift((top - p.y) * zoom / vp_h)
+		placed.append(Vector2(p.x, top + LABEL_STACK_GAP_PX))
+
+
+const LABEL_STACK_GAP_PX := 34.0   # минимальный вертикальный шаг подписей на экране, px
 
 
 func ship_view(id: String) -> Node3D:

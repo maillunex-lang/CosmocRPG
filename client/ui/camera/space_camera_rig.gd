@@ -70,11 +70,11 @@ func apply_config(c: Resource, snap: bool = false) -> void:
 
 # --- управление (все значения ограничиваются здесь) ---
 
-## Поворот и наклон жестом: dx, dy в пикселях. Свайп вправо вращает мир по часовой стрелке, свайп вниз поднимает камеру.
+## Поворот и наклон жестом: dx, dy в пикселях. Свайп вправо поворачивает камеру вправо (взгляд вправо), влево — влево, свайп вниз поднимает камеру.
 func orbit(dx_px: float, dy_px: float) -> void:
 	if _mode != Mode.FREE:
 		return   # в закреплённых режимах вид задаёт курс корабля
-	_yaw_target += deg_to_rad(dx_px * config.orbit_sensitivity)
+	_yaw_target -= deg_to_rad(dx_px * config.orbit_sensitivity)   # свайп вправо поворачивает камеру вправо
 	_tilt_target = clampf(_tilt_target - dy_px * config.tilt_sensitivity, config.tilt_min, config.tilt_max)
 	_idle = 0.0
 

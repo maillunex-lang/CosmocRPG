@@ -113,7 +113,7 @@ func _run() -> void:
 	var max_step := 0.0
 	var last_raw := 0.0
 	var monotonic := true
-	rig.orbit(2880.0, 0.0)   # 720° при чувствительности 0,25°/px
+	rig.orbit(-2880.0, 0.0)   # 720° (свайп влево) при чувствительности 0,25°/px
 	_check(is_equal_approx(rad_to_deg(rig.yaw_target_rad() - prev_yaw), 720.0), "вращение: 720° накапливаются без ограничения 360° (%.1f)" % rad_to_deg(rig.yaw_target_rad() - prev_yaw))
 	for i in 600:
 		rig.update(1.0 / 60.0, Vector3.ZERO, Vector2(0, -1))
@@ -124,7 +124,7 @@ func _run() -> void:
 		last_raw = raw
 	_check(monotonic and max_step <= 540.0 / 60.0 + 0.01, "вращение на 720°: непрерывно, монотонно, угловая скорость ограничена (макс. %.1f° за кадр)" % max_step)
 	_check(absf(rig.azimuth_deg()) < 0.5 or absf(rig.azimuth_deg() - 360.0) < 0.5, "после двух оборотов азимут снова около 0° (%.2f°)" % rig.azimuth_deg())
-	rig.orbit(-1500.0, 0.0)  # обратное вращение: -375°
+	rig.orbit(1500.0, 0.0)  # обратное вращение: -375°
 	_settle(rig, 4.0)
 	_check(absf(rig.azimuth_deg() - fposmod(-375.0, 360.0)) < 0.5, "обратное вращение за границу 0°/360°: азимут %.2f°" % rig.azimuth_deg())
 	# при пересечении границы положение камеры меняется плавно (нет скачков)
@@ -220,7 +220,7 @@ func _run() -> void:
 	_settle(rig_on, 10.0, Vector3.ZERO, Vector2(0, -1), 14.0)
 	var want := fposmod(rad_to_deg(RigScript.behind_yaw(Vector2(0, -1))), 360.0)
 	_check(absf(angle_difference(deg_to_rad(rig_on.azimuth_deg()), deg_to_rad(want))) < deg_to_rad(2.0), "автоцентрирование: камера выровнялась за кораблём (%.1f° из %.1f°)" % [rig_on.azimuth_deg(), want])
-	rig_on.orbit(200.0, 0.0)
+	rig_on.orbit(-200.0, 0.0)
 	var az1: float = rig_on.azimuth_deg()
 	_settle(rig_on, 1.0, Vector3.ZERO, Vector2(0, -1), 14.0)
 	_check(absf(angle_difference(deg_to_rad(rig_on.azimuth_deg()), deg_to_rad(az1 + 50.0))) < deg_to_rad(1.0), "ручное действие в приоритете: автоцентрирование не перебивает свайп сразу")

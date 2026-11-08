@@ -45,6 +45,9 @@ button.secondary { background: transparent; color: var(--text); border: 1px soli
   .dashboard header h1 { font-size: 1.25rem; }
   table { display: table; font-size: .8rem; }
   th, td { white-space: normal; padding: .35rem .3rem; word-break: break-word; }
+  /* списки «подпись — значение» в одну колонку: длинная подпись не должна выталкивать значение за край экрана */
+  dl { grid-template-columns: 1fr; gap: .1rem 0; }
+  dd { margin-bottom: .6rem; overflow-wrap: anywhere; }
 }
 
 /* AI Studio */

@@ -6,6 +6,16 @@ const PATHS := {
 	"FTR-001": "res://assets/ships/ftr001/ship.json",
 	"TMP-HAUL": "res://assets/ships/tmp_haul/ship.json",   # временная модель
 	"TMP-MINE": "res://assets/ships/tmp_mine/ship.json",   # временная модель
+	# корабли ТЗ «Корабли» (SHIPS_SPEC.md 2.3): временные заглушки на модели «Стрижа», собираются tools/gen_placeholder_ships.py
+	"FTR-002": "res://assets/ships/ftr002/ship.json",
+	"COR-001": "res://assets/ships/cor001/ship.json",
+	"COR-002": "res://assets/ships/cor002/ship.json",
+	"FRG-001": "res://assets/ships/frg001/ship.json",
+	"FRG-002": "res://assets/ships/frg002/ship.json",
+	"DST-001": "res://assets/ships/dst001/ship.json",
+	"CRU-001": "res://assets/ships/cru001/ship.json",
+	"SCT-001": "res://assets/ships/sct001/ship.json",
+	"SUP-001": "res://assets/ships/sup001/ship.json",
 }
 const DEFAULT_ID := "FTR-001"
 

@@ -99,12 +99,23 @@ func _run() -> void:
 	_check((_n(c, "%AutopilotButton") as Button).disabled, "автопилот без цели недоступен")
 
 	# ============ «Скоро»: нереализованное не притворяется рабочим ============
-	for nm in ["%MapButton", "%MenuButton", "%SettingsButton"]:
+	for nm in ["%SettingsButton"]:
 		var b := _n(c, nm) as ActionButton
 		_check(b.disabled and b.text.ends_with("скоро") and b.tooltip_text != "", "«Скоро»: %s неактивна и помечена" % nm)
-	_check((_n(c, "%MapButton") as ActionButton).text.count("скоро") == 1, "«Скоро» не дублируется в тексте кнопки")
+	_check((_n(c, "%SettingsButton") as ActionButton).text.count("скоро") == 1, "«Скоро» не дублируется в тексте кнопки")
+	var map_btn := _n(c, "%MapButton") as ActionButton
+	var map_asked := [false]
+	(c["hud"] as Control).map_requested.connect(func() -> void: map_asked[0] = true)
+	map_btn.pressed.emit()
+	_check(not map_btn.disabled and map_btn.text == "Карта" and map_asked[0], "кнопка «Карта» активна и запрашивает карту")
 	var fleet := _n(c, "%FleetButton") as ActionButton
 	_check(not fleet.disabled and fleet.text == "Ангар", "кнопка «Ангар» активна: ангар реализован")
+	var shop_btn := _n(c, "%MenuButton") as ActionButton
+	_check(not shop_btn.disabled and shop_btn.text == "Магазин", "кнопка «Магазин» активна")
+	var shop_asked := [false]
+	(c["hud"] as Control).shop_requested.connect(func() -> void: shop_asked[0] = true)
+	shop_btn.pressed.emit()
+	_check(shop_asked[0], "нажатие «Магазин» запрашивает магазин")
 	var hangar_asked := [false]
 	(c["hud"] as Control).hangar_requested.connect(func() -> void: hangar_asked[0] = true)
 	fleet.pressed.emit()

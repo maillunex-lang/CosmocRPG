@@ -243,7 +243,6 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Карта"
 script = ExtResource("5")
-soon = true
 
 [node name="FleetButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
 unique_name_in_owner = true
@@ -254,9 +253,8 @@ script = ExtResource("5")
 [node name="MenuButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Меню"
+text = "Магазин"
 script = ExtResource("5")
-soon = true
 
 [node name="RightStack" type="VBoxContainer" parent="SafeArea/Columns"]
 layout_mode = 2

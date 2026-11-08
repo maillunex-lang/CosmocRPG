@@ -44,8 +44,15 @@ func _run() -> void:
 		{"pilot": "trader", "ship_name": "Грузовик «Тягач»", "temporary": true}, {"pilot": "miner", "ship_name": "Буровик «Крот»", "temporary": true}]
 	var cs: Control = CharacterScreen.new()
 	cs.options = options
-	root.add_child(cs)
+	var layer := CanvasLayer.new()
+	layer.layer = 50
+	root.add_child(layer)
+	layer.add_child(cs)
 	await process_frame
+	await process_frame
+	var vp := root.get_visible_rect().size
+	_c(cs.size.is_equal_approx(vp), "экран создания занимает весь экран (%s из %s)" % [cs.size, vp])
+	_c((cs.get_child(0) as Control).size.is_equal_approx(vp), "фон экрана создания закрывает весь экран")
 	_c(cs._pilot_buttons.size() == 4, "четыре стартовых направления")
 	_c((cs._pilot_buttons["trader"] as Button).text.contains("временная модель") and not (cs._pilot_buttons["interceptor"] as Button).text.contains("временная"), "временные модели помечены, «Стриж» нет")
 	_c((cs._pilot_buttons["scout"] as Button).text.contains("Стриж"), "разведчик и перехватчик показывают один корабль (без копий)")

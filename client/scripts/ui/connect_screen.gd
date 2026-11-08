@@ -11,12 +11,23 @@ const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 const ServerGateway := preload("res://ui/gateway/server_gateway.gd")
 const PlayerIdentity := preload("res://ui/player_identity.gd")
 const CharacterScreen := preload("res://ui/character_screen.gd")
+const StartSplash := preload("res://ui/start_splash.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
-const DEFAULT_URL := "ws://78.17.214.25:8080/ws"  # тестовый сервер; позже будет настраиваться при сборке
+const DEFAULT_URL := "wss://rikagro.ru/ws"  # домен с сертификатом Let's Encrypt (запасной адрес: ws://78.17.214.25:8080/ws)
+
+## Автоподключение при запуске (тесты выключают его до добавления на сцену).
+var auto_connect := true
 
 var _client: Node
 var _account_pending := false
+var _splash: Control
+var _overlay_bg: ColorRect
+var _overlay_back: ActionButton
+var _retry_timer: Timer
+var _retry_attempt := 0
+var _retry_left := 0
+var _manual_close := false
 
 @onready var _url_edit: LineEdit = %UrlEdit
 @onready var _connect_button: ActionButton = %ConnectButton
@@ -46,7 +57,9 @@ func _ready() -> void:
 	_client.message_received.connect(_on_message)
 
 	_connect_button.pressed.connect(_on_connect_pressed)
-	_disconnect_button.pressed.connect(func() -> void: _client.close())
+	_disconnect_button.pressed.connect(func() -> void:
+		_manual_close = true
+		_client.close())
 	_ping_button.pressed.connect(func() -> void: _client.ping())
 	_url_edit.text_submitted.connect(func(_t: String) -> void: _on_connect_pressed())
 	_demo_space_button.pressed.connect(_open_demo_space)
@@ -58,6 +71,99 @@ func _ready() -> void:
 
 	_url_edit.text = _load_url()
 	_set_idle("Не подключено")
+	_build_start_screen()
+	if auto_connect:
+		_on_connect_pressed.call_deferred()
+
+
+## Стартовый экран поверх служебного: адрес сервера игроку не показывается. Служебный экран открывается пятью нажатиями на логотип.
+func _build_start_screen() -> void:
+	var safe := $SafeArea as Control
+	safe.visible = false
+	_overlay_bg = ColorRect.new()
+	_overlay_bg.name = "OverlayBackdrop"
+	_overlay_bg.color = Color(Tokens.BG, 0.97)
+	_overlay_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_overlay_bg.visible = false
+	add_child(_overlay_bg)
+	move_child(_overlay_bg, safe.get_index())
+	_overlay_back = ActionButton.new()
+	_overlay_back.text = "Назад"
+	_overlay_back.custom_minimum_size = Vector2(0, 56)
+	_overlay_back.pressed.connect(_close_overlay)
+	$SafeArea/Column.add_child(_overlay_back)
+
+	_retry_timer = Timer.new()
+	_retry_timer.wait_time = 1.0
+	_retry_timer.timeout.connect(_on_retry_tick)
+	add_child(_retry_timer)
+
+	_splash = StartSplash.new()
+	_splash.name = "StartSplash"
+	_splash.theme = theme
+	add_child(_splash)
+	# экраны-наложения (служебный, аккаунт) должны быть выше стартового
+	move_child(_overlay_bg, get_child_count() - 1)
+	move_child(safe, get_child_count() - 1)
+	_splash.play_pressed.connect(_enter_world)
+	_splash.retry_pressed.connect(_retry_now)
+	_splash.account_pressed.connect(func() -> void: _open_overlay(false))
+	_splash.secret_opened.connect(func() -> void: _open_overlay(true))
+	_sync_splash()
+
+
+## Показ служебного экрана (dev=true: сервер, журнал) или только аккаунта.
+func _open_overlay(dev: bool) -> void:
+	$SafeArea/Column/TopRow/ConnectionCard.visible = dev
+	$SafeArea/Column/LogCard.visible = dev
+	_overlay_bg.visible = true
+	($SafeArea as Control).visible = true
+
+
+func _close_overlay() -> void:
+	_overlay_bg.visible = false
+	($SafeArea as Control).visible = false
+
+
+func _retry_now() -> void:
+	_retry_timer.stop()
+	if _client.state == WsClientScript.State.IDLE:
+		_on_connect_pressed()
+
+
+func _schedule_retry() -> void:
+	_retry_attempt += 1
+	_retry_left = mini(2 + _retry_attempt * 2, 12)
+	_retry_timer.start()
+	_sync_splash()
+
+
+func _on_retry_tick() -> void:
+	_retry_left -= 1
+	if _retry_left <= 0:
+		_retry_timer.stop()
+		if _client.state == WsClientScript.State.IDLE:
+			_on_connect_pressed()
+	_sync_splash()
+
+
+## Подпись и состояние стартового экрана по состоянию соединения.
+func _sync_splash() -> void:
+	if _splash == null:
+		return
+	if _world_button != null and _world_button.is_busy():
+		_splash.set_state(StartSplash.State.ENTERING, "Вход в космос…")
+		return
+	match _client.state:
+		WsClientScript.State.OPEN:
+			_splash.set_state(StartSplash.State.READY, "Сервер на связи")
+		WsClientScript.State.IDLE:
+			if _retry_timer != null and not _retry_timer.is_stopped():
+				_splash.set_state(StartSplash.State.ERROR, "Нет связи с сервером. Повтор через %d с" % _retry_left)
+			else:
+				_splash.set_state(StartSplash.State.ERROR, "Нет связи с сервером")
+		_:
+			_splash.set_state(StartSplash.State.CONNECTING, "Подключение к серверу…")
 
 
 ## Регистрация или вход по логину и паролю (соединение уже открыто). Пароль нигде не сохраняется и не пишется в журнал.
@@ -103,6 +209,7 @@ func _enter_world() -> void:
 	if _client.state != WsClientScript.State.OPEN or _world_button.is_busy():
 		return
 	_world_button.begin_busy("Вход…")
+	_sync_splash()
 	var gw := ServerGateway.new()
 	add_child(gw)
 	gw.joined.connect(func() -> void:
@@ -115,17 +222,22 @@ func _enter_world() -> void:
 		var cs: Control = CharacterScreen.new()
 		cs.options = options
 		cs.theme = theme
-		add_child(cs)
+		# отдельный верхний слой: экран подключения под ним не просвечивает и не получает ввод
+		var layer := CanvasLayer.new()
+		layer.layer = 50
+		add_child(layer)
+		layer.add_child(cs)
 		cs.submitted.connect(func(nick: String, g: String, p: String) -> void: gw.create_character(nick, g, p))
 		gw.character_failed.connect(func(reason: String) -> void:
 			if is_instance_valid(cs):
 				cs.show_error(reason))
 		gw.joined.connect(func() -> void:
 			if is_instance_valid(cs):
-				cs.queue_free()))
+				cs.get_parent().queue_free()))
 	gw.join_failed.connect(func(reason: String) -> void:
 		_append(_danger("Вход не удался: %s" % reason))
 		_world_button.end_busy()
+		_sync_splash()
 		if _client.get_parent() == gw:
 			gw.remove_child(_client)   # соединение возвращается экрану подключения
 			add_child(_client)
@@ -151,6 +263,7 @@ func _on_connect_pressed() -> void:
 	_url_edit.editable = false
 	_append("Подключение к %s" % url)
 	_client.connect_to(url)
+	_sync_splash()
 
 
 func _on_connected(session_id: String, server_version: String) -> void:
@@ -161,17 +274,24 @@ func _on_connected(session_id: String, server_version: String) -> void:
 	_disconnect_button.disabled = false
 	_ping_button.disabled = false
 	_world_button.disabled = false
+	_retry_attempt = 0
+	_retry_timer.stop() if _retry_timer != null else null
 	_refresh_account()
+	_sync_splash()
 
 
 func _on_failed(reason: String) -> void:
 	_append(_danger("Ошибка: %s" % reason))
 	_set_idle("Ошибка подключения", &"DangerLabel")
+	if auto_connect and _retry_timer != null:
+		_schedule_retry()
 
 
 func _on_disconnected(code: int, reason: String) -> void:
 	_append("Соединение закрыто (код %d %s)" % [code, reason])
 	_set_idle("Отключено")
+	if auto_connect and _retry_timer != null and not _manual_close:
+		_schedule_retry()
 
 
 func _on_latency(rtt_ms: int) -> void:
@@ -205,6 +325,7 @@ func _set_idle(text: String, variation: StringName = &"Label") -> void:
 	_world_button.disabled = true
 	_url_edit.editable = true
 	_refresh_account()
+	_sync_splash()
 
 
 func _status(text: String, variation: StringName) -> void:
@@ -222,7 +343,8 @@ func _append(bbcode: String) -> void:
 
 func _load_url() -> String:
 	var cfg := ConfigFile.new()
-	if cfg.load(SETTINGS_PATH) == OK:
+	# сохранённый адрес действует только если его задали вручную на служебном экране; иначе всегда адрес по умолчанию
+	if cfg.load(SETTINGS_PATH) == OK and bool(cfg.get_value("server", "custom", false)):
 		return str(cfg.get_value("server", "url", DEFAULT_URL))
 	return DEFAULT_URL
 
@@ -231,4 +353,5 @@ func _save_url(url: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SETTINGS_PATH)
 	cfg.set_value("server", "url", url)
+	cfg.set_value("server", "custom", url != DEFAULT_URL)
 	cfg.save(SETTINGS_PATH)

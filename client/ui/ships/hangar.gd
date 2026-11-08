@@ -9,6 +9,7 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 
 signal skin_selected(skin_id: String)
 signal spec_selected(spec_id: String)
+signal ship_selected(ship_id: String)
 signal closed
 
 var ship_id := ShipDef.DEFAULT_ID
@@ -20,6 +21,8 @@ var _turntable: Node3D
 var _stats: Label
 var _skin_buttons: Dictionary = {}
 var _spec_buttons: Dictionary = {}
+var _fleet_box: GridContainer
+var _fleet_buttons: Dictionary = {}
 var _info: Label
 var _data: Dictionary = {}   # характеристики корабля игрока (от сервера или демо)
 
@@ -97,6 +100,15 @@ func _ready() -> void:
 	_stats = Label.new()
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_stats)
+	box.add_child(_caption("Корабль (смена у станции)"))
+	var fleet_scroll := ScrollContainer.new()
+	fleet_scroll.custom_minimum_size = Vector2(0, 112)
+	fleet_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(fleet_scroll)
+	_fleet_box = GridContainer.new()
+	_fleet_box.columns = 2
+	_fleet_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fleet_scroll.add_child(_fleet_box)
 	box.add_child(_caption("Облик (характеристики одинаковые)"))
 	var skins := HBoxContainer.new()
 	box.add_child(skins)
@@ -149,6 +161,33 @@ func set_data(ship: Dictionary) -> void:
 	if str(ship.get("spec", "")) != "":
 		spec = str(ship["spec"])
 	_refresh()
+
+
+## Список кораблей каталога от сервера (сообщение ships); текущий корабль выделен.
+func set_fleet(ships: Array) -> void:
+	for c in _fleet_box.get_children():
+		c.queue_free()
+	_fleet_buttons.clear()
+	for sh in ships:
+		if not (sh is Dictionary):
+			continue
+		var b := ActionButton.new()
+		b.toggle_mode = true
+		b.text = "%s\n%s%s" % [str(sh.get("name", "")), str(sh.get("class", "")), " · врем." if bool(sh.get("temporary", false)) else ""]
+		b.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 52)
+		b.set_pressed_no_signal(str(sh.get("id", "")) == ship_id)
+		b.pressed.connect(_pick_ship.bind(str(sh.get("id", ""))))
+		_fleet_box.add_child(b)
+		_fleet_buttons[str(sh.get("id", ""))] = b
+
+
+func _pick_ship(id: String) -> void:
+	for k in _fleet_buttons:
+		(_fleet_buttons[k] as Button).set_pressed_no_signal(k == ship_id)   # выбор подтверждает сервер: пока остаётся прежний корабль
+	if id != ship_id:
+		ship_selected.emit(id)
 
 
 func _pick_skin(k: String) -> void:

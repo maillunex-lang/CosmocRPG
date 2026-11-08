@@ -10,6 +10,10 @@ const LABEL_ZOOM_SHOW := 40.0   # и при котором полностью в
 const LABEL_NEAR_HIDE := 5.0    # расстояние до корабля игрока (ед. мира): скрыта
 const LABEL_NEAR_SHOW := 11.0   # видна
 const BASE_SPEED := 14.0        # обычная скорость, ед/с: по ней считается тяга двигателей
+## Серверные интерактивные объекты живых локаций: рисуются процедурными заглушками (позже модели из Meshy AI).
+const OBJECT_KINDS := ["deposit", "anomaly", "derelict", "signal"]
+const RING_RADIUS := {"deposit": 3.4, "anomaly": 3.6, "derelict": 3.4, "signal": 1.6}
+const RESOURCE_COLORS := {"iron_ore": Color("#b08968"), "crystals": Color("#7fe3ff"), "gas": Color("#9be37f"), "scrap": Color("#9aa4ad")}
 const ShipVisual := preload("res://ui/ships/ship_visual.gd")
 const ShipDef := preload("res://ui/ships/ship_def.gd")
 const SnapshotBuffer := preload("res://scripts/space/snapshot_buffer.gd")
@@ -45,7 +49,7 @@ static func color_for(kind_: String, stance: String, is_me: bool) -> Color:
 	return Tokens.ACCENT_2
 
 
-func setup(id: String, kind_: String, stance: String, display_name: String, is_me: bool = false) -> void:
+func setup(id: String, kind_: String, stance: String, display_name: String, is_me: bool = false, info: Dictionary = {}) -> void:
 	object_id = id
 	kind = kind_
 	scale = Vector3.ONE * 1.6  # заглушки крупнее: при широком обзоре иначе почти не видны
@@ -62,6 +66,8 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 		_add_box(Vector3(6.0, 1.2, 6.0), Vector3.ZERO, mat)
 		_add_box(Vector3(9.0, 0.2, 1.0), Vector3(0, 0.3, 0), mat)
 		_add_box(Vector3(1.0, 0.2, 9.0), Vector3(0, 0.3, 0), mat)
+	elif kind_ in OBJECT_KINDS:
+		_build_world_object(kind_, id, display_name, info)
 	else:
 		# облик по умолчанию: у разных объектов чередуются два облика «Стрижа» (сервер присылает настоящий через set_ship)
 		set_ship(ShipDef.DEFAULT_ID, str(ShipDef.skin_ids()[int(hash(id)) % 2]))
@@ -81,7 +87,7 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 
 	_ring = MeshInstance3D.new()
 	var torus := TorusMesh.new()
-	var r := 4.2 if kind_ == "station" else 1.9
+	var r := 4.2 if kind_ == "station" else (RING_RADIUS.get(kind_, 1.9) as float)
 	torus.inner_radius = r
 	torus.outer_radius = r + 0.12
 	_ring.mesh = torus
@@ -96,7 +102,7 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 	add_child(_ring)
 
 	_label = Label3D.new()
-	_label.text = display_name
+	_label.text = display_name + (" · врем." if kind_ in OBJECT_KINDS else "")
 	_label.font = UiTheme.make_font(600)
 	_label.font_size = 40
 	_label.fixed_size = true       # постоянный размер на экране при любом масштабе камеры
@@ -107,7 +113,100 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.no_depth_test = true
 	_label.position = Vector3(0, 1.8, 0) if kind_ != "station" else Vector3(0, 2.5, 0)
+	if kind_ in OBJECT_KINDS:
+		_label.position = Vector3(0, 2.6, 0)
 	add_child(_label)
+
+
+## Заглушки месторождений, аномалий, заброшенных станций и сигналов. Цвет месторождения задаёт ресурс; есть мягкое свечение и пульсация.
+func _build_world_object(kind_: String, id: String, display_name: String, info: Dictionary = {}) -> void:
+	match kind_:
+		"deposit":
+			var rkey := str(info.get("resource", "")) if str(info.get("resource", "")) != "" else _resource_of(display_name)
+			var col: Color = RESOURCE_COLORS.get(rkey, Color("#b08968"))
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash(id)
+			for i in 5:
+				var m := MeshInstance3D.new()
+				var sph := SphereMesh.new()
+				sph.radius = rng.randf_range(0.5, 1.1)
+				sph.height = sph.radius * 2.0
+				sph.radial_segments = 6
+				sph.rings = 3
+				m.mesh = sph
+				var mat := StandardMaterial3D.new()
+				mat.albedo_color = col.darkened(0.35)
+				mat.emission_enabled = true
+				mat.emission = col
+				mat.emission_energy_multiplier = 1.4
+				mat.roughness = 0.8
+				m.material_override = mat
+				m.position = Vector3(rng.randf_range(-1.6, 1.6), rng.randf_range(0.0, 0.4), rng.randf_range(-1.6, 1.6))
+				add_child(m)
+			# подсвеченный диск под месторождением: его видно среди декоративных камней
+			var disc := MeshInstance3D.new()
+			var dt := TorusMesh.new()
+			dt.inner_radius = 2.1
+			dt.outer_radius = 2.5
+			disc.mesh = dt
+			disc.scale = Vector3(1, 0.08, 1)
+			var dmat := StandardMaterial3D.new()
+			dmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			dmat.albedo_color = Color(col, 0.75)
+			dmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			disc.material_override = dmat
+			disc.position.y = -0.2
+			add_child(disc)
+		"anomaly":
+			var t := MeshInstance3D.new()
+			var tm := TorusMesh.new()
+			tm.inner_radius = 2.2
+			tm.outer_radius = 2.6
+			t.mesh = tm
+			var am := StandardMaterial3D.new()
+			am.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			am.albedo_color = Color(Tokens.ACCENT_2, 0.8)
+			am.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			t.material_override = am
+			t.name = "AnomalyRing"
+			add_child(t)
+			var core := MeshInstance3D.new()
+			var cs := SphereMesh.new()
+			cs.radius = 0.8
+			cs.height = 1.6
+			core.mesh = cs
+			var cm := StandardMaterial3D.new()
+			cm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			cm.albedo_color = Color(0.8, 0.7, 1.0)
+			core.material_override = cm
+			add_child(core)
+		"derelict":
+			var dm := StandardMaterial3D.new()
+			dm.albedo_color = Color(0.25, 0.28, 0.32)
+			dm.metallic = 0.5
+			_add_box(Vector3(4.0, 0.8, 2.0), Vector3.ZERO, dm)
+			_add_box(Vector3(1.0, 0.6, 5.0), Vector3(-0.6, 0.1, 0.4), dm)
+			_add_box(Vector3(2.4, 0.3, 0.6), Vector3(0.8, 0.5, -1.4), dm)
+		"signal":
+			var b := MeshInstance3D.new()
+			var bs := SphereMesh.new()
+			bs.radius = 0.45
+			bs.height = 0.9
+			b.mesh = bs
+			var bm := StandardMaterial3D.new()
+			bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			bm.albedo_color = Tokens.ACCENT
+			b.material_override = bm
+			b.name = "Beacon"
+			add_child(b)
+
+
+## Ресурс по подписи месторождения (сервер присылает «Месторождение (Железная руда)»; точный ключ приходит в resource).
+func _resource_of(display_name: String) -> String:
+	for pair in [["Железная руда", "iron_ore"], ["Кристаллы", "crystals"], ["Газ", "gas"], ["Лом", "scrap"]]:
+		if display_name.contains(pair[0]):
+			return pair[1]
+	return ""
 
 
 ## Корабль и облик (по данным сервера). Повторный вызов с тем же обликом ничего не делает.
@@ -173,6 +272,8 @@ func push_snapshot(sim_t: float, local_t: float, pos: Vector2, dir: Vector2) -> 
 
 ## Обновить отображаемую позицию по буферу снимков (вызывать каждый кадр).
 func update_interp(local_now: float) -> void:
+	if kind in OBJECT_KINDS:
+		_pulse(local_now)
 	var s: Dictionary = buffer.sample(local_now)
 	if s["valid"]:
 		set_world_position(s["pos"])
@@ -188,6 +289,19 @@ func update_interp(local_now: float) -> void:
 		_last_t = local_now
 		_last_pos = world_pos
 		_last_dir = heading
+
+
+## Мягкая пульсация аномалии и маяка (только внешний вид).
+func _pulse(t: float) -> void:
+	var ring := get_node_or_null("AnomalyRing") as Node3D
+	if ring != null:
+		var k := 1.0 + 0.12 * sin(t * 2.0)
+		ring.scale = Vector3(k, 1.0, k)
+		ring.rotation.y = t * 0.6
+	var b := get_node_or_null("Beacon") as Node3D
+	if b != null:
+		var k2 := 0.8 + 0.35 * (0.5 + 0.5 * sin(t * 3.0))
+		b.scale = Vector3.ONE * k2
 
 
 ## Направление носа в мировых координатах.

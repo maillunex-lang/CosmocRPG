@@ -92,12 +92,30 @@ func set_skin(skin: String) -> void:
 	if ps != null:
 		_skin_root = ps.instantiate()
 		model.add_child(_skin_root)
+		var tint: Array = sk.get("tint", [])
+		if tint.size() >= 3:
+			_apply_tint(_skin_root, Color(float(tint[0]), float(tint[1]), float(tint[2])))
 	var fc: Array = sk.get("flame", [0.35, 0.9, 1.0])
 	_flame_color = Color(fc[0], fc[1], fc[2])
 	for f in flames:
 		(f as MeshInstance3D).material_override = ShipVfx.glow(Color(_flame_color, 0.85), 1.4)
 	_boost_trail = null
 	_flash.clear()
+
+
+## Окраска заглушек: цвет умножается на текстуру корпуса (материалы копируются, оригинальный GLB не меняется).
+func _apply_tint(node: Node, color: Color) -> void:
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.mesh != null:
+			for i in mi.mesh.get_surface_count():
+				var m := mi.get_active_material(i)
+				if m is BaseMaterial3D:
+					var c := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
+					c.albedo_color = c.albedo_color * color
+					mi.set_surface_override_material(i, c)
+	for ch in node.get_children():
+		_apply_tint(ch, color)
 
 
 func point(n: String) -> Marker3D:

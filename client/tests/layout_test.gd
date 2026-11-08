@@ -31,6 +31,8 @@ func _check(cond: bool, name: String) -> void:
 
 func _controls(node: Node, out: Array) -> void:
 	for c in node.get_children():
+		if c.name == &"StartSplash":
+			continue   # стартовый экран проверяет start_splash_test
 		if c is Control and c.visible:
 			out.append(c)
 		_controls(c, out)
@@ -43,7 +45,10 @@ func _verify(size: Vector2i, insets: Vector4i, label: String) -> void:
 	holder.transparent_bg = false
 	root.add_child(holder)
 	var screen: Control = load("res://scenes/connect.tscn").instantiate()
+	screen.set("auto_connect", false)
 	holder.add_child(screen)
+	await process_frame
+	screen.call("_open_overlay", true)   # служебный экран (стартовый проверяется отдельно в start_splash_test)
 	await process_frame
 	if insets != Vector4i.ZERO:
 		screen.get_node("%SafeArea").set_debug_insets(insets.x, insets.y, insets.z, insets.w)
@@ -60,7 +65,7 @@ func _verify(size: Vector2i, insets: Vector4i, label: String) -> void:
 	var squeezed := []
 	var small_buttons := []
 	for c: Control in all:
-		if c.name == &"Background":
+		if c.name == &"Background" or c.name == &"OverlayBackdrop":
 			continue
 		var is_container := c.name == &"SafeArea"  # сам контейнер безопасной зоны занимает весь экран
 		var r := c.get_global_rect()

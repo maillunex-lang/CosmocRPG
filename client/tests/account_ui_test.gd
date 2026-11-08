@@ -39,7 +39,11 @@ func _run() -> void:
 	PlayerIdentity.PATH = "user://identity_test.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerIdentity.PATH))
 	var s: Control = load("res://scenes/connect.tscn").instantiate()
+	s.set("auto_connect", false)
 	root.add_child(s)
+	await process_frame
+	await process_frame
+	s.call("_open_overlay", false)   # игрок видит форму аккаунта на экране «Аккаунт»
 	await process_frame
 	await process_frame
 	var rect := (s.get_node("%AccountStatus") as Control).get_global_rect()

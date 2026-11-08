@@ -11,11 +11,14 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
+const Icons := preload("res://ui/icons.gd")
 
 signal exit_requested
 signal camera_mode_requested   # кнопка «Вид»: следующий режим камеры
 signal world_tapped(pos: Vector2)   # короткое касание в зоне джойстика: выбор объекта под пальцем
 signal hangar_requested   # кнопка «Ангар»
+signal shop_requested   # кнопка «Магазин»
+signal map_requested   # кнопка «Карта»
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -37,6 +40,10 @@ var _speed_prev_pos := Vector2.INF
 var _speed_prev_time := 0.0
 var _quests_sig := ""
 var _chat_sig := ""
+var _mine_button: ActionButton
+var _sell_button: ActionButton
+var _cargo_row: HBoxContainer
+var _cargo_label: Label
 var _attack_expect: Variant = null  # ожидаемое значение attacking после нажатия (null: не ждём)
 
 @onready var _joystick: Control = %Joystick
@@ -96,6 +103,12 @@ func _ready() -> void:
 	_reset_button.pressed.connect(func() -> void: camera_mode_requested.emit())
 	_joystick.tapped.connect(func(pos: Vector2) -> void: world_tapped.emit(pos))
 	%FleetButton.pressed.connect(func() -> void: hangar_requested.emit())
+	%MenuButton.pressed.connect(func() -> void: shop_requested.emit())
+	%MapButton.pressed.connect(func() -> void: map_requested.emit())
+	Icons.apply(%MapButton, "globe", Tokens.ACCENT, 22)
+	Icons.apply(%MenuButton, "store", Tokens.ACCENT, 22)
+	Icons.apply(%FleetButton, "rocket", Tokens.ACCENT, 22)
+	_build_cargo_ui()
 	_confirm.opened.connect(func() -> void: modal_opened.emit())
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())
@@ -105,6 +118,11 @@ func _ready() -> void:
 	_quests_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("quests", c))
 	_chat_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("chat", c))
 	_set_target_empty()
+
+
+## Короткое сообщение игроку (всплывающая плашка).
+func show_toast(text: String) -> void:
+	_alerts.toast(text)
 
 
 ## Подпись кнопки «Вид» показывает текущий режим камеры.
@@ -125,6 +143,68 @@ func bind(gw: UiGateway) -> void:
 	%DemoLabel.visible = gw.is_demo()
 	_system_button.visible = gw.is_demo()
 	apply_state(gw.snapshot())
+
+
+## Груз и кнопки добычи/продажи: появляются, только если корабль может добывать или везёт груз.
+func _build_cargo_ui() -> void:
+	_cargo_row = HBoxContainer.new()
+	_cargo_row.add_theme_constant_override("separation", 6)
+	_cargo_row.add_child(Icons.rect("package", 20, Tokens.ACCENT))
+	_cargo_label = Label.new()
+	_cargo_label.name = "CargoLabel"
+	_cargo_row.add_child(_cargo_label)
+	_cargo_row.visible = false
+	var sp := _speed_label.get_parent()
+	sp.add_child(_cargo_row)
+	sp.move_child(_cargo_row, _speed_label.get_index() + 1)
+	var stack := _attack.get_parent()
+	_mine_button = ActionButton.new()
+	_mine_button.name = "MineButton"
+	_mine_button.text = "Добыть"
+	Icons.apply(_mine_button, "pickaxe", Tokens.ACCENT, 22)
+	_mine_button.visible = false
+	_mine_button.pressed.connect(_on_mine_pressed)
+	_sell_button = ActionButton.new()
+	_sell_button.name = "SellButton"
+	_sell_button.text = "Продать груз"
+	Icons.apply(_sell_button, "coins", Tokens.RARE, 22)
+	_sell_button.visible = false
+	_sell_button.pressed.connect(func() -> void: if gateway != null: gateway.sell())
+	stack.add_child(_mine_button)
+	stack.add_child(_sell_button)
+	stack.move_child(_mine_button, _attack.get_index() + 1)
+	stack.move_child(_sell_button, _attack.get_index() + 2)
+
+
+func _on_mine_pressed() -> void:
+	if gateway == null:
+		return
+	var ship: Dictionary = _last_state.get("ship", {})
+	if str(ship.get("mining", "")) != "":
+		gateway.stop_mining()
+	else:
+		gateway.mine(str(_last_state.get("target_id", "")))
+
+
+## Состояние кнопок добычи и груза. Вынесено отдельно для тестов.
+func _apply_cargo(state: Dictionary, target: Dictionary, ship: Dictionary) -> void:
+	var cap := float(ship.get("cargo", 0.0))
+	var used := float(ship.get("cargo_used", 0.0))
+	_cargo_row.visible = cap > 0.0 and state.get("mode", "") == "server"
+	_cargo_label.text = "Груз %d/%d" % [int(round(used)), int(round(cap))]
+	_cargo_label.add_theme_color_override("font_color", Tokens.DANGER if cap > 0.0 and used >= cap - 0.01 else Tokens.TEXT)
+	var can_mine := bool(ship.get("can_mine", false))
+	_mine_button.visible = can_mine
+	if can_mine:
+		var mining := str(ship.get("mining", "")) != ""
+		var is_dep := not target.is_empty() and str(target.get("kind", "")) == "deposit"
+		var in_reach := is_dep and (ship["pos"] as Vector2).distance_to(target["pos"]) <= float(ship.get("mine_range", 0.0))
+		_mine_button.text = "Остановить добычу" if mining else "Добыть"
+		_mine_button.disabled = not mining and not (is_dep and in_reach and used < cap - 0.01 and float(target.get("amount", 0.0)) >= 1.0)
+		_mine_button.tooltip_text = "Выберите месторождение и подлетите ближе" if not is_dep else ("Подлетите ближе" if not in_reach else "")
+	_sell_button.visible = used > 0.0
+	_sell_button.disabled = not bool(ship.get("in_safe", false))
+	_sell_button.tooltip_text = "" if bool(ship.get("in_safe", false)) else "Продавать груз можно только у станции"
 
 
 func _build_skills() -> void:
@@ -234,7 +314,19 @@ static func kind_label(obj: Dictionary) -> String:
 			return "Враг"
 		"station":
 			return "Станция"
+		"deposit":
+			return "Месторождение"
+		"anomaly":
+			return "Аномалия"
+		"derelict":
+			return "Заброшенная станция"
+		"signal":
+			return "Сигнал"
 	return "Объект"
+
+
+static func tier_label(tier: String) -> String:
+	return {"normal": "обычный", "reinforced": "усиленный", "elite": "элитный", "miniboss": "мини-босс", "worldboss": "мировой босс"}.get(tier, "")
 
 
 static func stance_label(stance: String) -> String:
@@ -259,6 +351,10 @@ func _apply_target(state: Dictionary, target: Dictionary) -> void:
 	_target_name.text = str(target["name"])
 	var dist := ((state["ship"]["pos"] as Vector2).distance_to(target["pos"])) / 10.0
 	var info := "%s · %s · %.1f км" % [kind_label(target), stance_label(str(target["stance"])), dist]
+	if str(target.get("kind", "")) == "deposit":
+		info = "Месторождение · %d из %d · %.1f км" % [int(target.get("amount", 0.0)), int(target.get("amount_max", 0.0)), dist]
+	elif tier_label(str(target.get("tier", ""))) != "":
+		info += " · " + tier_label(str(target["tier"]))
 	if state.get("combat_available", true):
 		info += " · " + ("в зоне огня" if state.get("target_in_range", false) else "вне дальности")
 	_target_info.text = info
@@ -301,6 +397,7 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 		b.disabled = blocked
 		b.tooltip_text = "Энергия: %d, перезарядка: %d с" % [int(s["energy_cost"]), int(s["cooldown"])]
 
+	_apply_cargo(state, target, ship)
 	_autopilot.disabled = not has_target and not state.get("autopilot", false)
 	_set_toggle(_autopilot, "Автопилот", bool(state.get("autopilot", false)))
 	_auto_skills.disabled = not combat_ok

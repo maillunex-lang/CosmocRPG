@@ -26,6 +26,8 @@ var player_id := ""
 ## Имя при создании игрока (по умолчанию сервер даёт «Пилот-NNNN»); нужно тестам, чтобы отличать своих игроков.
 var join_name := ""
 var system: Dictionary = {}
+var layout: Dictionary = {}   # раскладка системы с сервера (зоны, тела, станции, месторождения) и параметры декора
+var visual: Dictionary = {}
 
 var _client: Node
 var _state: Dictionary = {}
@@ -134,6 +136,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			player_name = str(payload.get("name", ""))
 			player_id = str(payload.get("player_id", ""))
 			system = payload.get("system", {})
+			layout = payload.get("layout", {}) if payload.get("layout") is Dictionary else {}
+			visual = payload.get("visual", {}) if payload.get("visual") is Dictionary else {}
 			alert_cleared.emit(ALERT_LINK)
 			_sent_move = Vector2.INF   # после входа заново сообщаем движение
 			joined.emit()
@@ -146,6 +150,14 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 		"quest_completed":
 			var reward: Dictionary = payload.get("reward", {})
 			notification.emit("Задание выполнено: %s. Награда: %d кредитов" % [str(payload.get("title", "")), int(reward.get("credits", 0))])
+		"reward":
+			var credits := int(payload.get("credits", 0))
+			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
+			notification.emit("%s: +%d кредитов" % [what, credits])
+		"ships":
+			ships_updated.emit(payload.get("ships", []))
+		"shop":
+			shop_updated.emit(payload)
 		"error":
 			_on_error(payload)
 
@@ -155,6 +167,9 @@ func _on_error(payload: Dictionary) -> void:
 	var text := str(payload.get("message", "ошибка"))
 	if code in ["bad_nick", "nick_reserved", "nick_taken", "bad_gender", "bad_pilot_spec", "character_exists"]:
 		character_failed.emit(text)
+		return
+	if code in ["no_item", "already_owned", "vip_required", "not_owned", "bad_slot", "bad_request"]:
+		shop_failed.emit(text)
 		return
 	match code:
 		"replaced":
@@ -166,7 +181,8 @@ func _on_error(payload: Dictionary) -> void:
 				alert_raised.emit(ALERT_LINK, text)
 			else:
 				join_failed.emit(text)
-		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec":
+		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec", \
+				"no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big":
 			command_failed.emit("space", text)
 		_:
 			command_failed.emit("server", text)
@@ -179,6 +195,13 @@ func _ship_dict(ship: Dictionary) -> Dictionary:
 	if ship.has("hull"):   # шкалы показываются только если сервер прислал значения
 		for k in ["hull", "hull_max", "shield", "shield_max", "energy", "energy_max", "armor", "cargo"]:
 			d[k] = float(ship.get(k, 0.0))
+	for k in ["cargo_used", "mine_range"]:
+		d[k] = float(ship.get(k, 0.0))
+	d["hold"] = ship.get("hold", {}) if ship.get("hold") is Dictionary else {}
+	d["mining"] = str(ship.get("mining", ""))
+	d["can_mine"] = bool(ship.get("can_mine", false))
+	d["in_safe"] = bool(ship.get("in_safe", false))
+	d["cosmetics"] = ship.get("cosmetics", {}) if ship.get("cosmetics") is Dictionary else {}
 	return d
 
 
@@ -201,6 +224,12 @@ func _apply_state(p: Dictionary) -> void:
 		if o.has("hull"):
 			obj["hull"] = float(o["hull"])
 			obj["hull_max"] = float(o.get("hull_max", o["hull"]))
+		for k in ["tier", "resource", "rarity", "zone", "badge", "name_color", "engine"]:
+			if o.has(k):
+				obj[k] = str(o[k])
+		for k in ["amount", "amount_max", "vip"]:
+			if o.has(k):
+				obj[k] = float(o[k])
 		objects.append(obj)
 	_target_id = str(p.get("target_id", ""))
 	_autopilot = bool(p.get("autopilot", false))
@@ -303,6 +332,53 @@ func set_skin(skin_id: String) -> void:
 func set_spec(spec_id: String) -> void:
 	if _joined:
 		_client.send_message("set_spec", {"value": spec_id})
+
+
+func has_shop() -> bool:
+	return true
+
+
+func request_ships() -> void:
+	if _joined:
+		_client.send_message("ships", {})
+
+
+## Смена корабля у станции (сервер проверяет место, груз и наличие корабля).
+func set_ship(ship_id: String) -> void:
+	if _joined:
+		_client.send_message("set_ship", {"ship": ship_id})
+
+
+## Добыча из месторождения: цель выбирается и отправляется в одном действии.
+func mine(deposit_id: String) -> void:
+	if _joined:
+		_client.send_message("mine", {"id": deposit_id})
+
+
+func stop_mining() -> void:
+	if _joined:
+		_client.send_message("mine_stop", {})
+
+
+func sell() -> void:
+	if _joined:
+		_client.send_message("sell", {})
+
+
+func shop_open() -> void:
+	if _joined:
+		_client.send_message("shop", {})
+
+
+## Покупка идемпотентна по request_id: повторная отправка того же запроса безопасна.
+func shop_buy(item: String) -> void:
+	if _joined:
+		_client.send_message("shop_buy", {"item": item, "request_id": "%d-%d" % [Time.get_ticks_usec(), randi()]})
+
+
+func shop_equip(slot: String, item: String) -> void:
+	if _joined:
+		_client.send_message("shop_equip", {"slot": slot, "item": item})
 
 
 func set_auto_skills(_on: bool) -> void:

@@ -7,7 +7,6 @@ extends Control
 const Session := preload("res://ui/session.gd")
 const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
-const UiSettings := preload("res://ui/ui_settings.gd")
 const ShipView := preload("res://scripts/space/ship_view.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 const BackgroundLibrary := preload("res://ui/space_bg/background_library.gd")
@@ -16,6 +15,10 @@ const CameraConfig := preload("res://ui/camera/space_camera_config.gd")
 const CameraGestures := preload("res://ui/camera/camera_gestures.gd")
 const LoadingOverlay := preload("res://ui/loading_overlay.gd")
 const Hangar := preload("res://ui/ships/hangar.gd")
+const ShopScreen := preload("res://ui/shop_screen.gd")
+const MapScreen := preload("res://ui/map_screen.gd")
+const WorldDecor := preload("res://scripts/space/world_decor.gd")
+const UiSettings := preload("res://ui/ui_settings.gd")
 
 signal exit_requested
 
@@ -37,6 +40,7 @@ var _bg_id := ""
 var _last_sim_time := -1.0
 var _ship_speed := 0.0
 var _last_me_pos := Vector2.ZERO
+var _decor: Node3D   # декор живых локаций (строится по раскладке сервера)
 
 @onready var _hud: Control = %Hud
 @onready var _bg: Control = %SpaceBackground
@@ -94,6 +98,8 @@ func _ready() -> void:
 	_hud.camera_mode_requested.connect(_rig.cycle_mode)
 	_hud.world_tapped.connect(select_at)
 	_hud.hangar_requested.connect(open_hangar)
+	_hud.shop_requested.connect(open_shop)
+	_hud.map_requested.connect(open_map)
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -102,6 +108,7 @@ func _ready() -> void:
 	_hud.exit_requested.connect(_on_exit)
 	gateway.state_updated.connect(_on_state)
 	gateway.combat_event.connect(_on_combat_event)
+	gateway.state_updated.connect(_on_state_for_overlays)
 	var t_state := Time.get_ticks_msec()
 	_on_state(gateway.snapshot())
 	stats.mark("мир+фон", float(Time.get_ticks_msec() - t_state))
@@ -123,6 +130,8 @@ func _process(delta: float) -> void:
 		_last_me_pos = p
 		_rig.viewport_height = size.y
 		_rig.update(delta, Vector3(p.x, 0.0, p.y), me.heading, _ship_speed)
+		if _decor != null:
+			_decor.update(p, delta)
 	# фон: сдвиг только от перемещения корабля в экранных осях; вращение, наклон и масштаб камеры фон не трогают
 	var prof: Resource = _bg.profile
 	if prof != null:
@@ -133,12 +142,26 @@ func ship_view(id: String) -> Node3D:
 	return _ships.get(id)
 
 
+## Декор строится один раз, когда сервер прислал раскладку системы (в демо раскладки нет: остаётся прежний космос).
+func _ensure_decor() -> void:
+	if _decor != null or not ("layout" in gateway):
+		return
+	var lay: Dictionary = gateway.layout
+	if lay.is_empty():
+		return
+	_decor = WorldDecor.new()
+	_decor.name = "WorldDecor"
+	_ships_root.get_parent().add_child(_decor)
+	_decor.build(lay, gateway.visual, UiSettings.graphics_preset())
+
+
 func _on_state(state: Dictionary) -> void:
 	# фон зависит от системы: текстуры и параметры берутся из профиля, который задают данные
 	var bg_id: String = str(state.get("system", {}).get("background", ""))
 	if bg_id != _bg_id:
 		_bg_id = bg_id
 		_bg.apply_profile(BackgroundLibrary.profile(bg_id))
+	_ensure_decor()
 	var now := _now()
 	# новый снимок только при новом игровом времени; состояние без времени считается новым снимком каждый раз
 	var sim_t: float = float(state.get("time", now))
@@ -167,7 +190,7 @@ func _sync_ship(id: String, kind: String, stance: String, display_name: String, 
 	if v == null:
 		v = ShipView.new()
 		_ships_root.add_child(v)
-		v.setup(id, kind, stance, display_name, is_me)
+		v.setup(id, kind, stance, display_name, is_me, info)
 		v.buffer.delay = camera_config.snapshot_delay
 		_ships[id] = v
 		v.set_world_position(pos)  # первое появление: сразу на месте
@@ -196,6 +219,89 @@ func screen_to_world_move(v: Vector2) -> Vector2:
 	var f: Vector3 = axes["forward"]
 	var up := -v.y
 	return Vector2(r.x * v.x + f.x * up, r.z * v.x + f.z * up).limit_length(1.0)
+
+
+## Карта системы поверх сцены: раскладка берётся у сервера (в демо — пустая карта малой системы).
+func open_map() -> Control:
+	var existing := get_node_or_null("MapLayer/MapOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var m: Control = MapScreen.new()
+	m.name = "MapOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "MapLayer"
+	add_child(layer)
+	layer.add_child(m)
+	m.theme = theme
+	var lay: Dictionary = gateway.layout if "layout" in gateway else {}
+	m.set_data(lay, gateway.snapshot())
+	var on_state := func(st: Dictionary) -> void:
+		if is_instance_valid(m):
+			m.set_data(lay, st)
+	gateway.state_updated.connect(on_state)
+	m.target_selected.connect(func(id: String) -> void: gateway.set_target(id))
+	m.autopilot_requested.connect(func(id: String) -> void:
+		gateway.set_target(id)
+		gateway.set_autopilot(true)
+		layer.queue_free())
+	m.closed.connect(func() -> void: layer.queue_free())
+	m.tree_exiting.connect(func() -> void: gateway.state_updated.disconnect(on_state))
+	return m
+
+
+var _hangar_wait_ship := ""   # корабль, смену на который мы ждём от сервера (ангар откроется заново с ним)
+
+
+## Магазин поверх сцены. Каталог и результат покупок приходят от сервера; в демо магазин недоступен.
+func open_shop() -> Control:
+	var existing := get_node_or_null("ShopLayer/ShopOverlay")
+	if existing != null:
+		return existing
+	if not gateway.has_shop():
+		_hud.show_toast("Магазин доступен только при игре на сервере")
+		return null
+	gestures.cancel()
+	var sh: Control = ShopScreen.new()
+	sh.name = "ShopOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "ShopLayer"
+	add_child(layer)
+	layer.add_child(sh)
+	sh.theme = theme
+	sh.set_credits(int(gateway.snapshot().get("credits", -1)))
+	var on_data := func(d: Dictionary) -> void:
+		if is_instance_valid(sh):
+			sh.set_data(d, int(gateway.snapshot().get("credits", -1)))
+	var on_fail := func(t: String) -> void:
+		if is_instance_valid(sh):
+			sh.show_error(t)
+	gateway.shop_updated.connect(on_data)
+	gateway.shop_failed.connect(on_fail)
+	sh.buy_requested.connect(func(id: String) -> void: gateway.shop_buy(id))
+	sh.equip_requested.connect(func(slot: String, id: String) -> void: gateway.shop_equip(slot, id))
+	sh.closed.connect(func() -> void:
+		gateway.shop_updated.disconnect(on_data)
+		gateway.shop_failed.disconnect(on_fail)
+		layer.queue_free())
+	gateway.shop_open()
+	return sh
+
+
+## Баланс в открытом магазине и повторное открытие ангара после смены корабля.
+func _on_state_for_overlays(state: Dictionary) -> void:
+	var shop := get_node_or_null("ShopLayer/ShopOverlay")
+	if shop != null and state.has("credits"):
+		shop.set_credits(int(state["credits"]))
+	if _hangar_wait_ship != "" and str(state.get("ship", {}).get("type", "")) == _hangar_wait_ship:
+		_hangar_wait_ship = ""
+		var old := get_node_or_null("HangarLayer")
+		if old != null:
+			old.queue_free()
+			await get_tree().process_frame
+		open_hangar()
 
 
 ## Ангар поверх сцены (соединение с сервером остаётся). Выбор облика и специализации уходит на сервер.
@@ -229,7 +335,18 @@ func open_hangar() -> Control:
 	h.spec_selected.connect(func(k: String) -> void:
 		if gateway.has_method("set_spec"):
 			gateway.set_spec(k))
-	h.closed.connect(func() -> void: layer.queue_free())
+	h.closed.connect(func() -> void:
+		_hangar_wait_ship = ""
+		layer.queue_free())
+	h.ship_selected.connect(func(id: String) -> void:
+		_hangar_wait_ship = id
+		gateway.set_ship(id))
+	var on_ships := func(list: Array) -> void:
+		if is_instance_valid(h):
+			h.set_fleet(list)
+	gateway.ships_updated.connect(on_ships)
+	h.tree_exiting.connect(func() -> void: gateway.ships_updated.disconnect(on_ships))
+	gateway.request_ships()
 	return h
 
 

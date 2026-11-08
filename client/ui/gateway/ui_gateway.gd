@@ -57,5 +57,47 @@ func move_input(_v: Vector2) -> void:
 	_unsupported("space.move")
 
 
+## Добыча, продажа и магазин: есть только у серверного шлюза; в демо магазин и добыча недоступны.
+signal ships_updated(ships: Array)
+signal shop_updated(data: Dictionary)
+signal shop_failed(text: String)
+
+
+func has_shop() -> bool:
+	return false
+
+
+func mine(_deposit_id: String) -> void:
+	_unsupported("space.mine")
+
+
+func stop_mining() -> void:
+	pass
+
+
+func sell() -> void:
+	_unsupported("space.sell")
+
+
+func request_ships() -> void:
+	pass
+
+
+func set_ship(_ship_id: String) -> void:
+	_unsupported("space.ship")
+
+
+func shop_open() -> void:
+	shop_failed.emit("Магазин доступен только при игре на сервере")
+
+
+func shop_buy(_item: String) -> void:
+	shop_open()
+
+
+func shop_equip(_slot: String, _item: String) -> void:
+	shop_open()
+
+
 func _unsupported(action: String) -> void:
 	command_failed.emit(action, "Сервер пока не поддерживает это действие")

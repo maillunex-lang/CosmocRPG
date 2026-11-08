@@ -45,6 +45,7 @@ func _run() -> void:
 	DirAccess.remove_absolute("user://settings.cfg")
 
 	_screen = load("res://scenes/connect.tscn").instantiate()
+	_screen.set("auto_connect", false)
 	root.add_child(_screen)
 	await process_frame
 	var url_edit: LineEdit = _screen.get_node("%UrlEdit")
@@ -57,7 +58,7 @@ func _run() -> void:
 	# Начальное состояние
 	_check(status.text == "Не подключено", "начальный статус «Не подключено»")
 	_check(not connect_btn.disabled and disconnect_btn.disabled and ping_btn.disabled, "начальное состояние кнопок")
-	_check(url_edit.text == "ws://78.17.214.25:8080/ws", "адрес по умолчанию")
+	_check(url_edit.text == "wss://rikagro.ru/ws", "адрес по умолчанию")
 	_check(url_edit.virtual_keyboard_type == LineEdit.KEYBOARD_TYPE_URL, "для адреса включена клавиатура URL (не числовая)")
 	await _shot("01_idle")
 

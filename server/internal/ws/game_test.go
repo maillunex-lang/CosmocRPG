@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"io"
 	"log/slog"
 	"strings"
@@ -484,4 +485,111 @@ func TestSkinChoiceVisibleToOthers(t *testing.T) {
 	if !found {
 		t.Fatal("другие игроки не видят выбранный облик")
 	}
+}
+
+func accountServer(t *testing.T) (*quest.MemStore, string) {
+	t.Helper()
+	w := world.New()
+	qs := quest.NewMemStore()
+	store := world.NewMemStore()
+	svc := quest.NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), qs, w.ObjectPos)
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc, Accounts: account.NewService(store)}
+	srv, h := newServer(t, opts)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { h.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	return qs, srv.URL
+}
+
+func TestAccountSurvivesReinstall(t *testing.T) {
+	_, url := accountServer(t)
+	// устройство A: играем, получаем награду, сохраняем аккаунт
+	a := connect(t, url)
+	a.send("register", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "Captain_X", "password": "hunter2-hunter2"})
+	m := a.next("account")
+	if !strings.Contains(string(m.Payload), `"captain_x"`) {
+		t.Fatalf("регистрация: %s", m.Payload)
+	}
+	pj := a.join("devicetokenaaaaaaaaaaaa")
+	pid := pj["player_id"].(string)
+	a.send("target", map[string]any{"id": world.StationID})
+	a.send("autopilot", map[string]any{"on": true})
+	a.next("quest_completed")
+	a.c.CloseNow()
+	// «приложение удалено»: новое устройство, новый токен, вход по логину и паролю
+	b := connect(t, url)
+	b.send("login", map[string]any{"token": "devicetokenbbbbbbbbbbbb", "login": "captain_x", "password": "wrong-password-1"})
+	if m := b.next("error"); errCode(t, m) != "bad_credentials" {
+		t.Fatalf("неверный пароль: %s", m.Payload)
+	}
+	b.send("login", map[string]any{"token": "devicetokenbbbbbbbbbbbb", "login": "CAPTAIN_X", "password": "hunter2-hunter2"})
+	if m := b.next("account"); !strings.Contains(string(m.Payload), `"captain_x"`) {
+		t.Fatalf("вход: %s", m.Payload)
+	}
+	pj2 := b.join("devicetokenbbbbbbbbbbbb")
+	if pj2["player_id"].(string) != pid {
+		t.Fatalf("новое устройство получило другого игрока: %v и %v", pj2["player_id"], pid)
+	}
+	var s questState
+	for i := 0; i < 20; i++ {
+		s = b.questState()
+		if s.Credits != nil && *s.Credits == 500 {
+			break
+		}
+	}
+	if s.Credits == nil || *s.Credits != 500 || len(s.Quests) != 0 {
+		t.Fatalf("прогресс не перенесён: %+v", s)
+	}
+	// без аккаунта токен без привязки создаёт нового игрока
+	c := connect(t, url)
+	pj3 := c.join("devicetokenccccccccccccc")
+	if pj3["player_id"].(string) == pid {
+		t.Fatal("чужое устройство получило игрока без входа")
+	}
+}
+
+func TestAccountProtocolErrors(t *testing.T) {
+	_, url := accountServer(t)
+	a := connect(t, url)
+	for _, tc := range []struct {
+		typ  string
+		body map[string]any
+		code string
+	}{
+		{"register", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "x", "password": "hunter2-hunter2"}, "bad_login"},
+		{"register", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "good_login", "password": "short"}, "weak_password"},
+		{"register", map[string]any{"token": "коротко", "login": "good_login", "password": "hunter2-hunter2"}, "bad_token"},
+		{"login", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "nobody", "password": "hunter2-hunter2"}, "bad_credentials"},
+	} {
+		a.send(tc.typ, tc.body)
+		if m := a.next("error"); errCode(t, m) != tc.code {
+			t.Errorf("%s: %s, ожидалось %s", tc.typ, m.Payload, tc.code)
+		}
+	}
+	a.send("register", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "taken_one", "password": "hunter2-hunter2"})
+	a.next("account")
+	b := connect(t, url)
+	b.send("register", map[string]any{"token": "devicetokenbbbbbbbbbbbb", "login": "Taken_One", "password": "hunter2-hunter2"})
+	if m := b.next("error"); errCode(t, m) != "login_taken" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// после входа в мир регистрация и вход отклоняются
+	b.join("devicetokenbbbbbbbbbbbb")
+	b.send("login", map[string]any{"token": "devicetokenbbbbbbbbbbbb", "login": "taken_one", "password": "hunter2-hunter2"})
+	if m := b.next("error"); errCode(t, m) != "already_joined" {
+		t.Fatalf("%s", m.Payload)
+	}
+	// выключенная функция: сообщения неизвестны
+	_, url2 := gameServer2(t)
+	d := connect(t, url2)
+	d.send("login", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "x", "password": "y"})
+	if m := d.next("error"); errCode(t, m) != "unknown_type" {
+		t.Fatalf("%s", m.Payload)
+	}
+}
+
+func gameServer2(t *testing.T) (*Handler, string) {
+	h, _, url := gameServer(t)
+	return h, url
 }

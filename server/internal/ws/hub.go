@@ -9,12 +9,14 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
@@ -40,9 +42,10 @@ type Options struct {
 	MaxMessage int64 // максимальный размер входящего сообщения, байт
 	RatePerSec int   // допустимое число сообщений в секунду на сессию
 	Version    string
-	World      *world.World   // игровой мир; nil: игровые сообщения отключены (Этап 00)
-	Store      world.Store    // хранилище игроков; nil: позиции не сохраняются
-	Quests     *quest.Service // контракты и награды; nil: функция выключена
+	World      *world.World     // игровой мир; nil: игровые сообщения отключены (Этап 00)
+	Store      world.Store      // хранилище игроков; nil: позиции не сохраняются
+	Quests     *quest.Service   // контракты и награды; nil: функция выключена
+	Accounts   *account.Service // аккаунты (логин и пароль); nil: функция выключена
 }
 
 // Handler обслуживает WebSocket-соединения.
@@ -129,6 +132,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch m.Type {
 		case "ping":
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
+		case "register", "login":
+			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
 		case "join", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
@@ -561,5 +566,65 @@ func (h *Handler) broadcastEvents(evs []world.Event) {
 		case s.events <- m:
 		default:
 		}
+	}
+}
+
+// accountMsg обрабатывает register и login (до входа в мир). Пароли не логируются.
+func (h *Handler) accountMsg(ctx context.Context, c *websocket.Conn, ss *session, remote string, m Message) {
+	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
+	if h.opts.Accounts == nil {
+		reply(errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
+		return
+	}
+	if ss.pid != "" {
+		reply(errMsg(m.ID, "already_joined", "вход уже выполнен"))
+		return
+	}
+	var p struct {
+		Login    string `json:"login"`
+		Password string `json:"password"`
+		Token    string `json:"token"`
+		Name     string `json:"name"`
+	}
+	if json.Unmarshal(m.Payload, &p) != nil {
+		reply(errMsg(m.ID, "bad_message", "некорректный запрос"))
+		return
+	}
+	ip := remote
+	if i := strings.LastIndex(remote, ":"); i > 0 {
+		ip = remote[:i]
+	}
+	actx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	fail := func(err error) {
+		code := err.Error()
+		text := map[string]string{
+			"bad_login": "логин: 3-32 символа, латиница, цифры, «_», «.», «-»", "weak_password": "пароль: от 8 до 128 символов, не повторяющийся символ и не логин",
+			"bad_credentials": "неверный логин или пароль", "too_many_attempts": "слишком много попыток, попробуйте позже", "bad_token": "некорректный токен",
+			"login_taken": "такой логин уже занят", "already_has_account": "у этого игрока уже есть аккаунт",
+		}[code]
+		if text == "" {
+			h.log.Error("ws: аккаунт", "err", err)
+			code, text = "server_error", "ошибка сервера"
+		}
+		reply(errMsg(m.ID, code, text))
+	}
+	switch m.Type {
+	case "register":
+		_, login, err := h.opts.Accounts.Register(actx, ip, p.Token, p.Name, p.Login, p.Password)
+		if err != nil {
+			fail(err)
+			return
+		}
+		h.log.Info("ws: аккаунт создан", "login", login)
+		reply(Message{Type: "account", ID: m.ID, Payload: mustJSON(map[string]any{"login": login, "created": true})})
+	case "login":
+		login, pid, err := h.opts.Accounts.Login(actx, ip, p.Token, p.Login, p.Password)
+		if err != nil {
+			fail(err)
+			return
+		}
+		h.log.Info("ws: вход по аккаунту", "login", login, "player", pid)
+		reply(Message{Type: "account", ID: m.ID, Payload: mustJSON(map[string]any{"login": login, "created": false})})
 	}
 }

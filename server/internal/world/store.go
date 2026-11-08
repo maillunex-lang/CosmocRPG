@@ -75,6 +75,11 @@ func NewPGStore(pool *pgxpool.Pool) *PGStore { return &PGStore{pool: pool} }
 
 func (s *PGStore) Resolve(ctx context.Context, token, name string) (Record, error) {
 	h := TokenHash(token)
+	// токен, привязанный к аккаунту, ведёт к игроку аккаунта (вход с нового устройства)
+	var linked string
+	if err := s.pool.QueryRow(ctx, `SELECT player_public_id FROM player_tokens WHERE token_hash = $1`, h[:]).Scan(&linked); err == nil {
+		return s.byPublicID(ctx, linked)
+	}
 	rec := fresh(h, CleanName(name))
 	var px, py, dx, dy float64
 	var nm, skin, spec string
@@ -87,6 +92,17 @@ func (s *PGStore) Resolve(ctx context.Context, token, name string) (Record, erro
 		return Record{}, fmt.Errorf("игрок: %w", err)
 	}
 	return Record{ID: rec.ID, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec}, nil
+}
+
+func (s *PGStore) byPublicID(ctx context.Context, pid string) (Record, error) {
+	var px, py, dx, dy float64
+	var nm, skin, spec string
+	err := s.pool.QueryRow(ctx, `SELECT name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec FROM players WHERE public_id = $1`, pid).
+		Scan(&nm, &px, &py, &dx, &dy, &skin, &spec)
+	if err != nil {
+		return Record{}, fmt.Errorf("игрок аккаунта: %w", err)
+	}
+	return Record{ID: pid, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec}, nil
 }
 
 func (s *PGStore) Save(ctx context.Context, r Record) error {
@@ -102,6 +118,7 @@ func (s *PGStore) Save(ctx context.Context, r Record) error {
 type MemStore struct {
 	mu   sync.Mutex
 	recs map[string]Record
+	accs *memAccounts
 }
 
 // NewMemStore создаёт пустое хранилище.
@@ -109,9 +126,18 @@ func NewMemStore() *MemStore { return &MemStore{recs: map[string]Record{}} }
 
 func (s *MemStore) Resolve(_ context.Context, token, name string) (Record, error) {
 	h := TokenHash(token)
+	a := s.acc()
+	a.mu.Lock()
+	linked, isLinked := a.tokens[PublicID(h)]
+	a.mu.Unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	id := PublicID(h)
+	if isLinked { // токен привязан к аккаунту: ведёт к его игроку
+		if r, ok := s.recs[linked]; ok {
+			return r, nil
+		}
+	}
 	if r, ok := s.recs[id]; ok {
 		return r, nil
 	}

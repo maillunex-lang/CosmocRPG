@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/admin"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
@@ -149,6 +150,7 @@ func run() error {
 	log.Info("запуск зафиксирован", "boots_total", boots, "version", version)
 
 	gameWorld := world.New()
+	playerStore := world.NewPGStore(pool)
 	var quests *quest.Service
 	if cfg.FeatureQuests {
 		quests = quest.NewService(log, quest.NewPGStore(pool), gameWorld.ObjectPos)
@@ -159,7 +161,7 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: gameWorld, Store: world.NewPGStore(pool), Quests: quests,
+		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore),
 	})
 	worldDone := make(chan struct{})
 	go func() {

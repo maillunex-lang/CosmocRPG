@@ -8,8 +8,14 @@ const Icons := preload("res://ui/icons.gd")
 
 signal shop_requested
 signal closed
+## Игрок нажал «+» у характеристики пилота (сервер сам проверит очки).
+signal attribute_requested(attr: String)
 
 const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII"]
+const ATTRIBUTES := [
+	["piloting", "Пилотирование"], ["tactics", "Тактика"], ["engineering", "Инженерия"],
+	["energetics", "Энергетика"], ["analytics", "Аналитика"], ["logistics", "Логистика"],
+]
 
 var _nick: Label
 var _title: Label
@@ -21,6 +27,12 @@ var _credits: Label
 var _avatar: TextureRect
 var _frame: PanelContainer
 var _shop_button: ActionButton
+var _dev: VBoxContainer
+var _dev_level: Label
+var _dev_free: Label
+var _dev_bar: ProgressBar
+var _attr_values: Dictionary = {}
+var _attr_buttons: Dictionary = {}
 
 
 func _ready() -> void:
@@ -96,12 +108,83 @@ func _ready() -> void:
 	_credits = _row(box, "coins", "Кредиты")
 	_credits.name = "CreditsValue"
 
+	_build_development(box)
+
 	_shop_button = ActionButton.new()
 	_shop_button.name = "ShopButton"
 	_shop_button.text = "Открыть магазин"
 	Icons.apply(_shop_button, "store", Tokens.ACCENT, 22)
 	_shop_button.pressed.connect(func() -> void: shop_requested.emit())
 	box.add_child(_shop_button)
+
+
+## Развитие пилота: уровень, опыт, свободные очки и шесть характеристик. Показывается, только если сервер прислал данные.
+func _build_development(box: Control) -> void:
+	_dev = VBoxContainer.new()
+	_dev.name = "Development"
+	_dev.add_theme_constant_override("separation", 6)
+	_dev.visible = false
+	box.add_child(_dev)
+	var head := HBoxContainer.new()
+	_dev.add_child(head)
+	_dev_level = Label.new()
+	_dev_level.name = "DevLevel"
+	_dev_level.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_level.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
+	head.add_child(_dev_level)
+	_dev_free = Label.new()
+	_dev_free.name = "DevFree"
+	_dev_free.add_theme_color_override("font_color", Tokens.ACCENT)
+	head.add_child(_dev_free)
+	_dev_bar = ProgressBar.new()
+	_dev_bar.show_percentage = false
+	_dev_bar.custom_minimum_size = Vector2(0, 8)
+	_dev_bar.max_value = 1.0
+	_dev_bar.step = 0.001
+	_dev.add_child(_dev_bar)
+	for a in ATTRIBUTES:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		_dev.add_child(row)
+		var name_l := Label.new()
+		name_l.text = a[1]
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_l)
+		var val := Label.new()
+		val.custom_minimum_size.x = 44
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(val)
+		_attr_values[a[0]] = val
+		var b := ActionButton.new()
+		b.name = "Plus_" + a[0]
+		b.text = "+"
+		b.custom_minimum_size = Vector2(56, 44)
+		var attr_id: String = a[0]
+		b.pressed.connect(func() -> void: attribute_requested.emit(attr_id))
+		row.add_child(b)
+		_attr_buttons[a[0]] = b
+	var note := Label.new()
+	note.text = "Очки сохраняются. Влияние характеристик на корабль подключается на следующих этапах развития."
+	note.theme_type_variation = &"MutedLabel"
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dev.add_child(note)
+
+
+## Состояние пилота от сервера (опыт, уровень, очки).
+func set_pilot(p: Dictionary) -> void:
+	_dev.visible = not p.is_empty()
+	if p.is_empty():
+		return
+	var need := int(p.get("level_xp", 0))
+	_dev_level.text = "Уровень %d из %d" % [int(p.get("level", 1)), int(p.get("max_level", 60))]
+	_dev_bar.value = 1.0 if need <= 0 else clampf(float(p.get("into_level", 0)) / float(need), 0.0, 1.0)
+	_dev_bar.tooltip_text = "Максимальный уровень" if need <= 0 else "Опыт: %d / %d" % [int(p.get("into_level", 0)), need]
+	var free := int(p.get("attr_free", 0))
+	_dev_free.text = ("Свободно очков: %d" % free) if free > 0 else ""
+	var attrs: Dictionary = p.get("attributes", {})
+	for a in ATTRIBUTES:
+		(_attr_values[a[0]] as Label).text = str(int(attrs.get(a[0], 0)))
+		(_attr_buttons[a[0]] as Button).disabled = free <= 0
 
 
 func _row(parent: Control, icon: String, caption: String) -> Label:
@@ -145,6 +228,8 @@ func set_data(state: Dictionary, shop_state: Dictionary = {}) -> void:
 	_avatar.texture = Icons.tex(avatar if avatar != "" else "user")
 	_avatar.modulate = Tokens.ACCENT if avatar != "" else Tokens.TEXT_MUTED
 	_credits.text = "%s" % _fmt(int(state.get("credits", 0)))
+	if state.get("pilot") is Dictionary:
+		set_pilot(state["pilot"])
 
 
 static func _fmt(n: int) -> String:

@@ -36,6 +36,7 @@ var _state: Dictionary = {}
 var _target_id := ""
 var _autopilot := false
 var _joined := false
+var _pilot: Dictionary = {}        # состояние пилота от сервера: опыт, уровень, очки характеристик
 var _auto_battle := false          # автобой: кнопка «Авто»
 var _auto_skip: Dictionary = {}    # id цели -> до какого времени (мс) пропускать (сервер отклонил атаку)
 var _auto_sent_id := ""            # цель, на которую автобой отправил атаку и ждёт подтверждения
@@ -142,6 +143,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			_retry_in = -1.0
 			player_name = str(payload.get("name", ""))
 			player_id = str(payload.get("player_id", ""))
+			_pilot = payload.get("pilot", {}) if payload.get("pilot") is Dictionary else {}
 			system = payload.get("system", {})
 			layout = payload.get("layout", {}) if payload.get("layout") is Dictionary else {}
 			visual = payload.get("visual", {}) if payload.get("visual") is Dictionary else {}
@@ -163,6 +165,14 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			var credits := int(payload.get("credits", 0))
 			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
 			notification.emit("%s: +%d кредитов" % [what, credits])
+		"xp":
+			_set_pilot(payload.get("pilot", {}) if payload.get("pilot") is Dictionary else {})
+			if bool(payload.get("level_up", false)):
+				notification.emit("Новый уровень %d! Свободных очков характеристик: %d" % [int(_pilot.get("level", 1)), int(_pilot.get("attr_free", 0))])
+			else:
+				notification.emit("+%d опыта" % int(payload.get("gained", 0)))
+		"pilot":
+			_set_pilot(payload)
 		"chat":
 			if payload.get("message") is Dictionary:
 				chat_received.emit(payload["message"])
@@ -228,6 +238,41 @@ func _vec(a: Variant) -> Vector2:
 	return Vector2.ZERO
 
 
+## Игрок для HUD: уровень и опыт только если сервер их прислал (ничего не выдумываем).
+func _player_dict() -> Dictionary:
+	var d := {"name": player_name}
+	if not _pilot.is_empty():
+		d["level"] = int(_pilot.get("level", 1))
+		d["xp_into"] = int(_pilot.get("into_level", 0))
+		d["xp_to_next"] = int(_pilot.get("to_next", 0))
+		d["xp_level"] = int(_pilot.get("level_xp", 0))
+		d["attr_free"] = int(_pilot.get("attr_free", 0))
+	return d
+
+
+func _set_pilot(p: Dictionary) -> void:
+	_pilot = p
+	if not _state.is_empty():
+		_state["player"] = _player_dict()
+		_state["pilot"] = _pilot
+		state_updated.emit(_state)
+	pilot_updated.emit(_pilot)
+
+
+func has_pilot() -> bool:
+	return not _pilot.is_empty()
+
+
+func pilot_open() -> void:
+	if _joined:
+		_client.send_message("pilot", {})
+
+
+func pilot_spend(attr: String, points: int) -> void:
+	if _joined:
+		_client.send_message("pilot_spend", {"attr": attr, "points": points})
+
+
 ## Снимок сервера в формат HUD. Поля боя и экономики не добавляются: сервер их не присылает.
 func _apply_state(p: Dictionary) -> void:
 	var ship: Dictionary = p.get("ship", {})
@@ -269,7 +314,8 @@ func _apply_state(p: Dictionary) -> void:
 	_state = {
 		"mode": "server",
 		"time": float(p.get("time", 0.0)),
-		"player": {"name": player_name},
+		"player": _player_dict(),
+		"pilot": _pilot,
 		"system": system,
 		"ship": _ship_dict(ship),
 		"objects": objects,

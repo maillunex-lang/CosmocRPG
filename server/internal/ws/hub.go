@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"math"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
@@ -50,6 +52,7 @@ type Options struct {
 	Accounts   *account.Service   // аккаунты (логин и пароль); nil: функция выключена
 	Shop       *shop.Service      // VIP и магазин косметики; nil: функция выключена
 	Chat       *chat.Service      // чат (общий и личные сообщения); nil: функция выключена
+	Pilot      *pilot.Service     // опыт, уровень и характеристики пилота; nil: функция выключена
 	OnChat     func(chat.Message) // наблюдатель отправленных сообщений (ответы ИИ-капитанов); может быть nil
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
 	RequireCharacter bool
@@ -144,7 +147,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -265,6 +268,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.shopMsg(ctx, c, ss, m)
 	case "chat_send", "chat_history":
 		h.chatMsg(ctx, c, ss, m)
+	case "pilot", "pilot_spend":
+		h.pilotMsg(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
 		if err := json.Unmarshal(m.Payload, &p); err != nil || math.IsNaN(p.X+p.Y) || math.IsInf(p.X+p.Y, 0) {
@@ -609,7 +614,82 @@ func (h *Handler) evaluateQuests(ss *session, pid string, st world.State) {
 		default:
 			h.log.Warn("ws: очередь событий переполнена", "player", pid)
 		}
+		h.grantXP(ctx, pid, "xp:quest:"+c.QuestID, "quest", pilot.XPFor("quest", c.Credits))
 	}
+}
+
+// grantXP начисляет опыт пилота за событие (идемпотентно по ключу) и сообщает игроку, если он в сети.
+func (h *Handler) grantXP(ctx context.Context, pid, key, source string, amount int64) {
+	if h.opts.Pilot == nil || amount <= 0 {
+		return
+	}
+	g, err := h.opts.Pilot.Grant(ctx, pid, key, source, amount)
+	if err != nil {
+		h.log.Error("опыт пилота", "player", pid, "key", key, "err", err)
+		return
+	}
+	if !g.Granted {
+		return
+	}
+	h.mu.Lock()
+	ss := h.active[pid]
+	h.mu.Unlock()
+	if ss == nil {
+		return
+	}
+	select {
+	case ss.events <- Message{Type: "xp", Payload: mustJSON(map[string]any{"gained": g.Amount, "source": source, "level_up": g.LevelUp, "pilot": g.State})}:
+	default:
+	}
+}
+
+func pilotText(err error) (string, string) {
+	switch {
+	case errors.Is(err, pilot.ErrBadAttr):
+		return "pilot_bad_attr", "неизвестная характеристика"
+	case errors.Is(err, pilot.ErrBadCount):
+		return "pilot_bad_count", "некорректное число очков"
+	case errors.Is(err, pilot.ErrNoPoints):
+		return "pilot_no_points", "недостаточно свободных очков"
+	case errors.Is(err, pilot.ErrCap):
+		return "pilot_cap", "достигнут предел характеристики"
+	}
+	return "internal", "внутренняя ошибка"
+}
+
+// pilotMsg: pilot (состояние) и pilot_spend (потратить очки на характеристику). Результат всегда считает сервер.
+func (h *Handler) pilotMsg(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
+	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
+	if h.opts.Pilot == nil {
+		reply(errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
+		return
+	}
+	pctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	var st pilot.State
+	var err error
+	if m.Type == "pilot_spend" {
+		var p struct {
+			Attr   string `json:"attr"`
+			Points int    `json:"points"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || len(p.Attr) > 24 {
+			reply(errMsg(m.ID, "bad_message", "некорректная команда"))
+			return
+		}
+		st, err = h.opts.Pilot.Spend(pctx, ss.pid, p.Attr, p.Points)
+	} else {
+		st, err = h.opts.Pilot.State(pctx, ss.pid)
+	}
+	if err != nil {
+		code, text := pilotText(err)
+		if code == "internal" {
+			h.log.Error("пилот", "player", ss.pid, "type", m.Type, "err", err)
+		}
+		reply(errMsg(m.ID, code, text))
+		return
+	}
+	reply(Message{Type: "pilot", ID: m.ID, Payload: mustJSON(st)})
 }
 
 // grantRewards выдаёт награды локаций идемпотентно (ключ события) и сообщает игроку о зачислении.
@@ -626,6 +706,7 @@ func (h *Handler) grantRewards(rs []world.Reward) {
 			continue
 		}
 		h.log.Info("награда выдана", "player", r.Player, "kind", r.Kind, "ref", r.Ref, "credits", r.Credits, "total", total)
+		h.grantXP(ctx, r.Player, "xp:"+r.Key, r.Kind, pilot.XPFor(r.Kind, r.Credits))
 		h.mu.Lock()
 		ss := h.active[r.Player]
 		h.mu.Unlock()
@@ -759,6 +840,13 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 		// раскладка системы и визуальные параметры: клиент строит декор по seed, серверные объекты приходят в state
 		welcome["layout"] = lay
 		welcome["visual"] = wcfg.Visual
+	}
+	if h.opts.Pilot != nil {
+		pctx, pcancel := context.WithTimeout(ctx, 3*time.Second)
+		if ps, err := h.opts.Pilot.State(pctx, rec.ID); err == nil {
+			welcome["pilot"] = ps
+		}
+		pcancel()
 	}
 	reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(welcome)})
 	go h.pump(ctx, ss)

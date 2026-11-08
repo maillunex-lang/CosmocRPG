@@ -64,6 +64,8 @@ signal chat_failed(text: String)
 signal ships_updated(ships: Array)
 signal shop_updated(data: Dictionary)
 signal shop_failed(text: String)
+## Пилот: опыт, уровень и очки характеристик (серверный режим): словарь состояния пилота.
+signal pilot_updated(pilot: Dictionary)
 
 
 ## Игровая настройка (например, автоответ на атаку). В демо без сервера ничего не делает.
@@ -85,6 +87,18 @@ func request_chat_history() -> void:
 
 func has_shop() -> bool:
 	return false
+
+
+func has_pilot() -> bool:
+	return false
+
+
+func pilot_open() -> void:
+	pass
+
+
+func pilot_spend(_attr: String, _points: int) -> void:
+	_unsupported("pilot.spend")
 
 
 func mine(_deposit_id: String) -> void:

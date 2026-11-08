@@ -75,6 +75,7 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 @onready var _system_button: ActionButton = %SystemButton
 @onready var _alerts: VBoxContainer = %AlertBar
 @onready var _credits: HBoxContainer = %Credits
+var _xp_bar: ProgressBar
 @onready var _target_name: Label = %TargetName
 @onready var _target_info: Label = %TargetInfo
 @onready var _target_hull: ProgressBar = %TargetHull
@@ -87,6 +88,41 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 
 
 ## Верхний статус-чип: режим управления, скорость и груз в прозрачной рамке (вместо строки внутри нижней панели).
+## Тонкая полоса опыта под именем пилота (есть только если сервер прислал опыт).
+func _build_xp_bar() -> void:
+	var box: Control = _player_name.get_parent().get_parent()
+	_xp_bar = ProgressBar.new()
+	_xp_bar.name = "XpBar"
+	_xp_bar.show_percentage = false
+	_xp_bar.custom_minimum_size = Vector2(0, 6)
+	_xp_bar.min_value = 0.0
+	_xp_bar.max_value = 1.0
+	_xp_bar.step = 0.001
+	_xp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_xp_bar.visible = false
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(Tokens.TEXT, 0.12)
+	bg.set_corner_radius_all(3)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Tokens.ACCENT
+	fill.set_corner_radius_all(3)
+	_xp_bar.add_theme_stylebox_override("background", bg)
+	_xp_bar.add_theme_stylebox_override("fill", fill)
+	box.add_child(_xp_bar)
+	box.move_child(_xp_bar, 1)
+
+
+func _apply_xp(player: Dictionary) -> void:
+	if _xp_bar == null:
+		return
+	_xp_bar.visible = player.has("xp_level")
+	if not _xp_bar.visible:
+		return
+	var need := int(player.get("xp_level", 0))
+	_xp_bar.value = 1.0 if need <= 0 else clampf(float(player.get("xp_into", 0)) / float(need), 0.0, 1.0)
+	_xp_bar.tooltip_text = "Максимальный уровень" if need <= 0 else "Опыт: %d / %d" % [int(player.get("xp_into", 0)), need]
+
+
 func _build_status_chip() -> void:
 	var center: Control = _speed_label.get_parent().get_parent().get_parent()   # CenterStack
 	var chip := PanelContainer.new()
@@ -123,6 +159,7 @@ func _airy(card: Control, alpha: float, border := true) -> void:
 
 func _ready() -> void:
 	_build_status_chip()
+	_build_xp_bar()
 	for c in [%ProfileCard, %QuestsCard, %ChatCard, %TargetCard, %CreditsCard]:
 		_airy(c, 0.55)
 	_airy(%CombatBlock, 0.28, false)
@@ -360,7 +397,8 @@ func apply_state(state: Dictionary) -> void:
 	var player: Dictionary = state.get("player", {})
 	_player_name.text = str(player.get("name", ""))
 	_player_level.visible = player.has("level")   # уровня нет в данных: не выдумываем
-	_player_level.text = "Ур. %d" % int(player.get("level", 1))
+	_player_level.text = "Ур. %d" % int(player.get("level", 1)) + ((" · +%d" % int(player["attr_free"])) if int(player.get("attr_free", 0)) > 0 else "")
+	_apply_xp(player)
 	var ship: Dictionary = state.get("ship", {})
 	_ship_name.text = str(ship.get("name", ""))
 	# косметика профиля (R-34): аватарка, рамка, титул — прислал сервер

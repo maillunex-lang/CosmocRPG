@@ -7,10 +7,14 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 )
+
+// livingPilot — сервис пилота последнего созданного livingServer (опыт в памяти).
+var livingPilot *pilot.Service
 
 // livingServer: мир с живыми локациями и контрактами; игрок заранее создан в хранилище в заданной точке.
 func livingServer(t *testing.T, token, ship string, at world.Vec, hold map[string]float64) (*quest.MemStore, worldgen.Layout, string) {
@@ -26,7 +30,8 @@ func livingServer(t *testing.T, token, ship string, at world.Vec, hold map[strin
 	store := world.NewMemStore()
 	id := world.PublicID(world.TokenHash(token))
 	_ = store.Save(context.Background(), world.Record{ID: id, Name: "Шахтёр", Pos: at, Dir: world.Vec{X: 1}, Created: true, ShipType: ship, PilotSpec: "miner", Hold: hold})
-	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc}
+	livingPilot = pilot.NewService(pilot.NewMemStore())
+	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc, Pilot: livingPilot}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -173,5 +178,56 @@ func TestSetOptionThroughProtocol(t *testing.T) {
 	_ = json.Unmarshal(e.Payload, &ec)
 	if ec.Code != "bad_message" {
 		t.Fatalf("код %q", ec.Code)
+	}
+}
+
+func TestPilotXPFromSellOnceAndSpend(t *testing.T) {
+	_, _, url := livingServer(t, "xpsellertoken0001", "TMP-MINE", world.Vec{X: -12 + 8, Y: 14}, map[string]float64{"iron_ore": 10})
+	cl := connect(t, url)
+	w := cl.joinRaw("xpsellertoken0001")
+	p0, _ := w["pilot"].(map[string]any)
+	if p0 == nil || p0["level"].(float64) != 1 || p0["xp"].(float64) != 0 {
+		t.Fatalf("в welcome нет состояния пилота на уровне 1: %v", w["pilot"])
+	}
+	cl.send("sell", nil)
+	credits := int64(10 * worldgen.DefaultConfig().Resources["iron_ore"].Price)
+	want := pilot.XPFor("sell", credits)
+	m := cl.next("xp")
+	var x struct {
+		Gained  int64
+		Source  string
+		LevelUp bool `json:"level_up"`
+		Pilot   pilot.State
+	}
+	_ = json.Unmarshal(m.Payload, &x)
+	if x.Gained != want || x.Source != "sell" || x.Pilot.XP != want {
+		t.Fatalf("опыт за продажу: %+v (ожидалось %d)", x, want)
+	}
+	// трата без свободных очков отклоняется сервером
+	cl.send("pilot_spend", map[string]any{"attr": "piloting", "points": 1})
+	if code := cl.errCode(); code != "pilot_no_points" && x.Pilot.AttrFree > 0 {
+		t.Fatalf("код ошибки: %q", code)
+	}
+	// начислим уровень напрямую сервисом и потратим очки по протоколу
+	id := world.PublicID(world.TokenHash("xpsellertoken0001"))
+	if _, err := livingPilot.Grant(context.Background(), id, "test:level", "kill", 100000); err != nil {
+		t.Fatal(err)
+	}
+	cl.send("pilot_spend", map[string]any{"attr": "piloting", "points": 3})
+	pm := cl.next("pilot")
+	var ps pilot.State
+	_ = json.Unmarshal(pm.Payload, &ps)
+	if ps.Attributes["piloting"] != 3 || ps.AttrSpent != 3 {
+		t.Fatalf("очки не потрачены: %+v", ps)
+	}
+	cl.send("pilot_spend", map[string]any{"attr": "bogus", "points": 1})
+	if code := cl.errCode(); code != "pilot_bad_attr" {
+		t.Fatalf("неизвестная характеристика: %q", code)
+	}
+	cl.send("pilot", nil)
+	var again pilot.State
+	_ = json.Unmarshal(cl.next("pilot").Payload, &again)
+	if again.Attributes["piloting"] != 3 {
+		t.Fatalf("состояние не сохранилось: %+v", again)
 	}
 }

@@ -399,6 +399,13 @@ func open_profile() -> Control:
 		if is_instance_valid(p):
 			p.set_data(gateway.snapshot(), d.get("state", {}))
 	gateway.shop_updated.connect(on_shop)
+	var on_pilot := func(pl: Dictionary) -> void:
+		if is_instance_valid(p):
+			p.set_pilot(pl)
+	gateway.pilot_updated.connect(on_pilot)
+	p.attribute_requested.connect(func(attr: String) -> void: gateway.pilot_spend(attr, 1))
+	if gateway.has_pilot():
+		gateway.pilot_open()
 	if gateway.has_shop():
 		gateway.shop_open()   # состояние магазина: срок подписки
 	p.shop_requested.connect(func() -> void:
@@ -406,6 +413,7 @@ func open_profile() -> Control:
 		open_shop())
 	p.closed.connect(func() -> void:
 		gateway.shop_updated.disconnect(on_shop)
+		gateway.pilot_updated.disconnect(on_pilot)
 		layer.queue_free())
 	return p
 

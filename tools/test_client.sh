@@ -29,6 +29,9 @@ timeout 280 xvfb-run -a -s "-screen 0 1920x1080x24" \
 echo "== сетевой слой"
 timeout 120 godot --headless --path "$ROOT/client" --script res://tests/ws_client_test.gd 2>&1 | grep -vE "^Godot Engine|^$|WARNING: WsClient|^\s+(at:|GDScript|\[[0-9]+\])" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
 
+echo "== серверный шлюз и онлайн-космос"
+timeout 120 godot --headless --path "$ROOT/client" --script res://tests/server_gateway_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|COSMOC_TEST)" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+
 echo "== экран подключения"
 [ -n "${1:-}" ] && mkdir -p "$1" && export SHOT_DIR="$(realpath "$1")"
 timeout 120 xvfb-run -a -s "-screen 0 1920x1080x24" \

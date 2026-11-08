@@ -8,6 +8,7 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const Session := preload("res://ui/session.gd")
 const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
+const ServerGateway := preload("res://ui/gateway/server_gateway.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "ws://78.17.214.25:8080/ws"  # тестовый сервер; позже будет настраиваться при сборке
@@ -19,6 +20,7 @@ var _client: Node
 @onready var _disconnect_button: ActionButton = %DisconnectButton
 @onready var _ping_button: ActionButton = %PingButton
 @onready var _demo_space_button: ActionButton = %DemoSpaceButton
+@onready var _world_button: ActionButton = %WorldButton
 @onready var _status_label: Label = %StatusLabel
 @onready var _log: RichTextLabel = %Log
 
@@ -39,9 +41,33 @@ func _ready() -> void:
 	_ping_button.pressed.connect(func() -> void: _client.ping())
 	_url_edit.text_submitted.connect(func(_t: String) -> void: _on_connect_pressed())
 	_demo_space_button.pressed.connect(_open_demo_space)
+	_world_button.pressed.connect(_enter_world)
 
 	_url_edit.text = _load_url()
 	_set_idle("Не подключено")
+
+
+## Вход в общий космос: соединение передаётся серверному шлюзу, который выполняет join.
+func _enter_world() -> void:
+	if _client.state != WsClientScript.State.OPEN or _world_button.is_busy():
+		return
+	_world_button.begin_busy("Вход…")
+	var gw := ServerGateway.new()
+	add_child(gw)
+	gw.joined.connect(func() -> void:
+		remove_child(gw)   # дальше шлюз живёт в сцене космоса
+		Session.gateway = gw
+		Session.opened_msec = Time.get_ticks_msec()
+		get_tree().change_scene_to_file("res://scenes/space.tscn"))
+	gw.join_failed.connect(func(reason: String) -> void:
+		_append(_danger("Вход не удался: %s" % reason))
+		_world_button.end_busy()
+		if _client.get_parent() == gw:
+			gw.remove_child(_client)   # соединение возвращается экрану подключения
+			add_child(_client)
+		gw.queue_free())
+	var url := _url_edit.text.strip_edges()
+	gw.adopt(_client, url)
 
 
 ## Демонстрационный космос: данные не с сервера (интерфейс сам покажет плашку «Демо»).
@@ -70,6 +96,7 @@ func _on_connected(session_id: String, server_version: String) -> void:
 	_connect_button.disabled = true  # уже подключены
 	_disconnect_button.disabled = false
 	_ping_button.disabled = false
+	_world_button.disabled = false
 
 
 func _on_failed(reason: String) -> void:
@@ -99,6 +126,7 @@ func _set_idle(text: String, variation: StringName = &"Label") -> void:
 	_connect_button.disabled = false
 	_disconnect_button.disabled = true
 	_ping_button.disabled = true
+	_world_button.disabled = true
 	_url_edit.editable = true
 
 

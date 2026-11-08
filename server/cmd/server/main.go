@@ -18,6 +18,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/ws"
 )
 
@@ -147,7 +148,13 @@ func run() error {
 
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
+		World: world.New(), Store: world.NewPGStore(pool),
 	})
+	worldDone := make(chan struct{})
+	go func() {
+		wsHandler.Run(ctx) // симуляция мира; при остановке сохраняет позиции всех кораблей
+		close(worldDone)
+	}()
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           httpapi.NewMux(pool, version, wsHandler),
@@ -197,6 +204,10 @@ func run() error {
 		if err := s.Shutdown(shutCtx); err != nil {
 			return err
 		}
+	}
+	select {
+	case <-worldDone:
+	case <-shutCtx.Done():
 	}
 	log.Info("сервер остановлен корректно")
 	return nil

@@ -173,3 +173,10 @@ func TestLimiterWindow(t *testing.T) {
 		t.Fatal("после окна лимит должен сброситься")
 	}
 }
+
+func newTestURL(u string) *httptest.Server { return &httptest.Server{URL: u} }
+
+func dialURL(t *testing.T, srv *httptest.Server) (*websocket.Conn, context.Context) {
+	t.Helper()
+	return dial(t, srv)
+}

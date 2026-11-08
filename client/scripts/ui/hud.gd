@@ -118,7 +118,10 @@ func bind(gw: UiGateway) -> void:
 	gw.alert_cleared.connect(func(id: String) -> void: _alerts.clear_alert(id))
 	gw.notification.connect(func(text: String) -> void: _alerts.toast(text))
 	gw.command_failed.connect(_on_command_failed)
-	_demo_bar.visible = gw.is_demo()
+	# плашка с кнопками «Выйти» нужна всегда; пометка «Демо» и смена системы только в демо
+	_demo_bar.visible = true
+	%DemoLabel.visible = gw.is_demo()
+	_system_button.visible = gw.is_demo()
 	apply_state(gw.snapshot())
 
 
@@ -166,13 +169,21 @@ func apply_state(state: Dictionary) -> void:
 	_last_state = state
 	var player: Dictionary = state.get("player", {})
 	_player_name.text = str(player.get("name", ""))
+	_player_level.visible = player.has("level")   # уровня нет в данных: не выдумываем
 	_player_level.text = "Ур. %d" % int(player.get("level", 1))
 	var ship: Dictionary = state.get("ship", {})
 	_ship_name.text = str(ship.get("name", ""))
+	# шкалы и кредиты показываются только если сервер прислал данные
+	_hull.visible = ship.has("hull")
+	_shield.visible = ship.has("shield")
+	_energy.visible = ship.has("energy")
+	%BarsRow.visible = _hull.visible or _shield.visible or _energy.visible
 	_hull.set_values(ship.get("hull", 0.0), ship.get("hull_max", 1.0))
 	_shield.set_values(ship.get("shield", 0.0), ship.get("shield_max", 1.0))
 	_energy.set_values(ship.get("energy", 0.0), ship.get("energy_max", 1.0))
+	%CreditsCard.visible = state.has("credits")
 	_credits.set_value(int(state.get("credits", 0)))
+	_skills_grid.visible = not state.get("skills", []).is_empty() or not state.has("combat_available")
 	_update_speed(state, ship)
 
 	var target := _target_object(state)
@@ -245,10 +256,13 @@ func _apply_target(state: Dictionary, target: Dictionary) -> void:
 		return
 	_target_name.text = str(target["name"])
 	var dist := ((state["ship"]["pos"] as Vector2).distance_to(target["pos"])) / 10.0
-	var rng := "в зоне огня" if state.get("target_in_range", false) else "вне дальности"
-	_target_info.text = "%s · %s · %.1f км · %s" % [kind_label(target), stance_label(str(target["stance"])), dist, rng]
-	_target_hull.visible = true
-	_target_hull.set_values(target["hull"], target["hull_max"])
+	var info := "%s · %s · %.1f км" % [kind_label(target), stance_label(str(target["stance"])), dist]
+	if state.get("combat_available", true):
+		info += " · " + ("в зоне огня" if state.get("target_in_range", false) else "вне дальности")
+	_target_info.text = info
+	_target_hull.visible = target.has("hull")
+	if target.has("hull"):
+		_target_hull.set_values(target["hull"], target["hull_max"])
 
 
 func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> void:
@@ -260,10 +274,11 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 	if _attack.is_busy() and _attack_expect != null and attacking == _attack_expect:
 		_attack.end_busy()
 		_attack_expect = null
+	var combat_ok: bool = state.get("combat_available", true)
 	if not _attack.is_busy():
-		_attack.text = "Прекратить атаку" if attacking else "Атаковать"
+		_attack.text = ("Прекратить атаку" if attacking else "Атаковать") if combat_ok else "Бой · скоро"
 		_attack.variant = ActionButton.Variant.SECONDARY if attacking else ActionButton.Variant.DANGER
-		_attack.disabled = not attacking and (not has_target or friendly)
+		_attack.disabled = not combat_ok or (not attacking and (not has_target or friendly))
 
 	for i in _skill_buttons.size():
 		var b: ActionButton = _skill_buttons[i]
@@ -286,8 +301,8 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 
 	_autopilot.disabled = not has_target and not state.get("autopilot", false)
 	_set_toggle(_autopilot, "Автопилот", bool(state.get("autopilot", false)))
-	_auto_skills.disabled = false
-	_set_toggle(_auto_skills, "Авто-навыки", bool(state.get("auto_skills", false)))
+	_auto_skills.disabled = not combat_ok
+	_set_toggle(_auto_skills, "Авто-навыки" if combat_ok else "Авто-навыки · скоро", bool(state.get("auto_skills", false)))
 
 
 func _set_toggle(b: ActionButton, label: String, on: bool) -> void:

@@ -43,6 +43,7 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 @onready var _chat_lines: VBoxContainer = %ChatLines
 @onready var _demo_bar: Control = %DemoBar
 @onready var _exit_button: ActionButton = %ExitButton
+@onready var _system_button: ActionButton = %SystemButton
 @onready var _alerts: VBoxContainer = %AlertBar
 @onready var _credits: HBoxContainer = %Credits
 @onready var _target_name: Label = %TargetName
@@ -78,6 +79,7 @@ func _ready() -> void:
 	_joystick.vector_changed.connect(func(v: Vector2) -> void: _joy = v)
 
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
+	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())
 	_attack.pressed.connect(_on_attack_pressed)
 	_autopilot.toggled.connect(func(on: bool) -> void: if gateway != null: gateway.set_autopilot(on))
 	_auto_skills.toggled.connect(func(on: bool) -> void: if gateway != null: gateway.set_auto_skills(on))

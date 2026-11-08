@@ -1,6 +1,8 @@
 extends SceneTree
 ## Скриншоты экрана «Космос» в характерных состояниях (нужен рендеринг: xvfb).
-## Переменные: SHOT_DIR (каталог), INSETS="л,в,п,н" (имитация выреза, px окна).
+## Переменные: SHOT_DIR (каталог), INSETS="л,в,п,н" (имитация выреза, px окна),
+## SYSTEM=N (сколько раз переключить демо-систему: 0 Кси, 1 Омега, 2 Глубокий космос),
+## NOHUD=1 (скрыть HUD и корабли: только фон), ONLY_IDLE=1 (только первый кадр).
 
 const Session := preload("res://ui/session.gd")
 const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
@@ -31,9 +33,17 @@ func _run() -> void:
 	if ins != "":
 		var p := ins.split(",")
 		screen.get_node("%Hud/SafeArea").set_debug_insets(int(p[0]), int(p[1]), int(p[2]), int(p[3]))
+	for i in int(OS.get_environment("SYSTEM") if OS.get_environment("SYSTEM") != "" else "0"):
+		gw.demo_next_system()
+	if OS.get_environment("NOHUD") == "1":
+		screen.get_node("%Hud").visible = false
+		screen.get_node("%Ships").visible = false
 	for i in 5:
 		await process_frame
 	await _shot("1_idle")
+	if OS.get_environment("ONLY_IDLE") == "1":
+		quit()
+		return
 
 	# цель выбрана
 	var pts: Dictionary = screen.screen_points()

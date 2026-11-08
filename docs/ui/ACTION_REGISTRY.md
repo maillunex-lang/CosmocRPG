@@ -110,7 +110,7 @@
 
 Экраны получают данные только через шлюз (`client/ui/gateway/ui_gateway.gd`) и ничего не считают сами. Сигналы: `state_updated(state)`, `alert_raised(id, text)`, `alert_cleared(id)`, `notification(text)`, `command_failed(action, reason)`. Реализация сейчас одна: `DemoGateway` (данные не с сервера, `is_demo() == true`, интерфейс показывает плашку «Демо»). Серверный шлюз появится вместе с серверным миром (Этап 01); подставляется вместо демо без изменений экранов.
 
-Поля `state`: `mode` («demo» / «server»); `player` {name, level}; `ship` {name, hull, hull_max, shield, shield_max, energy, energy_max, pos, dir}; `credits`; `objects[]` {id, name, kind: player|ai|hostile|station, stance: hostile|neutral|friendly, is_ai, pos, dir, hull, hull_max}; `target_id`; `target_in_range`; `attacking`; `auto_skills`; `autopilot`; `skills[]` {slot, name, energy_cost, cooldown, cooldown_left, needs_target}; `combat` {in_combat}; `quests[]` {title, progress, goal}; `chat[]` {channel, author, text}. Все значения (урон, дальность, энергия, перезарядка, награды) определяет источник данных; клиент их только показывает.
+Поля `state`: `mode` («demo» / «server»); `player` {name, level}; `system` {id, name, background} (профиль фона системы); `ship` {name, hull, hull_max, shield, shield_max, energy, energy_max, pos, dir}; `credits`; `objects[]` {id, name, kind: player|ai|hostile|station, stance: hostile|neutral|friendly, is_ai, pos, dir, hull, hull_max}; `target_id`; `target_in_range`; `attacking`; `auto_skills`; `autopilot`; `skills[]` {slot, name, energy_cost, cooldown, cooldown_left, needs_target}; `combat` {in_combat}; `quests[]` {title, progress, goal}; `chat[]` {channel, author, text}. Все значения (урон, дальность, энергия, перезарядка, награды) определяет источник данных; клиент их только показывает.
 
 ## Статус реализации в клиенте (UI-02)
 
@@ -127,3 +127,7 @@
 | chat.send, чат | показ последних строк (демо), ввод недоступен до UI-09 | демо |
 
 Серверных команд для этих действий пока не существует (колонка «Сервер» в таблицах выше остаётся ✖).
+
+| Действие (демо) | В клиенте | Источник |
+|---|---|---|
+| Смена системы | кнопка «Система» в плашке «Демо» циклически переключает системы Кси, Омега, Глубокий космос; фон меняется по `system.background`. На сервере переход между системами будет отдельной командой | демо |

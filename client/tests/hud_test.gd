@@ -331,6 +331,22 @@ func _run() -> void:
 	_check(exits.size() == 2, "Escape / «Назад» запрашивает выход")
 	_free(c)
 
+	# ============ смена системы: фон меняется по данным шлюза ============
+	c = await _make()
+	var bg_node: Control = c["screen"].get_node("%SpaceBackground")
+	_check(bg_node.profile.id == "xi" and bg_node.layer_count() == 3, "экран космоса: фон системы Кси (профиль xi)")
+	var tex_before = bg_node.layer_info(1)["texture"]
+	(_n(c, "%SystemButton") as Button).pressed.emit()
+	await process_frame
+	_check(bg_node.profile.id == "omega" and (c["screen"]._bg_id == "omega"), "кнопка «Система»: фон сменился на профиль omega")
+	_check(c["gw"].snapshot()["system"]["id"] == "omega", "шлюз сообщает новую систему")
+	_check(_n(c, "%AlertBar").get_children().any(func(n: Node) -> bool: return n.has_meta("toast")), "смена системы показана уведомлением")
+	(_n(c, "%SystemButton") as Button).pressed.emit()
+	await process_frame
+	_check(bg_node.profile.id == "deep" and bg_node.layer_count() == 2, "следующая система: deep, два слоя фона")
+	_check(bg_node.layer_info(0)["texture"] == tex_before or bg_node.layer_info(1)["texture"] == tex_before, "текстуры берутся из каталога по ключам (общие текстуры переиспользуются)")
+	_free(c)
+
 	# ============ раскладка: размеры, вырезы, состояния ============
 	var sizes := [Vector2i(1280, 720), Vector2i(1572, 720), Vector2i(1600, 720), Vector2i(1920, 720), Vector2i(1280, 853), Vector2i(1280, 960)]
 	for sz in sizes:

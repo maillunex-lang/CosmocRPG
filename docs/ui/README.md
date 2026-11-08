@@ -9,6 +9,8 @@
 | [ACTION_REGISTRY.md](ACTION_REGISTRY.md) | Реестр действий и серверные контракты |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Результаты аудита UI-00 и план этапов |
 | [UI_CHANGELOG.md](UI_CHANGELOG.md) | Журнал изменений интерфейса |
+| [ART_STANDARD.md](ART_STANDARD.md) | Художественный стандарт космического фона, пороги, профили систем, настройки |
+| [ART_ASSETS.md](ART_ASSETS.md) | Ассеты: что есть, временные заглушки, чего не хватает |
 
 ## Главные правила
 

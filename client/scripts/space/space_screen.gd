@@ -7,6 +7,7 @@ const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const ShipView := preload("res://scripts/space/ship_view.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
+const BackgroundLibrary := preload("res://ui/space_bg/background_library.gd")
 
 signal exit_requested
 
@@ -22,9 +23,10 @@ const CAMERA_SHIFT_X := 6.0
 var gateway: UiGateway
 var _ships: Dictionary = {}       # id -> ShipView
 var _cam_goal := Vector3.ZERO
+var _bg_id := ""
 
 @onready var _hud: Control = %Hud
-@onready var _stars: Node2D = %Starfield
+@onready var _bg: Control = %SpaceBackground
 @onready var _ships_root: Node3D = %Ships
 @onready var _rig: Node3D = %CameraRig
 @onready var _camera: Camera3D = %Camera3D
@@ -57,7 +59,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_rig.position = _rig.position.lerp(_cam_goal, clampf(delta * camera_follow, 0.0, 1.0))
-	_stars.set_scroll(Vector2(_rig.position.x, _rig.position.z))
+	_bg.set_camera(Vector2(_rig.position.x, _rig.position.z))
 
 
 func ship_view(id: String) -> Node3D:
@@ -65,6 +67,11 @@ func ship_view(id: String) -> Node3D:
 
 
 func _on_state(state: Dictionary) -> void:
+	# фон зависит от системы: текстуры и параметры берутся из профиля, который задают данные
+	var bg_id: String = str(state.get("system", {}).get("background", ""))
+	if bg_id != _bg_id:
+		_bg_id = bg_id
+		_bg.apply_profile(BackgroundLibrary.profile(bg_id))
 	var seen := {}
 	var ship: Dictionary = state.get("ship", {})
 	if not ship.is_empty():

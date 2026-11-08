@@ -281,6 +281,23 @@ func _run() -> void:
 	g._damage_player(500.0)
 	_check(g._ship["hull"] == 250.0 and spy.notes.any(func(n: String) -> bool: return n.contains("выведен из строя")), "вывод из строя: корпус 25 %, уведомление")
 
+	# --- системы: смена фона по данным шлюза ---
+	g = _gw()
+	spy = Spy.new(g)
+	_check(g.snapshot()["system"]["id"] == "xi" and g.snapshot()["system"]["background"] == "xi", "начальная система: Кси, фон xi")
+	g.demo_next_system()
+	_check(g.snapshot()["system"]["background"] == "omega" and spy.states == 1, "следующая система: omega, состояние опубликовано сразу")
+	_check(spy.notes.any(func(n: String) -> bool: return n.contains("Пояс Омега")), "уведомление с названием системы")
+	g.demo_next_system()
+	g.demo_next_system()
+	_check(g.snapshot()["system"]["id"] == "xi", "системы идут по кругу (xi, omega, deep, xi)")
+	g.publish_on_command = false  # медленный сервер: ответ приходит только на тике
+	var before: int = spy.states
+	g.demo_next_system()
+	_check(spy.states == before and g.snapshot()["system"]["id"] == "omega", "медленный сервер: система сменилась, состояние ещё не опубликовано")
+	g.tick(0.1)
+	_check(spy.states == before + 1, "медленный сервер: состояние приходит на ближайшем тике")
+
 	# --- сигнал состояния и инварианты ---
 	g = _gw()
 	spy = Spy.new(g)

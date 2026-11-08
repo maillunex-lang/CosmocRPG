@@ -152,6 +152,13 @@ size_flags_vertical = 4
 theme_type_variation = &"RareLabel"
 text = "ДЕМО · не с сервера"
 
+[node name="SystemButton" type="Button" parent="SafeArea/Columns/CenterStack/DemoBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Демо: сменить звёздную систему (другой фон)"
+text = "Система"
+script = ExtResource("5")
+
 [node name="ExitButton" type="Button" parent="SafeArea/Columns/CenterStack/DemoBar/Row"]
 unique_name_in_owner = true
 layout_mode = 2

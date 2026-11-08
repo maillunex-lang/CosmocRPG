@@ -32,6 +32,34 @@ static func override(key: String, value: Variant) -> void:
 		_overrides[key] = value
 
 
+static func get_float(key: String, default: float) -> float:
+	if _overrides.has(key):
+		return float(_overrides[key])
+	var cfg := ConfigFile.new()
+	if cfg.load(PATH) == OK:
+		return float(cfg.get_value(SECTION, key, default))
+	return default
+
+
+static func set_float(key: String, value: float) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(PATH)
+	cfg.set_value(SECTION, key, value)
+	cfg.save(PATH)
+
+
+## Пресет графики: low | medium | high (по умолчанию medium). Экран настроек появится в UI-11.
+static func graphics_preset() -> String:
+	var v := "medium"
+	if _overrides.has("graphics_preset"):
+		v = str(_overrides["graphics_preset"])
+	else:
+		var cfg := ConfigFile.new()
+		if cfg.load(PATH) == OK:
+			v = str(cfg.get_value(SECTION, "graphics_preset", "medium"))
+	return v if v in ["low", "medium", "high"] else "medium"
+
+
 ## Уменьшение анимаций (доступность).
 static func reduce_motion() -> bool:
 	return get_bool("reduce_motion", false)

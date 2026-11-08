@@ -37,7 +37,7 @@
 - [HANDOFF](docs/HANDOFF.md) — журнал передачи задач
 - [DEVELOPMENT](docs/DEVELOPMENT.md) — правила разработки
 - [REFERENCES](docs/REFERENCES.md) — внешние источники и референсы
-- [UI](docs/ui/README.md) — документы интерфейса
+- [UI](docs/ui/README.md) — документы интерфейса, [художественный стандарт фона](docs/ui/ART_STANDARD.md), [ассеты](docs/ui/ART_ASSETS.md)
 - [Корабли и бой (ТЗ)](docs/design/SHIPS_SPEC.md) — корабли, развитие, эскадры, боевые системы
 
 ## Быстрый старт клиента

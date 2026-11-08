@@ -36,6 +36,12 @@ var _alerts: Dictionary = {}
 var _respawn_at := -1.0
 var _chat: Array = []
 var _quests: Array = []
+var _systems: Array = [
+	{"id": "xi", "name": "Система Кси", "background": "xi"},
+	{"id": "omega", "name": "Пояс Омега", "background": "omega"},
+	{"id": "deep", "name": "Глубокий космос", "background": "deep"},
+]
+var _system_idx := 0
 
 
 func _init() -> void:
@@ -107,6 +113,7 @@ func snapshot() -> Dictionary:
 		"mode": "demo",
 		"time": _t,
 		"player": {"name": "Капитан Демо", "level": 7},
+		"system": _systems[_system_idx].duplicate(),
 		"ship": _ship.duplicate(),
 		"credits": _credits,
 		"objects": objects,
@@ -178,6 +185,13 @@ func move_input(v: Vector2) -> void:
 	_move = v.limit_length(1.0)
 	if _move.length() > 0.05:
 		_autopilot = false  # ручное управление отключает автопилот
+
+
+## Демо: перейти в следующую систему (другой профиль фона). На сервере переход между системами — отдельная команда.
+func demo_next_system() -> void:
+	_system_idx = (_system_idx + 1) % _systems.size()
+	notification.emit("Система: %s" % _systems[_system_idx]["name"])
+	_publish()
 
 
 func _publish() -> void:

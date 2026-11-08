@@ -45,6 +45,14 @@
 	handle /health {
 		reverse_proxy server:8080
 	}
+	# Раздача APK по HTTPS: https://<домен>/download/<файл>.apk (каталог монтируется только на чтение, без списка файлов)
+	handle /download/* {
+		uri strip_prefix /download
+		root * /downloads
+		header Content-Type application/vnd.android.package-archive
+		header Content-Disposition attachment
+		file_server
+	}
 	handle {
 		redir * /admin/ temporary
 	}

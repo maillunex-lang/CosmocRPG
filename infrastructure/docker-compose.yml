@@ -57,6 +57,7 @@ services:
       - "${ADMIN_BIND:-127.0.0.1}:443:443"
     volumes:
       - caddy_data:/data
+      - ${APK_DIR:-/home/gamedev/apk-share}:/downloads:ro   # раздача APK по https://<домен>/download/
     networks: [edge]
 
 networks:

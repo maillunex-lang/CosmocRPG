@@ -34,3 +34,13 @@
 
 - Ориентация изменена с фиксированной альбомной (0) на альбомную по датчику (4): игра переворачивается между двумя горизонтальными положениями. Портретной ориентации нет.
 - В UI-01 безопасная зона должна пересчитываться при повороте (вырез камеры с другой стороны).
+
+## 2026-11-08 — UI-01: Landscape и базовая тема
+
+- Токены оформления `client/ui/theme/tokens.gd` (палитра UI-11 + производные цвета, отступы, размеры, шрифты, анимации, расчёт контраста WCAG).
+- Общая тема `client/ui/theme/ui_theme.gd` (Golos Text, стили Label/Button/LineEdit/PanelContainer/ProgressBar/RichTextLabel/HSeparator; варианты `TitleLabel`, `SectionLabel`, `MutedLabel`, `DangerLabel`, `SuccessLabel`, `RareLabel`, `CardPanel`, `RaisedPanel`, `PrimaryButton`, `DangerButton`; параметр масштаба текста).
+- `client/ui/safe_area_root.gd`: отступы от выреза камеры, пересчёт при каждом изменении размера окна (в том числе при повороте на 180°), имитация выреза для тестов.
+- Компоненты `client/ui/components/`: `action_button` (варианты, защита от повторного нажатия `begin_busy`/`end_busy`, состояние «Скоро»), `panel_card`, `resource_badge`, `hud_bar`.
+- Экран подключения переведён на тему и компоненты (`scenes/connect.tscn`, `scripts/ui/connect_screen.gd`); имена узлов для тестов сохранены.
+- Тесты: `theme_test` (44), `safe_area_test` (17), `layout_test` (108), `components_test` (26); запуск `tools/test_client.sh`.
+- Исправлено по ходу: вызов `set_debug_insets` до входа узла в дерево приводил к ошибке (теперь значения применяются в `_ready`).

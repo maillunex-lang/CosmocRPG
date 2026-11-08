@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
-# Тесты клиента Godot против запущенного сервера.
+# Тесты клиента Godot.
+#  1) Интерфейс (тема, контраст, безопасная зона, раскладка, компоненты): сервер не нужен.
+#  2) Сеть и экран подключения: нужен запущенный сервер.
 # Использование: COSMOC_TEST_WS_URL=ws://127.0.0.1:8080/ws tools/test_client.sh [каталог_скриншотов]
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${COSMOC_TEST_WS_URL:?задайте COSMOC_TEST_WS_URL, например ws://127.0.0.1:8080/ws}"
 rc=0
+
+echo "== интерфейс: тема, безопасная зона, раскладка, компоненты"
+for t in theme_test safe_area_test layout_test components_test; do
+  echo "-- $t"
+  timeout 180 godot --headless --path "$ROOT/client" --script "res://tests/$t.gd" 2>&1 \
+    | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"
+  [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+done
+
 echo "== сетевой слой"
 timeout 120 godot --headless --path "$ROOT/client" --script res://tests/ws_client_test.gd 2>&1 | grep -vE "^Godot Engine|^$|WARNING: WsClient|^\s+(at:|GDScript|\[[0-9]+\])" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+
 echo "== экран подключения"
 [ -n "${1:-}" ] && mkdir -p "$1" && export SHOT_DIR="$(realpath "$1")"
 timeout 120 xvfb-run -a -s "-screen 0 1920x1080x24" \

@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/connect_screen.gd" id="1"]
+[ext_resource type="Script" path="res://ui/safe_area_root.gd" id="2"]
+[ext_resource type="Script" path="res://ui/components/panel_card.gd" id="3"]
+[ext_resource type="Script" path="res://ui/components/action_button.gd" id="4"]
 
 [node name="ConnectScreen" type="Control"]
 layout_mode = 3
@@ -18,70 +21,85 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.04, 0.07, 0.14, 1)
+mouse_filter = 2
+color = Color(0.031372549, 0.078431375, 0.12941177, 1)
 
-[node name="Margin" type="MarginContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 48
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 32
+script = ExtResource("2")
 
-[node name="VBox" type="VBoxContainer" parent="Margin"]
+[node name="Column" type="VBoxContainer" parent="SafeArea"]
 layout_mode = 2
-theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Margin/VBox"]
+[node name="Title" type="Label" parent="SafeArea/Column"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_type_variation = &"TitleLabel"
 text = "Звёздные рубежи"
 horizontal_alignment = 1
 
-[node name="UrlEdit" type="LineEdit" parent="Margin/VBox"]
+[node name="ConnectionCard" type="PanelContainer" parent="SafeArea/Column"]
+layout_mode = 2
+script = ExtResource("3")
+title = "Сервер"
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Column/ConnectionCard"]
+layout_mode = 2
+
+[node name="UrlEdit" type="LineEdit" parent="SafeArea/Column/ConnectionCard/Box"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 placeholder_text = "ws://адрес:порт/ws"
 virtual_keyboard_type = 7
 
-[node name="Buttons" type="HBoxContainer" parent="Margin/VBox"]
+[node name="Buttons" type="HBoxContainer" parent="SafeArea/Column/ConnectionCard/Box"]
 layout_mode = 2
-theme_override_constants/separation = 12
 
-[node name="ConnectButton" type="Button" parent="Margin/VBox/Buttons"]
+[node name="ConnectButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Подключиться"
+script = ExtResource("4")
+variant = 1
 
-[node name="DisconnectButton" type="Button" parent="Margin/VBox/Buttons"]
+[node name="DisconnectButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
 text = "Отключиться"
+script = ExtResource("4")
 
-[node name="PingButton" type="Button" parent="Margin/VBox/Buttons"]
+[node name="PingButton" type="Button" parent="SafeArea/Column/ConnectionCard/Box/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
 text = "Пинг"
+script = ExtResource("4")
 
-[node name="StatusLabel" type="Label" parent="Margin/VBox"]
+[node name="StatusLabel" type="Label" parent="SafeArea/Column/ConnectionCard/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Не подключено"
 
-[node name="Log" type="RichTextLabel" parent="Margin/VBox"]
+[node name="LogCard" type="PanelContainer" parent="SafeArea/Column"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("3")
+title = "Журнал"
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Column/LogCard"]
+layout_mode = 2
+
+[node name="Log" type="RichTextLabel" parent="SafeArea/Column/LogCard/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

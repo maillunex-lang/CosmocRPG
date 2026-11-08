@@ -27,6 +27,7 @@ var _busy := false
 var _saved_text := ""
 var _saved_disabled := false
 var _soon_base := ""
+var _soon_applied := false
 
 
 func _ready() -> void:
@@ -34,7 +35,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	_apply_variant()
 	if soon:
-		_apply_soon()
+		_apply_soon()  # безопасно при повторном вызове
 
 
 func _apply_variant() -> void:
@@ -49,11 +50,15 @@ func _apply_variant() -> void:
 
 func _apply_soon() -> void:
 	if soon:
+		if _soon_applied:
+			return  # уже применено (сеттер и _ready не должны дописывать суффикс дважды)
+		_soon_applied = true
 		_soon_base = text
 		text = _soon_base + SOON_SUFFIX
 		tooltip_text = SOON_HINT
 		disabled = true
-	else:
+	elif _soon_applied:
+		_soon_applied = false
 		text = _soon_base
 		tooltip_text = ""
 		disabled = false

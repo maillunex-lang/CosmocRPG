@@ -105,3 +105,25 @@
 | svc.notifications | HUD | всегда | событие `notify` | нет | — | ✖ |
 | svc.shop | Магазин | — | «Скоро» (монетизация вне текущих этапов) | да | да | ✖ |
 | svc.help | Помощь | всегда | клиент (статический текст) | нет | нет | клиент |
+
+## Контракт состояния мира (шлюз данных `UiGateway`, UI-02)
+
+Экраны получают данные только через шлюз (`client/ui/gateway/ui_gateway.gd`) и ничего не считают сами. Сигналы: `state_updated(state)`, `alert_raised(id, text)`, `alert_cleared(id)`, `notification(text)`, `command_failed(action, reason)`. Реализация сейчас одна: `DemoGateway` (данные не с сервера, `is_demo() == true`, интерфейс показывает плашку «Демо»). Серверный шлюз появится вместе с серверным миром (Этап 01); подставляется вместо демо без изменений экранов.
+
+Поля `state`: `mode` («demo» / «server»); `player` {name, level}; `ship` {name, hull, hull_max, shield, shield_max, energy, energy_max, pos, dir}; `credits`; `objects[]` {id, name, kind: player|ai|hostile|station, stance: hostile|neutral|friendly, is_ai, pos, dir, hull, hull_max}; `target_id`; `target_in_range`; `attacking`; `auto_skills`; `autopilot`; `skills[]` {slot, name, energy_cost, cooldown, cooldown_left, needs_target}; `combat` {in_combat}; `quests[]` {title, progress, goal}; `chat[]` {channel, author, text}. Все значения (урон, дальность, энергия, перезарядка, награды) определяет источник данных; клиент их только показывает.
+
+## Статус реализации в клиенте (UI-02)
+
+| Действие | В клиенте | Источник |
+|---|---|---|
+| nav.open_map, nav.open_fleet, nav.open_menu | кнопки в состоянии «Скоро» (экраны появятся в UI-03, UI-04, UI-06) | клиент |
+| space.select_object / combat.set_target | работает: касание по объекту, пустое место снимает цель | демо |
+| space.autopilot | работает: переключатель, требует цель | демо |
+| space.move_manual | работает: виртуальный джойстик (опционален) и клавиши W A S D | демо |
+| combat.attack | работает; для нейтрального игрока и AI-капитана перед командой окно подтверждения; кнопка защищена от повторного нажатия | демо |
+| combat.skill (4 способности) | работает: энергия, перезарядка, причины отказа показываются уведомлением | демо |
+| combat.set_auto | работает: переключатель автонавыков | демо |
+| svc.settings | кнопка «Скоро» | клиент |
+| chat.send, чат | показ последних строк (демо), ввод недоступен до UI-09 | демо |
+
+Серверных команд для этих действий пока не существует (колонка «Сервер» в таблицах выше остаётся ✖).

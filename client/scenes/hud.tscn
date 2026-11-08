@@ -1,0 +1,301 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
+[ext_resource type="Script" path="res://ui/safe_area_root.gd" id="2"]
+[ext_resource type="Script" path="res://ui/components/panel_card.gd" id="3"]
+[ext_resource type="Script" path="res://ui/components/collapsible_card.gd" id="4"]
+[ext_resource type="Script" path="res://ui/components/action_button.gd" id="5"]
+[ext_resource type="Script" path="res://ui/components/resource_badge.gd" id="6"]
+[ext_resource type="Script" path="res://ui/components/hud_bar.gd" id="7"]
+[ext_resource type="Script" path="res://ui/components/alert_bar.gd" id="8"]
+[ext_resource type="Script" path="res://ui/components/virtual_joystick.gd" id="9"]
+[ext_resource type="Script" path="res://ui/components/confirm_dialog.gd" id="10"]
+
+[node name="Hud" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2")
+
+[node name="Columns" type="HBoxContainer" parent="SafeArea"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="LeftStack" type="VBoxContainer" parent="SafeArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+
+[node name="ProfileCard" type="PanelContainer" parent="SafeArea/Columns/LeftStack"]
+layout_mode = 2
+script = ExtResource("3")
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Columns/LeftStack/ProfileCard"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NameRow" type="HBoxContainer" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
+layout_mode = 2
+
+[node name="PlayerName" type="Label" parent="SafeArea/Columns/LeftStack/ProfileCard/Box/NameRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Капитан"
+
+[node name="PlayerLevel" type="Label" parent="SafeArea/Columns/LeftStack/ProfileCard/Box/NameRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "Ур. 1"
+
+[node name="ShipName" type="Label" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "Корабль"
+
+[node name="HullBar" type="ProgressBar" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 22)
+layout_mode = 2
+tooltip_text = "Корпус"
+script = ExtResource("7")
+
+[node name="ShieldBar" type="ProgressBar" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 22)
+layout_mode = 2
+tooltip_text = "Щиты"
+script = ExtResource("7")
+
+[node name="EnergyBar" type="ProgressBar" parent="SafeArea/Columns/LeftStack/ProfileCard/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 22)
+layout_mode = 2
+tooltip_text = "Энергия"
+script = ExtResource("7")
+
+[node name="QuestsCard" type="PanelContainer" parent="SafeArea/Columns/LeftStack"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("4")
+title = "Задания"
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Columns/LeftStack/QuestsCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="QuestsList" type="VBoxContainer" parent="SafeArea/Columns/LeftStack/QuestsCard/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ChatCard" type="PanelContainer" parent="SafeArea/Columns/LeftStack"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("4")
+title = "Чат"
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Columns/LeftStack/ChatCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ChatLines" type="VBoxContainer" parent="SafeArea/Columns/LeftStack/ChatCard/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LeftSpacer" type="Control" parent="SafeArea/Columns/LeftStack"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Joystick" type="Control" parent="SafeArea/Columns/LeftStack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+script = ExtResource("9")
+
+[node name="CenterStack" type="VBoxContainer" parent="SafeArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="DemoBar" type="PanelContainer" parent="SafeArea/Columns/CenterStack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Row" type="HBoxContainer" parent="SafeArea/Columns/CenterStack/DemoBar"]
+layout_mode = 2
+
+[node name="DemoLabel" type="Label" parent="SafeArea/Columns/CenterStack/DemoBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"RareLabel"
+text = "ДЕМО · не с сервера"
+
+[node name="ExitButton" type="Button" parent="SafeArea/Columns/CenterStack/DemoBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Выйти"
+script = ExtResource("5")
+
+[node name="AlertBar" type="VBoxContainer" parent="SafeArea/Columns/CenterStack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("8")
+
+[node name="CenterSpacer" type="Control" parent="SafeArea/Columns/CenterStack"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="BottomNav" type="HBoxContainer" parent="SafeArea/Columns/CenterStack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="MapButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Карта"
+script = ExtResource("5")
+soon = true
+
+[node name="FleetButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Флот"
+script = ExtResource("5")
+soon = true
+
+[node name="MenuButton" type="Button" parent="SafeArea/Columns/CenterStack/BottomNav"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Меню"
+script = ExtResource("5")
+soon = true
+
+[node name="RightStack" type="VBoxContainer" parent="SafeArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+
+[node name="TopRight" type="HBoxContainer" parent="SafeArea/Columns/RightStack"]
+layout_mode = 2
+size_flags_horizontal = 8
+mouse_filter = 2
+
+[node name="CreditsCard" type="PanelContainer" parent="SafeArea/Columns/RightStack/TopRight"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Credits" type="HBoxContainer" parent="SafeArea/Columns/RightStack/TopRight/CreditsCard"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("6")
+caption = "Кредиты"
+color = Color(0.9529412, 0.76862746, 0.41960785, 1)
+
+[node name="SettingsButton" type="Button" parent="SafeArea/Columns/RightStack/TopRight"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Настройки"
+script = ExtResource("5")
+soon = true
+
+[node name="RightSpacer" type="Control" parent="SafeArea/Columns/RightStack"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="TargetCard" type="PanelContainer" parent="SafeArea/Columns/RightStack"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("3")
+
+[node name="Box" type="VBoxContainer" parent="SafeArea/Columns/RightStack/TargetCard"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TargetName" type="Label" parent="SafeArea/Columns/RightStack/TargetCard/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Цель не выбрана"
+
+[node name="TargetInfo" type="Label" parent="SafeArea/Columns/RightStack/TargetCard/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(290, 0)
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+autowrap_mode = 3
+
+[node name="TargetHull" type="ProgressBar" parent="SafeArea/Columns/RightStack/TargetCard/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(290, 22)
+layout_mode = 2
+tooltip_text = "Корпус цели"
+script = ExtResource("7")
+
+[node name="AttackButton" type="Button" parent="SafeArea/Columns/RightStack"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Атаковать"
+script = ExtResource("5")
+variant = 2
+
+[node name="SkillsGrid" type="GridContainer" parent="SafeArea/Columns/RightStack"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+columns = 2
+
+[node name="ToggleRow" type="HBoxContainer" parent="SafeArea/Columns/RightStack"]
+layout_mode = 2
+
+[node name="AutopilotButton" type="Button" parent="SafeArea/Columns/RightStack/ToggleRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Автопилот"
+script = ExtResource("5")
+
+[node name="AutoSkillsButton" type="Button" parent="SafeArea/Columns/RightStack/ToggleRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Авто-навыки"
+script = ExtResource("5")
+
+[node name="Confirm" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10")

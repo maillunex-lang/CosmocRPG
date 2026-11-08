@@ -84,7 +84,7 @@ static func build(text_scale: float = 1.0) -> Theme:
 	t.set_constant("separation", "HBoxContainer", Tokens.SPACE_MD)
 
 	# --- Кнопки ---
-	var bm := Vector4(Tokens.SPACE_XL, Tokens.SPACE_MD, Tokens.SPACE_XL, Tokens.SPACE_MD)
+	var bm := Vector4(Tokens.SPACE_LG, Tokens.SPACE_MD, Tokens.SPACE_LG, Tokens.SPACE_MD)
 	t.set_stylebox("normal", "Button", _box(Tokens.SURFACE_RAISED, border, Tokens.RADIUS, bm))
 	t.set_stylebox("hover", "Button", _box(Tokens.SURFACE_RAISED.lightened(0.12), Color(Tokens.ACCENT, 0.6), Tokens.RADIUS, bm))
 	t.set_stylebox("pressed", "Button", _box(Tokens.SURFACE.darkened(0.2), Tokens.ACCENT, Tokens.RADIUS, bm))
@@ -118,6 +118,18 @@ static func build(text_scale: float = 1.0) -> Theme:
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		t.set_color(c, "DangerButton", Tokens.BG)
 	t.set_color("font_disabled_color", "DangerButton", Tokens.TEXT_MUTED)
+
+	# Плоская кнопка (заголовки сворачиваемых карточек): без фона, акцентный текст, высота касания не ниже 48
+	_variation(t, &"FlatButton", &"Button")
+	var fm := Vector4(Tokens.SPACE_MD, Tokens.SPACE_MD, Tokens.SPACE_MD, Tokens.SPACE_MD)
+	t.set_stylebox("normal", "FlatButton", _box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), Tokens.RADIUS, fm))
+	t.set_stylebox("hover", "FlatButton", _box(Color(Tokens.SURFACE_RAISED, 0.6), Color(0, 0, 0, 0), Tokens.RADIUS, fm))
+	t.set_stylebox("pressed", "FlatButton", _box(Color(Tokens.SURFACE_RAISED, 0.9), Color(0, 0, 0, 0), Tokens.RADIUS, fm))
+	t.set_stylebox("disabled", "FlatButton", _box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), Tokens.RADIUS, fm))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		t.set_color(c, "FlatButton", Tokens.ACCENT)
+	t.set_font_size("font_size", "FlatButton", _fs(Tokens.FONT_SMALL, text_scale))
+	t.set_constant("h_separation", "FlatButton", Tokens.SPACE_SM)
 
 	# --- Поле ввода ---
 	var lm := Vector4(Tokens.SPACE_LG, Tokens.SPACE_MD, Tokens.SPACE_LG, Tokens.SPACE_MD)

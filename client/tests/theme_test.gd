@@ -81,7 +81,8 @@ func _run() -> void:
 	_check(th.default_font_size == Tokens.FONT_BODY, "размер шрифта по умолчанию из токенов")
 	for v in [["TitleLabel", "Label"], ["SectionLabel", "Label"], ["MutedLabel", "Label"], ["DangerLabel", "Label"],
 			["SuccessLabel", "Label"], ["RareLabel", "Label"], ["CardPanel", "PanelContainer"],
-			["RaisedPanel", "PanelContainer"], ["PrimaryButton", "Button"], ["DangerButton", "Button"]]:
+			["RaisedPanel", "PanelContainer"], ["PrimaryButton", "Button"], ["DangerButton", "Button"],
+			["FlatButton", "Button"]]:
 		_check(th.get_type_variation_base(v[0]) == StringName(v[1]), "вариант темы %s наследует %s" % [v[0], v[1]])
 	_check(th.has_stylebox("panel", "CardPanel") and th.has_stylebox("normal", "PrimaryButton"), "стили панели и кнопки заданы")
 	_check(th.get_color("font_color", "PrimaryButton").is_equal_approx(Tokens.BG), "текст основной кнопки тёмный")

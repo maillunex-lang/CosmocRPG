@@ -6,6 +6,8 @@ const WsClientScript := preload("res://scripts/net/ws_client.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
+const Session := preload("res://ui/session.gd")
+const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "ws://78.17.214.25:8080/ws"  # тестовый сервер; позже будет настраиваться при сборке
@@ -16,6 +18,7 @@ var _client: Node
 @onready var _connect_button: ActionButton = %ConnectButton
 @onready var _disconnect_button: ActionButton = %DisconnectButton
 @onready var _ping_button: ActionButton = %PingButton
+@onready var _demo_space_button: ActionButton = %DemoSpaceButton
 @onready var _status_label: Label = %StatusLabel
 @onready var _log: RichTextLabel = %Log
 
@@ -35,9 +38,16 @@ func _ready() -> void:
 	_disconnect_button.pressed.connect(func() -> void: _client.close())
 	_ping_button.pressed.connect(func() -> void: _client.ping())
 	_url_edit.text_submitted.connect(func(_t: String) -> void: _on_connect_pressed())
+	_demo_space_button.pressed.connect(_open_demo_space)
 
 	_url_edit.text = _load_url()
 	_set_idle("Не подключено")
+
+
+## Демонстрационный космос: данные не с сервера (интерфейс сам покажет плашку «Демо»).
+func _open_demo_space() -> void:
+	Session.gateway = DemoGateway.new()
+	get_tree().change_scene_to_file("res://scenes/space.tscn")
 
 
 func _on_connect_pressed() -> void:

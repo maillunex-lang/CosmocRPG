@@ -8,8 +8,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${COSMOC_TEST_WS_URL:?задайте COSMOC_TEST_WS_URL, например ws://127.0.0.1:8080/ws}"
 rc=0
 
-echo "== интерфейс: тема, безопасная зона, раскладка, компоненты"
-for t in theme_test safe_area_test layout_test components_test; do
+echo "== интерфейс: тема, безопасная зона, раскладка, компоненты, шлюз, HUD космоса"
+for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test; do
   echo "-- $t"
   timeout 180 godot --headless --path "$ROOT/client" --script "res://tests/$t.gd" 2>&1 \
     | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"

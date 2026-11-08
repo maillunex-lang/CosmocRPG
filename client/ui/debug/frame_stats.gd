@@ -10,6 +10,8 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 
 const DEFAULT_VISIBLE := false
+## Ключ настройки. Сменён с debug_overlay (2026-11-08): в старых тестовых сборках у игроков сохранилось «включено», и новое значение по умолчанию не действовало.
+const SETTING_KEY := "debug_overlay2"
 const RING := 720                 # сколько последних кадров хранится (около 12 с при 60 FPS)
 const WINDOW_SEC := 10.0          # окно, по которому считаются показатели
 const HITCH_MS := 25.0            # кадр дольше этого считается «заиканием»
@@ -73,7 +75,7 @@ func _ready() -> void:
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.offset_bottom = -78.0
-	_set_shown(UiSettings.get_bool("debug_overlay", DEFAULT_VISIBLE))
+	_set_shown(UiSettings.get_bool(SETTING_KEY, DEFAULT_VISIBLE))
 	_refresh()
 
 
@@ -182,9 +184,17 @@ func _refresh() -> void:
 		_label.text = text()
 
 
+## Показать или скрыть панель и запомнить выбор (из экрана настроек).
+func set_shown(v: bool) -> void:
+	_set_shown(v)
+	UiSettings.set_bool(SETTING_KEY, v)
+	if v:
+		_refresh()
+
+
 func toggle() -> void:
 	_set_shown(not visible)
-	UiSettings.set_bool("debug_overlay", visible)
+	UiSettings.set_bool(SETTING_KEY, visible)
 	if visible:
 		_refresh()
 

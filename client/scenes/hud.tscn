@@ -405,7 +405,6 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Настройки"
 script = ExtResource("5")
-soon = true
 
 [node name="ExitButton" type="Button" parent="MenuPopup/Panel/Box"]
 unique_name_in_owner = true

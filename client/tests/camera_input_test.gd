@@ -109,7 +109,7 @@ func _bg_offsets(c: Dictionary) -> Array:
 func _run() -> void:
 	UiSettings.override("reduce_motion", true)
 	UiSettings.override("graphics_preset", "high")
-	UiSettings.override("debug_overlay", true)
+	UiSettings.override("debug_overlay2", true)
 
 	var c = await _make()
 	var rig: Node3D = c["rig"]
@@ -459,7 +459,7 @@ func _run() -> void:
 
 	UiSettings.override("reduce_motion", null)
 	UiSettings.override("graphics_preset", null)
-	UiSettings.override("debug_overlay", null)
+	UiSettings.override("debug_overlay2", null)
 	print("Итого: проверок %d, провалов %d" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 

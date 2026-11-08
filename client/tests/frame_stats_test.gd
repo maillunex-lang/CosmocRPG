@@ -27,7 +27,7 @@ func _check(cond: bool, name: String) -> void:
 
 
 func _stats_node() -> CanvasLayer:
-	UiSettings.override("debug_overlay", true)
+	UiSettings.override(FrameStats.SETTING_KEY, true)
 	var n: CanvasLayer = FrameStats.new()
 	n.clock = func() -> int: return _fake_ms
 	root.add_child(n)
@@ -115,8 +115,8 @@ func _run() -> void:
 	n.queue_free()
 
 	# ============ жесты и состояние ============
-	UiSettings.override("debug_overlay", null)
-	UiSettings.set_bool("debug_overlay", true)
+	UiSettings.override(FrameStats.SETTING_KEY, null)
+	UiSettings.set_bool(FrameStats.SETTING_KEY, true)
 	n = FrameStats.new()
 	n.clock = func() -> int: return _fake_ms
 	root.add_child(n)
@@ -125,9 +125,9 @@ func _run() -> void:
 	f3.keycode = KEY_F3
 	f3.pressed = true
 	n._input(f3)
-	_check(not n.visible and not n._panel.visible and not UiSettings.get_bool("debug_overlay", true), "F3 выключает панель и запоминает выбор")
+	_check(not n.visible and not n._panel.visible and not UiSettings.get_bool(FrameStats.SETTING_KEY, true), "F3 выключает панель и запоминает выбор")
 	n._input(f3)
-	_check(n.visible and n._panel.visible and UiSettings.get_bool("debug_overlay", false), "F3 включает панель снова")
+	_check(n.visible and n._panel.visible and UiSettings.get_bool(FrameStats.SETTING_KEY, false), "F3 включает панель снова")
 	for idx in [0, 1]:
 		var tt := InputEventScreenTouch.new()
 		tt.index = idx
@@ -218,12 +218,12 @@ func _run() -> void:
 	_check(not n.visible, "автоповтор клавиши не переключает панель")
 	_check(n._panel.mouse_filter == Control.MOUSE_FILTER_IGNORE and n._label.mouse_filter == Control.MOUSE_FILTER_IGNORE, "панель не перехватывает ввод")
 	n.queue_free()
-	UiSettings.set_bool("debug_overlay", FrameStats.DEFAULT_VISIBLE)
+	UiSettings.set_bool(FrameStats.SETTING_KEY, FrameStats.DEFAULT_VISIBLE)
 
 	# ============ значение по умолчанию и список «перед публикацией» ============
 	var roadmap := FileAccess.get_file_as_string(ProjectSettings.globalize_path("res://").path_join("../docs/ROADMAP.md"))
 	_check(roadmap.contains("Перед публикацией") and roadmap.contains("DEFAULT_VISIBLE"), "в ROADMAP есть пункт «Перед публикацией» про отключение панели FPS")
-	UiSettings.override("debug_overlay", null)
+	UiSettings.override(FrameStats.SETTING_KEY, null)
 
 	# ============ интеграция в экран «Космос» ============
 	UiSettings.override("reduce_motion", true)
@@ -254,7 +254,7 @@ func _run() -> void:
 		Session.gateway = null
 	# раскладка: панель не налезает на нижнюю панель и колонки HUD
 	for size in [Vector2i(1280, 720), Vector2i(1572, 720), Vector2i(1280, 960)]:
-		UiSettings.override("debug_overlay", true)
+		UiSettings.override(FrameStats.SETTING_KEY, true)
 		var gw2 = DemoGateway.new()
 		gw2.auto_tick = false
 		Session.gateway = gw2
@@ -285,7 +285,7 @@ func _run() -> void:
 		h2.queue_free()
 		Session.gateway = null
 		await process_frame
-	UiSettings.override("debug_overlay", null)
+	UiSettings.override(FrameStats.SETTING_KEY, null)
 	UiSettings.override("reduce_motion", null)
 
 	print("Итого: проверок %d, провалов %d" % [_checks, _failures])

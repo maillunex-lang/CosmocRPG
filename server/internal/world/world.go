@@ -63,6 +63,7 @@ type Player struct {
 	Hull, Shield float64
 	Energy       float64
 	Attacking    bool
+	noRetaliate  bool // автоответ на атаку выключен игроком (по умолчанию включён)
 	boostUntil   float64
 	cooldowns    map[string]float64 // способность -> игровое время окончания перезарядки
 	attackAt     float64

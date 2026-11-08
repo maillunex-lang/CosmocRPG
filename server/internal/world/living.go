@@ -273,7 +273,7 @@ func (w *World) stepEnemy(n *npc, dt float64) {
 		if d <= cfg.AttackRange && w.t >= a.attackAt {
 			a.attackAt = w.t + cfg.Period
 			w.emit(Event{Type: "fire", From: n.ID, To: tgt.ID})
-			w.damagePlayerLocked(tgt.ID, cfg.Damage)
+			w.damagePlayerLocked(tgt.ID, cfg.Damage, n.ID)
 		}
 	case a.returned:
 		n.Pos = moveToward(n.Pos, a.home, cfg.ChaseSpeed*dt)

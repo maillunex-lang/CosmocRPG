@@ -9,4 +9,5 @@ RUN npm run build
 
 FROM caddy:2-alpine
 COPY --from=admin /admin/dist /srv
+COPY site /site
 COPY infrastructure/caddy/Caddyfile /etc/caddy/Caddyfile

@@ -139,7 +139,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "shop", "shop_buy", "shop_equip":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -254,7 +254,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		return true
 	}
 	switch m.Type {
-	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship":
+	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option":
 		h.gameShip(ctx, c, ss, m)
 	case "shop", "shop_buy", "shop_equip":
 		h.shopMsg(ctx, c, ss, m)
@@ -338,6 +338,18 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		}
 	case "mine_stop":
 		w.StopMining(ss.pid)
+	case "set_option":
+		var p struct {
+			Name  string `json:"name"`
+			Value bool   `json:"value"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Name == "" || len(p.Name) > 24 {
+			reply(errMsg(m.ID, "bad_message", "некорректная настройка"))
+			return
+		}
+		if err := w.SetOption(ss.pid, p.Name, p.Value); err != nil {
+			fail(err)
+		}
 	case "ships":
 		reply(Message{Type: "ships", ID: m.ID, Payload: mustJSON(map[string]any{"ships": w.Fleet()})})
 	case "set_ship":
@@ -415,6 +427,8 @@ func abilityText(code string) string {
 		return "продавать груз можно только у станции"
 	case "nothing_to_sell":
 		return "в грузовом отсеке пусто"
+	case "bad_option":
+		return "такой настройки нет"
 	case "no_ship":
 		return "такого корабля нет"
 	case "hold_too_big":

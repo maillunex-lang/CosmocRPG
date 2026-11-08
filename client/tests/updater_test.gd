@@ -81,9 +81,10 @@ func _run() -> void:
 	_c(not u.open_download({"url": "http://rikagro.ru/download/a.apk"}) and not u.open_download({}), "небезопасная ссылка не открывается")
 
 	# --- проект: версия и ключ ---
-	var pem := FileAccess.get_file_as_string(Updater.PUBLIC_KEY_PATH)
+	var pem := Updater.PUBLIC_KEY_PEM
 	var pk := CryptoKey.new()
-	_c(pem.begins_with("-----BEGIN PUBLIC KEY-----") and pk.load_from_string(pem, true) == OK, "публичный ключ обновлений вшит и загружается")
+	_c(FileAccess.get_file_as_string(Updater.PUBLIC_KEY_PATH).strip_edges() == pem.strip_edges(), "вшитый в код ключ совпадает с файлом ключа")
+	_c(pem.begins_with("-----BEGIN PUBLIC KEY-----") and pk.load_from_string(pem, true) == OK, "вшитый публичный ключ загружается")
 	_c(not pem.contains("PRIVATE"), "в приложении нет приватного ключа")
 	var cfg := ConfigFile.new()
 	var preset_ok := cfg.load("res://export_presets.cfg") == OK

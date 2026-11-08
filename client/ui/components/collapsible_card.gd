@@ -38,6 +38,7 @@ func _ready() -> void:
 	_title_label = Label.new()
 	_title_label.theme_type_variation = &"SectionLabel"
 	_title_label.text = title
+	_title_label.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)   # заголовки карточек скромнее
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header.add_child(_title_label)
 	_button = Button.new()

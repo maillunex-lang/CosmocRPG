@@ -11,6 +11,18 @@ const AppVersion := preload("res://ui/app_version.gd")
 
 const MANIFEST_URL := "https://rikagro.ru/download/latest.json"
 const SIG_URL := "https://rikagro.ru/download/latest.json.sig"
+## Публичный ключ проверки подписи манифеста. Вшит в код, потому что файлы .pem не попадают в APK без отдельной настройки экспорта
+## (так уже случилось в версии 0.3.0). Файл assets/update_public.pem остаётся эталоном; тест updater_test сверяет их.
+const PUBLIC_KEY_PEM := """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvQOphIqyew4ImE0bMrX6
+c9jH9pQ9ePtV2aXF8q1bsgITF10lFOmoD/4gn9JAW+VjYaIYGR+8o0zRXg52EtVV
+B2YKeWnIfSIvQWklUphsFer21dwwsHmBKGm+PI3fwenLGcEKbI2IBm0BJ8x08zsx
+MeGfImudMEeN3LQikqlld43Zg8lpTO2Q3pm9r9sfZuGje4xONGIa0vR3eS3a7Zez
+bArh8jjlmWw650VbRhulMI3MiSSlsrAIYvbT1xqKIH5BxUEYjvkTZuQrJHDJMLR9
+vKMiW8CW3D0VchpUxQvkk4GAKKLs0oMeNnGF8CSwe32hTETZsHDZzK7cHN3LF3TJ
+gQIDAQAB
+-----END PUBLIC KEY-----
+"""
 const PUBLIC_KEY_PATH := "res://assets/update_public.pem"
 const ALLOWED_HOSTS := ["rikagro.ru"]
 const MAX_MANIFEST_BYTES := 16384
@@ -139,7 +151,7 @@ func check() -> void:
 		if not bool(s["ok"]):
 			res = _err(str(s["error"]))
 		else:
-			res = evaluate(m["body"], (s["body"] as PackedByteArray).get_string_from_utf8(), FileAccess.get_file_as_string(PUBLIC_KEY_PATH), AppVersion.code(), _load_highest())
+			res = evaluate(m["body"], (s["body"] as PackedByteArray).get_string_from_utf8(), PUBLIC_KEY_PEM, AppVersion.code(), _load_highest())
 			if res["status"] != "error":
 				_save_highest(int(res["info"]["version_code"]))
 	busy = false

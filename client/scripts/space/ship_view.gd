@@ -25,6 +25,8 @@ var world_pos := Vector2.ZERO        # текущая отображаемая �
 var heading := Vector2(1, 0)         # текущее отображаемое направление
 
 var _ring: MeshInstance3D
+## false: подпись рисует экранный слой (ui/nameplates.gd), 3D-текст скрыт. По умолчанию true (тесты и режимы без слоя).
+var use_3d_label := true
 var _label: Label3D
 var _label_alpha := 1.0
 var _label_base_y := 1.8    # исходная высота подписи над объектом (задаётся в setup)
@@ -251,6 +253,9 @@ func _add_box(size: Vector3, pos: Vector3, mat: Material) -> void:
 ## Подпись не мешает обзору: исчезает при приближении камеры и вблизи корабля игрока.
 ## Выбранная цель подписана всегда. Возвращает текущую непрозрачность подписи.
 func update_label(delta: float, zoom_size: float, dist_to_me: float) -> float:
+	if not use_3d_label:
+		_label.visible = false
+		return 0.0
 	var a := smoothstep(LABEL_ZOOM_HIDE, LABEL_ZOOM_SHOW, zoom_size)
 	if not me and not is_selected():
 		a *= smoothstep(LABEL_NEAR_HIDE, LABEL_NEAR_SHOW, dist_to_me)

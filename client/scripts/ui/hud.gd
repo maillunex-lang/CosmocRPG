@@ -21,6 +21,7 @@ signal world_tapped(pos: Vector2)   # короткое касание в зон�
 signal hangar_requested   # кнопка «Ангар»
 signal shop_requested   # кнопка «Магазин»
 signal map_requested   # кнопка «Карта»
+signal settings_requested   # пункт меню «Настройки»
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -83,7 +84,49 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 @onready var _confirm: Control = %Confirm
 
 
+## Верхний статус-чип: режим управления, скорость и груз в прозрачной рамке (вместо строки внутри нижней панели).
+func _build_status_chip() -> void:
+	var center: Control = _speed_label.get_parent().get_parent().get_parent()   # CenterStack
+	var chip := PanelContainer.new()
+	chip.name = "StatusChip"
+	chip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := HBoxContainer.new()
+	row.name = "ChipRow"
+	row.add_theme_constant_override("separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(row)
+	center.add_child(chip)
+	center.move_child(chip, 0)
+	_speed_label.reparent(row, false)
+	_speed_label.owner = self   # сохраняет поиск по уникальному имени %SpeedLabel
+	_speed_label.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	_speed_label.add_theme_color_override("font_color", Color(Tokens.TEXT, 0.9))
+	_airy(chip, 0.34, false)
+
+
+## Прозрачная рамка карточки: меньше сплошных плашек, больше «воздуха» (как в современных MMO).
+func _airy(card: Control, alpha: float, border := true) -> void:
+	# стиль собирается из токенов, а не берётся из темы: тема назначается экрану позже, чем срабатывает _ready карточки
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Tokens.SURFACE, alpha)
+	sb.set_corner_radius_all(Tokens.RADIUS)
+	sb.set_content_margin_all(Tokens.SPACE_MD)
+	if border:
+		sb.border_color = Color(Tokens.ACCENT, Tokens.BORDER_ALPHA)
+		sb.set_border_width_all(Tokens.BORDER_WIDTH)
+	sb.anti_aliasing = true
+	card.add_theme_stylebox_override("panel", sb)
+
+
 func _ready() -> void:
+	_build_status_chip()
+	for c in [%ProfileCard, %QuestsCard, %ChatCard, %TargetCard, %CreditsCard]:
+		_airy(c, 0.55)
+	_airy(%CombatBlock, 0.28, false)
+	for bar in [%ShieldBar, %HullBar, %EnergyBar]:
+		bar.custom_minimum_size.y = 18.0
+	_skills_grid.add_theme_constant_override("separation", 10)
 	# чат по умолчанию свёрнут: космос занимает основную площадь
 	_pref_collapsed["chat"] = true
 	_chat_card.set_collapsed(true, false)
@@ -141,6 +184,7 @@ func _ready() -> void:
 	Icons.apply(%HangarMenuButton, "rocket", Tokens.ACCENT, 22)
 	Icons.apply(%StorageMenuButton, "package", Tokens.ACCENT, 22)
 	Icons.apply(%MailMenuButton, "mail", Tokens.ACCENT, 22)
+	%SettingsMenuButton.pressed.connect(func() -> void: _set_menu_open(false); settings_requested.emit())
 	Icons.apply(%SettingsMenuButton, "settings", Tokens.ACCENT, 22)
 	_build_cargo_ui()
 	_confirm.opened.connect(func() -> void: modal_opened.emit())

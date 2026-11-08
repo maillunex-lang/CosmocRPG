@@ -92,7 +92,7 @@ func _spawn(preset: String = "high") -> void:
 
 func _run() -> void:
 	UiSettings.override("reduce_motion", true)
-	UiSettings.override("debug_overlay", false)
+	UiSettings.override("debug_overlay2", false)
 	await _spawn()
 
 	var views := [
@@ -211,7 +211,7 @@ func _run() -> void:
 
 	UiSettings.override("reduce_motion", null)
 	UiSettings.override("graphics_preset", null)
-	UiSettings.override("debug_overlay", null)
+	UiSettings.override("debug_overlay2", null)
 	Session.gateway = null
 	print("Итого: проверок %d, провалов %d" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)

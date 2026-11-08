@@ -49,12 +49,17 @@
 	handle /download/* {
 		uri strip_prefix /download
 		root * /downloads
-		header Content-Type application/vnd.android.package-archive
-		header Content-Disposition attachment
+		@pkg path *.apk
+		header @pkg Content-Type application/vnd.android.package-archive
+		header @pkg Content-Disposition attachment
+		@json path *.json
+		header @json Content-Type "application/json; charset=utf-8"
 		file_server
 	}
+	# Лендинг на корне домена (решение владельца R-39): статические файлы из образа (/site), без внешних скриптов
 	handle {
-		redir * /admin/ temporary
+		root * /site
+		file_server
 	}
 }
 

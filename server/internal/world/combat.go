@@ -19,6 +19,7 @@ var (
 	ErrBadSkin   = errors.New("bad_skin")
 	ErrBadSpec   = errors.New("bad_spec")
 	ErrBadTarget = errors.New("bad_target")
+	ErrBadOption = errors.New("bad_option")
 )
 
 func (w *World) initShip(p *Player, shipType, skin, spec string) {
@@ -221,10 +222,12 @@ func (w *World) hitNPC(p *Player, n *npc, dmg float64) {
 func (w *World) DamagePlayer(id string, dmg float64) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.damagePlayerLocked(id, dmg)
+	w.damagePlayerLocked(id, dmg, "")
 }
 
-func (w *World) damagePlayerLocked(id string, dmg float64) {
+// damagePlayerLocked наносит урон; attacker — идентификатор нападающего (пусто: безымянный источник). Если у игрока включён
+// автоответ и он не занят другой живой целью, он начинает атаковать нападающего (когда тот в дальности, стреляет автоатака).
+func (w *World) damagePlayerLocked(id string, dmg float64, attacker string) {
 	p, ok := w.players[id]
 	if !ok || p.deadUntil > w.t {
 		return
@@ -241,7 +244,42 @@ func (w *World) damagePlayerLocked(id string, dmg float64) {
 		w.emit(Event{Type: "death", To: p.ID})
 		p.deadUntil = w.t + 3
 		p.Attacking, p.Autopilot, p.Move, p.mining = false, false, Vec{}, ""
+		return
 	}
+	w.retaliate(p, attacker)
+}
+
+// retaliate: автоответ на атаку (настройка игрока auto_retaliate, по умолчанию включена).
+func (w *World) retaliate(p *Player, attacker string) {
+	if attacker == "" || p.noRetaliate {
+		return
+	}
+	n := w.npcByID(attacker, nil)
+	if n == nil || n.deadUntil > w.t {
+		return
+	}
+	if p.Attacking && p.Target != attacker {
+		if cur := w.npcByID(p.Target, nil); cur != nil && cur.deadUntil <= w.t {
+			return // уже воюет с другой живой целью: не переключаем
+		}
+	}
+	p.Target, p.Attacking, p.Autopilot, p.mining = attacker, true, false, ""
+}
+
+// SetOption меняет настройку игрока. Сейчас: auto_retaliate (автоответ на атаку).
+func (w *World) SetOption(id, name string, value bool) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok {
+		return ErrNoPlayer
+	}
+	switch name {
+	case "auto_retaliate":
+		p.noRetaliate = !value
+		return nil
+	}
+	return ErrBadOption
 }
 
 // stepCombat — часть шага симуляции: восстановление, автоатака, форсаж, возрождение, дроны.

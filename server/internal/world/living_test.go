@@ -1,6 +1,7 @@
 package world
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -268,5 +269,64 @@ func TestBigMapRadiusAppliesToMovement(t *testing.T) {
 	// без раскладки радиус прежний
 	if New().radius != Radius {
 		t.Fatal("радиус по умолчанию изменился")
+	}
+}
+
+func TestAutoRetaliateOnAttack(t *testing.T) {
+	w, _ := livingWorld(t)
+	e := firstEnemy(w)
+	p := joinAt(w, "r", "FTR-001", Vec{e.Pos.X + 15, e.Pos.Y})
+	step(w, 4) // враг замечает игрока и атакует
+	if p.Target != e.ID || !p.Attacking {
+		t.Fatalf("автоответ по умолчанию включён: цель %q, атака %v", p.Target, p.Attacking)
+	}
+	// выключенный автоответ: игрок не отвечает
+	w2, _ := livingWorld(t)
+	e2 := firstEnemy(w2)
+	p2 := joinAt(w2, "r2", "FTR-001", Vec{e2.Pos.X + 15, e2.Pos.Y})
+	if err := w2.SetOption("r2", "auto_retaliate", false); err != nil {
+		t.Fatal(err)
+	}
+	step(w2, 4)
+	if p2.Hull+p2.Shield >= p2.spec.Hull+p2.spec.Shield {
+		t.Fatal("враг не атаковал: тест не проверяет автоответ")
+	}
+	if p2.Attacking || p2.Target != "" {
+		t.Fatalf("автоответ выключен, но игрок ответил: цель %q", p2.Target)
+	}
+	// включили обратно: при следующей атаке отвечает
+	_ = w2.SetOption("r2", "auto_retaliate", true)
+	step(w2, 3)
+	if !p2.Attacking || !strings.HasPrefix(p2.Target, "en-") {
+		t.Fatalf("после включения игрок не ответил: цель %q", p2.Target)
+	}
+	if err := w2.SetOption("r2", "nope", true); err != ErrBadOption {
+		t.Fatalf("неизвестная настройка: %v", err)
+	}
+	if err := w2.SetOption("ghost", "auto_retaliate", true); err != ErrNoPlayer {
+		t.Fatalf("нет игрока: %v", err)
+	}
+}
+
+func TestAutoRetaliateKeepsCurrentLiveTarget(t *testing.T) {
+	w, _ := livingWorld(t)
+	e := firstEnemy(w)
+	p := joinAt(w, "k", "FTR-001", Vec{e.Pos.X + 15, e.Pos.Y})
+	// игрок уже атакует учебного дрона: нападение врага не переключает цель
+	p.Target, p.Attacking = "dr1", true
+	w.mu.Lock()
+	w.retaliate(p, e.ID)
+	w.mu.Unlock()
+	if p.Target != "dr1" {
+		t.Fatalf("цель переключена с живой на нападающего: %q", p.Target)
+	}
+	// мёртвого нападающего не атакуют
+	p.Target, p.Attacking = "", false
+	e.deadUntil = w.t + 100
+	w.mu.Lock()
+	w.retaliate(p, e.ID)
+	w.mu.Unlock()
+	if p.Attacking {
+		t.Fatal("автоответ на мёртвого нападающего")
 	}
 }

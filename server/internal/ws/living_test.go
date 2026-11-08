@@ -155,3 +155,23 @@ func TestSellRejectedAwayFromStation(t *testing.T) {
 		t.Fatalf("код %q", ec.Code)
 	}
 }
+
+func TestSetOptionThroughProtocol(t *testing.T) {
+	_, _, url := livingServer(t, "optiontokentoken01", "FTR-001", world.Vec{X: 0, Y: 0}, nil)
+	cl := connect(t, url)
+	cl.joinRaw("optiontokentoken01")
+	cl.send("set_option", map[string]any{"name": "auto_retaliate", "value": false})
+	cl.send("set_option", map[string]any{"name": "wings", "value": true})
+	e := cl.next("error")
+	var ec struct{ Code string }
+	_ = json.Unmarshal(e.Payload, &ec)
+	if ec.Code != "bad_option" {
+		t.Fatalf("код %q", ec.Code)
+	}
+	cl.send("set_option", map[string]any{"name": "", "value": true})
+	e = cl.next("error")
+	_ = json.Unmarshal(e.Payload, &ec)
+	if ec.Code != "bad_message" {
+		t.Fatalf("код %q", ec.Code)
+	}
+}

@@ -18,6 +18,9 @@ const Hangar := preload("res://ui/ships/hangar.gd")
 const ShopScreen := preload("res://ui/shop_screen.gd")
 const ProfileScreen := preload("res://ui/profile_screen.gd")
 const MapScreen := preload("res://ui/map_screen.gd")
+const SettingsScreen := preload("res://ui/settings_screen.gd")
+const Nameplates := preload("res://ui/nameplates.gd")
+const Tokens := preload("res://ui/theme/tokens.gd")
 const WorldDecor := preload("res://scripts/space/world_decor.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 
@@ -41,6 +44,7 @@ var _bg_id := ""
 var _last_sim_time := -1.0
 var _ship_speed := 0.0
 var _last_me_pos := Vector2.ZERO
+var _plates: Control   # экранные подписи объектов
 var _decor: Node3D   # декор живых локаций (строится по раскладке сервера)
 
 @onready var _hud: Control = %Hud
@@ -96,11 +100,16 @@ func _ready() -> void:
 	if gateway.get_parent() == null:
 		add_child(gateway)
 	_hud.bind(gateway)
+	_plates = Nameplates.new()
+	_plates.name = "Nameplates"
+	add_child(_plates)
+	move_child(_plates, _hud.get_index())   # под интерфейсом, над миром
 	_hud.camera_mode_requested.connect(_rig.cycle_mode)
 	_hud.world_tapped.connect(select_at)
 	_hud.hangar_requested.connect(open_hangar)
 	_hud.shop_requested.connect(open_shop)
 	_hud.map_requested.connect(open_map)
+	_hud.settings_requested.connect(open_settings)
 	_hud.profile_requested.connect(open_profile)
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
@@ -141,39 +150,57 @@ func _process(delta: float) -> void:
 		_bg.set_camera(_rig.parallax_px() / prof.px_per_unit)
 
 
-## Подписи кораблей: прозрачность по зуму и близости к игроку; стекинг — наложившиеся
-## подписи сдвигаются вниз (как имена в MMO: толпа кораблей не слипается в одну строку).
-func _update_ship_labels(delta: float, me: Node3D) -> void:
+## Подписи объектов: экранный слой (ui/nameplates.gd). Показываются цель, свой корабль, ближайшие враги и игроки, станции,
+## находки рядом; не больше MAX_PLATES, без пересечений; дальние бледнее. Принципы MMO: лимит, приоритет цели, затухание по расстоянию.
+func _update_ship_labels(_delta: float, me: Node3D) -> void:
 	var cam: Camera3D = _rig.camera
-	if cam == null:
+	if cam == null or _plates == null:
 		return
-	var vp_h := cam.get_viewport().get_visible_rect().size.y
-	if vp_h <= 0.0:
-		return
+	var area := Rect2(Vector2(8, 70), _plates.size - Vector2(16, 150)) if _plates.size.x > 100.0 else Rect2(0, 0, 1280, 720)
 	var zoom: float = _rig.zoom_size()
 	var me_pos: Vector2 = me.world_pos if me != null else Vector2.ZERO
-	var items := []   # [{v, pos}]
+	var close_view := zoom < 26.0   # камера вплотную: подписываются только цель и свой корабль
+	var items: Array = []
 	for id in _ships:
 		var v: Node3D = _ships[id]
-		v.update_label(delta, zoom, v.world_pos.distance_to(me_pos))
-		if v.label_on_screen():
-			items.append({"v": v, "pos": v.label_screen_pos(cam)})
-		else:
-			v.set_label_lift(0.0)
-	items.sort_custom(func(x, y): return x["pos"].y < y["pos"].y)
-	var placed := []   # Vector2: x центра подписи и нижняя граница занятой экранной полосы, px
-	for it in items:
-		var v: Node3D = it["v"]
-		var p: Vector2 = it["pos"]
-		var top := p.y
-		for q in placed:
-			if absf(p.x - q.x) < v.label_half_width_px() + 40.0 and top < q.y:
-				top = q.y
-		v.set_label_lift((top - p.y) * zoom / vp_h)
-		placed.append(Vector2(p.x, top + LABEL_STACK_GAP_PX))
-
-
-const LABEL_STACK_GAP_PX := 34.0   # минимальный вертикальный шаг подписей на экране, px
+		v.use_3d_label = false
+		v.update_label(0.0, zoom, 0.0)
+		if cam.is_position_behind(v._label.global_position):
+			continue
+		var anchor: Vector2 = v.label_screen_pos(cam)
+		var d: float = v.world_pos.distance_to(me_pos)
+		var kind: String = v.kind
+		var sel: bool = v.is_selected()
+		var prio := -1.0
+		var maxd := 1.0
+		var col: Color = Tokens.TEXT
+		if sel:
+			prio = 1000.0
+		elif v.me:
+			prio = 900.0
+		elif close_view:
+			continue
+		elif kind == "hostile":
+			if not bool(v.get_meta("dead", false)):
+				prio = 500.0 - d
+				maxd = 140.0
+				col = Tokens.DANGER.lightened(0.35)
+		elif kind == "player" or kind == "ai":
+			prio = 450.0 - d
+			maxd = 160.0
+			col = Tokens.ACCENT.lightened(0.3)
+		elif kind == "station":
+			prio = 300.0 - d * 0.2
+			maxd = 260.0
+		elif kind in ["deposit", "anomaly", "derelict", "signal"]:
+			prio = 200.0 - d
+			maxd = 70.0
+			col = Tokens.RARE.lightened(0.2)
+		if prio < 0.0 or (not sel and not v.me and d > maxd):
+			continue
+		var alpha := 1.0 if (sel or v.me) else clampf(1.0 - 0.6 * d / maxd, 0.4, 1.0)
+		items.append({"id": id, "text": v._label.text, "anchor": anchor, "priority": prio, "force": sel or v.me, "alpha": alpha, "color": col, "big": sel or v.me})
+	_plates.update_plates(items, area)
 
 
 func ship_view(id: String) -> Node3D:
@@ -244,6 +271,7 @@ func _sync_ship(id: String, kind: String, stance: String, display_name: String, 
 			v.set_ship(str(info.get("ship", info.get("type", ""))), str(info["skin"]))
 		v.boosting = bool(info.get("boosting", false))
 		var dead := bool(info.get("dead", false))
+		v.set_meta("dead", dead)
 		if not dead and not v.visual.alive:
 			v.visual.respawn()
 	if new_snapshot:
@@ -287,6 +315,29 @@ func open_map() -> Control:
 	m.closed.connect(func() -> void: layer.queue_free())
 	m.tree_exiting.connect(func() -> void: gateway.state_updated.disconnect(on_state))
 	return m
+
+
+## Настройки поверх сцены: автоответ на атаку уходит серверу, панель FPS применяется сразу.
+func open_settings() -> Control:
+	var existing := get_node_or_null("SettingsLayer/SettingsOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var st: Control = SettingsScreen.new()
+	st.name = "SettingsOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "SettingsLayer"
+	add_child(layer)
+	layer.add_child(st)
+	st.theme = theme
+	st.option_changed.connect(func(opt: String, v: bool) -> void:
+		if opt == "auto_retaliate":
+			gateway.set_option(opt, v)
+		elif opt == FrameStats.SETTING_KEY:
+			stats.set_shown(v))
+	st.closed.connect(func() -> void: layer.queue_free())
+	return st
 
 
 var _hangar_wait_ship := ""   # корабль, смену на который мы ждём от сервера (ангар откроется заново с ним)

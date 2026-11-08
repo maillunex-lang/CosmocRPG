@@ -26,7 +26,7 @@ func _ready() -> void:
 	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_text.add_theme_font_size_override("font_size", Tokens.FONT_SMALL - 2)
+	_text.add_theme_font_size_override("font_size", Tokens.FONT_SMALL - 4)
 	_text.add_theme_color_override("font_color", Tokens.TEXT)
 	_text.add_theme_color_override("font_outline_color", Tokens.BG)
 	_text.add_theme_constant_override("outline_size", 4)

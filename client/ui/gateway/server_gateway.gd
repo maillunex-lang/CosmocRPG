@@ -4,6 +4,7 @@ extends "res://ui/gateway/ui_gateway.gd"
 ## эти поля в состоянии отсутствуют, интерфейс их не показывает (данных нет, значит не выдумываем).
 
 const WsClient := preload("res://scripts/net/ws_client.gd")
+const UiSettings := preload("res://ui/ui_settings.gd")
 const PlayerIdentity := preload("res://ui/player_identity.gd")
 
 const PROTOCOL := 1
@@ -141,6 +142,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			alert_cleared.emit(ALERT_LINK)
 			_sent_move = Vector2.INF   # после входа заново сообщаем движение
 			joined.emit()
+			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
 		"state":
 			_apply_state(payload)
 		"combat_events":
@@ -336,6 +338,12 @@ func set_spec(spec_id: String) -> void:
 
 func has_shop() -> bool:
 	return true
+
+
+## Игровая настройка на сервере (сейчас: auto_retaliate).
+func set_option(opt: String, value: bool) -> void:
+	if _joined:
+		_client.send_message("set_option", {"name": opt, "value": value})
 
 
 func request_ships() -> void:

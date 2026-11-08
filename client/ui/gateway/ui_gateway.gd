@@ -63,6 +63,11 @@ signal shop_updated(data: Dictionary)
 signal shop_failed(text: String)
 
 
+## Игровая настройка (например, автоответ на атаку). В демо без сервера ничего не делает.
+func set_option(_name: String, _value: bool) -> void:
+	pass
+
+
 func has_shop() -> bool:
 	return false
 

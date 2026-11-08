@@ -70,7 +70,7 @@ func _run() -> void:
 
 	# игрок первого устройства
 	var gw1 := ServerGateway.new()
-	gw1.join_name = "[тест] акк " + login.right(6)
+	gw1.character_needed.connect(func(_o: Array) -> void: gw1.create_character("Tst_" + login.right(9), "m", "miner"))
 	root.add_child(gw1)
 	gw1.connect_to_server(url)
 	await _wait(func() -> bool: return gw1.player_id != "")

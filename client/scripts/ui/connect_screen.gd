@@ -10,6 +10,7 @@ const Session := preload("res://ui/session.gd")
 const DemoGateway := preload("res://ui/gateway/demo_gateway.gd")
 const ServerGateway := preload("res://ui/gateway/server_gateway.gd")
 const PlayerIdentity := preload("res://ui/player_identity.gd")
+const CharacterScreen := preload("res://ui/character_screen.gd")
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_URL := "ws://78.17.214.25:8080/ws"  # тестовый сервер; позже будет настраиваться при сборке
@@ -109,6 +110,19 @@ func _enter_world() -> void:
 		Session.gateway = gw
 		Session.opened_msec = Time.get_ticks_msec()
 		get_tree().change_scene_to_file("res://scenes/space.tscn"))
+	gw.character_needed.connect(func(options: Array) -> void:
+		# новый игрок: создаём персонажа (ник, пол, направление пилота), затем сервер впускает в мир
+		var cs: Control = CharacterScreen.new()
+		cs.options = options
+		cs.theme = theme
+		add_child(cs)
+		cs.submitted.connect(func(nick: String, g: String, p: String) -> void: gw.create_character(nick, g, p))
+		gw.character_failed.connect(func(reason: String) -> void:
+			if is_instance_valid(cs):
+				cs.show_error(reason))
+		gw.joined.connect(func() -> void:
+			if is_instance_valid(cs):
+				cs.queue_free()))
 	gw.join_failed.connect(func(reason: String) -> void:
 		_append(_danger("Вход не удался: %s" % reason))
 		_world_button.end_busy()

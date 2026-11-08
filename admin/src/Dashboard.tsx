@@ -4,7 +4,7 @@ import { ChangePassword } from "./ChangePassword";
 
 const REFRESH_MS = 5000;
 
-export function Dashboard({ username, onLoggedOut, onOpenStudio }: { username: string; onLoggedOut: () => void; onOpenStudio?: () => void }) {
+export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips }: { username: string; onLoggedOut: () => void; onOpenStudio?: () => void; onOpenShips?: () => void }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [error, setError] = useState("");
@@ -45,6 +45,7 @@ export function Dashboard({ username, onLoggedOut, onOpenStudio }: { username: s
         <div>
           <span className="muted">{username}</span>
           {onOpenStudio && <button onClick={onOpenStudio}>AI Studio</button>}
+          {onOpenShips && <button onClick={onOpenShips}>Корабли</button>}
           <button onClick={() => void logout()}>Выйти</button>
         </div>
       </header>

@@ -55,4 +55,6 @@
 
 Аккаунты (до `join`): `register {token, login, password}`, `login {token, login, password}` → `account {login, created}`; подробности и коды ошибок: `docs/design/ACCOUNTS.md`.
 
+Персонаж (A1): при первом входе `welcome {needs_character: true, pilot_options[]}`, затем `create_character {nick, gender, pilot_spec}` → `welcome` с `character`. Подробности: `docs/design/ALPHA.md`. Каталог кораблей и ZIP-патчи: раздел «Корабли» админки (`/admin/api/ships/*`).
+
 Параметры мира: скорость 14 ед/с, радиус системы 400 ед., автопилот останавливается в 10 ед. от цели, максимум 50 игроков, корабль остаётся в мире 10 с после обрыва связи, позиции сохраняются раз в 5 с и при отключении.

@@ -205,6 +205,13 @@ func open_hangar() -> Control:
 	gestures.cancel()
 	var h: Control = Hangar.new()
 	h.name = "HangarOverlay"
+	var own: Dictionary = gateway.snapshot().get("ship", {})
+	if str(own.get("type", "")) != "":
+		h.ship_id = str(own["type"])   # ангар показывает тот корабль, на котором летит игрок
+	if str(own.get("skin", "")) != "":
+		h.skin = str(own["skin"])
+	if str(own.get("spec", "")) != "":
+		h.spec = str(own["spec"])
 	var layer := CanvasLayer.new()
 	layer.layer = 40
 	layer.name = "HangarLayer"

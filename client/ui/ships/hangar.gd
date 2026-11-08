@@ -86,6 +86,8 @@ func _ready() -> void:
 	var def := ShipDef.get_def(ship_id)
 	var title := Label.new()
 	title.text = "%s — %s" % [def.get("name", ""), def.get("class", "")]
+	if bool(def.get("temporary", false)):
+		title.text += " (временная модель)"
 	title.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 4)
 	box.add_child(title)
 	_info = Label.new()

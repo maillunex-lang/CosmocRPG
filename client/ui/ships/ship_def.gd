@@ -2,7 +2,11 @@ extends RefCounted
 ## Описание корабля для клиента (assets/ships/<id>/ship.json): облики, точки привязки, габариты, подписи.
 ## Игровые характеристики и способности принадлежат серверу; здесь только то, что нужно для отображения.
 
-const PATHS := {"FTR-001": "res://assets/ships/ftr001/ship.json"}
+const PATHS := {
+	"FTR-001": "res://assets/ships/ftr001/ship.json",
+	"TMP-HAUL": "res://assets/ships/tmp_haul/ship.json",   # временная модель
+	"TMP-MINE": "res://assets/ships/tmp_mine/ship.json",   # временная модель
+}
 const DEFAULT_ID := "FTR-001"
 
 static var _cache: Dictionary = {}
@@ -25,6 +29,10 @@ static func skin_ids(ship_id: String = DEFAULT_ID) -> Array:
 static func skin(ship_id: String, skin_id: String) -> Dictionary:
 	var skins: Dictionary = get_def(ship_id).get("skins", {})
 	return skins.get(skin_id, skins.get(skin_ids(ship_id)[0], {}))
+
+
+static func is_temporary(ship_id: String) -> bool:
+	return bool(get_def(ship_id).get("temporary", false))
 
 
 static func is_ship_kind(kind: String) -> bool:

@@ -13,6 +13,10 @@ const ALERT_LINK := "link"
 
 ## Вход выполнен (получен welcome).
 signal joined
+## Нужен новый персонаж: сервер прислал стартовые корабли направлений пилота.
+signal character_needed(options: Array)
+## Создание персонажа отклонено (причина для игрока).
+signal character_failed(reason: String)
 ## Вход не удался (причина для игрока).
 signal join_failed(reason: String)
 
@@ -120,6 +124,10 @@ func _on_link_lost(reason: String) -> void:
 func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 	match type:
 		"welcome":
+			if payload.get("needs_character", false):
+				player_id = str(payload.get("player_id", ""))
+				character_needed.emit(payload.get("pilot_options", []))
+				return
 			_joined = true
 			_retry = 0
 			_retry_in = -1.0
@@ -145,6 +153,9 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 func _on_error(payload: Dictionary) -> void:
 	var code := str(payload.get("code", ""))
 	var text := str(payload.get("message", "ошибка"))
+	if code in ["bad_nick", "nick_reserved", "nick_taken", "bad_gender", "bad_pilot_spec", "character_exists"]:
+		character_failed.emit(text)
+		return
 	match code:
 		"replaced":
 			_closing = true   # вошли с другого устройства: переподключаться не нужно
@@ -276,6 +287,11 @@ func stop_attack() -> void:
 func use_skill(slot: int) -> void:
 	if _joined and slot >= 0 and slot < _ability_ids.size():
 		_client.send_message("ability", {"id": _ability_ids[slot]})
+
+
+## Создание персонажа: ник, пол ("m"/"f"), направление пилота (interceptor, scout, trader, miner).
+func create_character(nick: String, gender: String, pilot: String) -> void:
+	_client.send_message("create_character", {"nick": nick, "gender": gender, "pilot_spec": pilot})
 
 
 ## Выбор облика и специализации корабля (сохраняется сервером).

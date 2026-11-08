@@ -81,12 +81,12 @@ func _run() -> void:
 	var tag := str(Time.get_ticks_usec())
 	PlayerIdentity.set_override("testa" + tag.pad_zeros(16))
 	var a := ServerGateway.new()
-	a.join_name = "[тест] A " + tag.right(6)
+	a.character_needed.connect(func(_o: Array) -> void: a.create_character("Tst_A" + tag.right(8), "m", "interceptor"))
 	root.add_child(a)
 	a.connect_to_server(url)
 	_check(await _wait(a, func() -> bool: return not a.snapshot().is_empty()), "вход выполнен, пришло состояние")
 	var st: Dictionary = a.snapshot()
-	_check(str(st["player"]["name"]).begins_with("[тест]"), "имя из join применено (%s)" % str(st["player"]["name"]))
+	_check(str(st["player"]["name"]).begins_with("Tst_A"), "ник персонажа применён (%s)" % str(st["player"]["name"]))
 	_check(st["system"].get("id", "") == "xi", "система Кси")
 	var has_station := false
 	for o in st["objects"]:
@@ -139,7 +139,7 @@ func _run() -> void:
 	# второй клиент
 	PlayerIdentity.set_override("testb" + tag.pad_zeros(16))
 	var b := ServerGateway.new()
-	b.join_name = "[тест] B " + tag.right(6)
+	b.character_needed.connect(func(_o: Array) -> void: b.create_character("Tst_B" + tag.right(8), "f", "scout"))
 	root.add_child(b)
 	b.connect_to_server(url)
 	await _wait(b, func() -> bool: return not b.snapshot().is_empty())

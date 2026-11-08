@@ -1,0 +1,27 @@
+# окружение и сборки
+.venv/
+__pycache__/
+*.pyc
+build/
+*.apk
+*.aab
+*.idsig
+*.keystore
+*.jks
+# секреты
+.env
+.env.*
+secrets/
+*.pem
+# Godot
+client/.godot/
+client/.import/
+*.translation
+# Blender / рендеры
+*.blend1
+*.blend2
+# ОС
+.DS_Store
+Thumbs.db
+# локальные настройки Claude Code
+.claude/settings.local.json

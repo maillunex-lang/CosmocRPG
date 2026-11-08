@@ -28,6 +28,8 @@ var _avatar: TextureRect
 var _frame: PanelContainer
 var _shop_button: ActionButton
 var _dev: VBoxContainer
+var _scroll: ScrollContainer
+var _box: VBoxContainer
 var _dev_level: Label
 var _dev_free: Label
 var _dev_bar: ProgressBar
@@ -49,9 +51,17 @@ func _ready() -> void:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(460, 0)
 	center.add_child(panel)
+	# содержимое прокручивается: на низком экране (альбомная ориентация) оно не помещается целиком
+	_scroll = ScrollContainer.new()
+	_scroll.name = "ProfileScroll"
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(_scroll)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
-	panel.add_child(box)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(box)
+	_box = box
+	resized.connect(_fit_scroll)
 
 	var head := HBoxContainer.new()
 	box.add_child(head)
@@ -109,6 +119,7 @@ func _ready() -> void:
 	_credits.name = "CreditsValue"
 
 	_build_development(box)
+	_fit_scroll.call_deferred()
 
 	_shop_button = ActionButton.new()
 	_shop_button.name = "ShopButton"
@@ -116,6 +127,14 @@ func _ready() -> void:
 	Icons.apply(_shop_button, "store", Tokens.ACCENT, 22)
 	_shop_button.pressed.connect(func() -> void: shop_requested.emit())
 	box.add_child(_shop_button)
+
+
+## Высота области прокрутки: по содержимому, но не выше экрана (минус поля панели).
+func _fit_scroll() -> void:
+	if _scroll == null or _box == null:
+		return
+	var avail := maxf(size.y - 56.0, 200.0)
+	_scroll.custom_minimum_size.y = minf(_box.get_combined_minimum_size().y, avail)
 
 
 ## Развитие пилота: уровень, опыт, свободные очки и шесть характеристик. Показывается, только если сервер прислал данные.
@@ -173,6 +192,7 @@ func _build_development(box: Control) -> void:
 ## Состояние пилота от сервера (опыт, уровень, очки).
 func set_pilot(p: Dictionary) -> void:
 	_dev.visible = not p.is_empty()
+	_fit_scroll.call_deferred()
 	if p.is_empty():
 		return
 	var need := int(p.get("level_xp", 0))
@@ -205,6 +225,7 @@ func _row(parent: Control, icon: String, caption: String) -> Label:
 
 ## Данные из снимка состояния игры: player/ship/credits. Срок подписки — из состояния магазина (если загружено).
 func set_data(state: Dictionary, shop_state: Dictionary = {}) -> void:
+	_fit_scroll.call_deferred()
 	var player: Dictionary = state.get("player", {})
 	var ship: Dictionary = state.get("ship", {})
 	var cos: Dictionary = ship.get("cosmetics", {})

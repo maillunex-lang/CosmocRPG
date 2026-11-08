@@ -141,7 +141,7 @@ func _ready() -> void:
 
 	# тоггл «Авто» стоит в ряду слотов: компактная подпись
 	_auto_skills.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
-	_auto_skills.tooltip_text = "Автоматически применять способности в бою"
+	_auto_skills.tooltip_text = "Автобой: сам выбирает ближайшую цель (вид — в настройках) и атакует"
 
 	for b in [_attack, _autopilot, _auto_skills]:
 		b.disabled = true

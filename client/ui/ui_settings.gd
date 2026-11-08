@@ -24,6 +24,22 @@ static func set_bool(key: String, value: bool) -> void:
 	cfg.save(PATH)
 
 
+static func get_string(key: String, default: String) -> String:
+	if _overrides.has(key):
+		return str(_overrides[key])
+	var cfg := ConfigFile.new()
+	if cfg.load(PATH) == OK:
+		return str(cfg.get_value(SECTION, key, default))
+	return default
+
+
+static func set_string(key: String, value: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(PATH)
+	cfg.set_value(SECTION, key, value)
+	cfg.save(PATH)
+
+
 ## Тестовое переопределение без записи на диск (null снимает его).
 static func override(key: String, value: Variant) -> void:
 	if value == null:

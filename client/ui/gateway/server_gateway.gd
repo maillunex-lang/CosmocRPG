@@ -6,6 +6,7 @@ extends "res://ui/gateway/ui_gateway.gd"
 const WsClient := preload("res://scripts/net/ws_client.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const PlayerIdentity := preload("res://ui/player_identity.gd")
+const AutoBattle := preload("res://ui/auto_battle.gd")
 
 const PROTOCOL := 1
 const MOVE_INTERVAL := 0.1         # не чаще 10 сообщений движения в секунду (лимит сервера 20/с)
@@ -35,6 +36,11 @@ var _state: Dictionary = {}
 var _target_id := ""
 var _autopilot := false
 var _joined := false
+var _auto_battle := false          # автобой: кнопка «Авто»
+var _auto_skip: Dictionary = {}    # id цели -> до какого времени (мс) пропускать (сервер отклонил атаку)
+var _auto_sent_id := ""            # цель, на которую автобой отправил атаку и ждёт подтверждения
+var _auto_sent_ms := 0
+var _auto_next_ms := 0
 var _closing := false
 var _retry := 0
 var _retry_in := -1.0
@@ -206,7 +212,7 @@ func _ship_dict(ship: Dictionary) -> Dictionary:
 	if ship.has("hull"):   # шкалы показываются только если сервер прислал значения
 		for k in ["hull", "hull_max", "shield", "shield_max", "energy", "energy_max", "armor", "cargo"]:
 			d[k] = float(ship.get(k, 0.0))
-	for k in ["cargo_used", "mine_range"]:
+	for k in ["cargo_used", "mine_range", "pulse_range"]:
 		d[k] = float(ship.get(k, 0.0))
 	d["hold"] = ship.get("hold", {}) if ship.get("hold") is Dictionary else {}
 	d["mining"] = str(ship.get("mining", ""))
@@ -272,7 +278,7 @@ func _apply_state(p: Dictionary) -> void:
 		"combat_available": has_combat,
 		"skills": skills,
 		"combat": {"in_combat": bool(p.get("attacking", false))},
-		"attacking": bool(p.get("attacking", false)), "auto_skills": false, "target_in_range": in_range,
+		"attacking": bool(p.get("attacking", false)), "auto_skills": _auto_battle, "target_in_range": in_range,
 		"quests": [], "chat": [],
 	}
 	# кредиты и задания показываются, только если сервер их прислал (контракты включены флагом на сервере)
@@ -282,6 +288,7 @@ func _apply_state(p: Dictionary) -> void:
 	for q in p.get("quests", []):
 		quests.append({"title": str(q.get("title", "")), "progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
 	_state["quests"] = quests
+	_auto_battle_tick()
 	state_updated.emit(_state)
 
 
@@ -320,6 +327,7 @@ func attack(id: String) -> void:
 
 
 func stop_attack() -> void:
+	_auto_battle = false   # ручная остановка атаки выключает автобой: иначе он тут же начал бы снова
 	if _joined:
 		_client.send_message("attack", {"on": false})
 
@@ -412,5 +420,36 @@ func shop_equip(slot: String, item: String) -> void:
 		_client.send_message("shop_equip", {"slot": slot, "item": item})
 
 
-func set_auto_skills(_on: bool) -> void:
-	command_failed.emit("combat.auto", "Авто-навыки появятся на следующем этапе")
+## Кнопка «Авто»: включает автобой (выбор целей и атака по настройке «Кого атаковать»).
+func set_auto_skills(on: bool) -> void:
+	_auto_battle = on
+	_auto_sent_id = ""
+	_auto_skip.clear()
+	_auto_next_ms = 0
+	if not _state.is_empty():
+		_state["auto_skills"] = on
+		state_updated.emit(_state)
+
+
+## Шаг автобоя на каждом снимке (не чаще двух раз в секунду): атаковать подходящую цель, пока не идёт атака или добыча.
+func _auto_battle_tick() -> void:
+	if not _auto_battle or not _joined:
+		return
+	var now := Time.get_ticks_msec()
+	var ship: Dictionary = _state.get("ship", {})
+	if bool(_state.get("attacking", false)):
+		_auto_sent_id = ""
+		return
+	if bool(ship.get("dead", false)) or str(ship.get("mining", "")) != "" or now < _auto_next_ms:
+		return
+	if _auto_sent_id != "" and now - _auto_sent_ms > 1500:
+		_auto_skip[_auto_sent_id] = now + 15000   # атака не началась (например, бой с игроками выключен): не настаиваем
+		_auto_sent_id = ""
+	var id := AutoBattle.pick(_state, AutoBattle.mode(), now, _auto_skip)
+	_auto_next_ms = now + 500
+	if id == "":
+		return
+	if id != _auto_sent_id:
+		_auto_sent_id = id
+		_auto_sent_ms = now
+	attack(id)

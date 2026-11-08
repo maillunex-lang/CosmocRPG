@@ -7,6 +7,7 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 const Icons := preload("res://ui/icons.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const FrameStats := preload("res://ui/debug/frame_stats.gd")
+const AutoBattle := preload("res://ui/auto_battle.gd")
 
 signal option_changed(name: String, value: bool)
 signal closed
@@ -56,6 +57,8 @@ func _ready() -> void:
 	box.add_child(head)
 	for o in OPTIONS:
 		box.add_child(_row(o))
+		if o["key"] == "auto_retaliate":
+			box.add_child(_auto_target_row())
 	var close := ActionButton.new()
 	close.text = "Закрыть"
 	close.variant = ActionButton.Variant.PRIMARY
@@ -92,6 +95,56 @@ func _row(o: Dictionary) -> Control:
 		option_changed.emit(key, v))
 	row.add_child(b)
 	return row
+
+
+const AUTO_TARGET_CHOICES := [
+	{"mode": "enemies", "text": "Враги"},
+	{"mode": "enemies_players", "text": "Враги и игроки"},
+	{"mode": "all", "text": "Все подряд"},
+]
+
+var _mode_buttons: Dictionary = {}
+
+
+## Выбор целей автобоя: кнопка «Авто» в бою сама выделяет и атакует цели этого вида.
+func _auto_target_row() -> Control:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	var t := Label.new()
+	t.text = "Автобой: кого атаковать"
+	t.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
+	col.add_child(t)
+	var a := Label.new()
+	a.text = "Когда включена кнопка «Авто», игра сама выбирает ближайшую цель выбранного вида и атакует. Бой между игроками пока выключен на сервере: такие цели будут пропускаться."
+	a.theme_type_variation = &"MutedLabel"
+	a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(a)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	for c in AUTO_TARGET_CHOICES:
+		var b := ActionButton.new()
+		b.text = str(c["text"])
+		b.toggle_mode = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 52)
+		var mode_id := str(c["mode"])
+		_mode_buttons[mode_id] = b
+		b.pressed.connect(func() -> void:
+			UiSettings.set_string(AutoBattle.SETTING_KEY, mode_id)
+			_sync_modes()
+			option_changed.emit(AutoBattle.SETTING_KEY, true))
+		row.add_child(b)
+	col.add_child(row)
+	_sync_modes()
+	return col
+
+
+func _sync_modes() -> void:
+	var cur := AutoBattle.mode()
+	for m in _mode_buttons:
+		var b := _mode_buttons[m] as ActionButton
+		b.set_pressed_no_signal(m == cur)
+		b.variant = ActionButton.Variant.PRIMARY if m == cur else ActionButton.Variant.SECONDARY
 
 
 func _sync_button(b: Button, on: bool) -> void:

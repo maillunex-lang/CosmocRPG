@@ -14,6 +14,7 @@ const BackgroundLibrary := preload("res://ui/space_bg/background_library.gd")
 const FrameStats := preload("res://ui/debug/frame_stats.gd")
 const CameraConfig := preload("res://ui/camera/space_camera_config.gd")
 const CameraGestures := preload("res://ui/camera/camera_gestures.gd")
+const LoadingOverlay := preload("res://ui/loading_overlay.gd")
 
 signal exit_requested
 
@@ -66,6 +67,7 @@ func _ready() -> void:
 	stats = FrameStats.new()
 	add_child(stats)
 	stats.attach_to(_hud.get_node("%DebugSlot"))
+	var show_loading := Session.opened_msec >= 0   # только при настоящем входе в мир (в тестах экрана загрузки нет)
 	if Session.opened_msec >= 0:
 		# от нажатия кнопки до начала _ready: загрузка и создание сцены, HUD и текстур
 		stats.mark("сцена", float(t_ready - Session.opened_msec))
@@ -100,6 +102,10 @@ func _ready() -> void:
 	var t_state := Time.get_ticks_msec()
 	_on_state(gateway.snapshot())
 	stats.mark("мир+фон", float(Time.get_ticks_msec() - t_state))
+	if show_loading:
+		var ov := LoadingOverlay.new()
+		add_child(ov)
+		ov.finished.connect(func(sec: float) -> void: stats.mark("прогрев", sec * 1000.0))
 
 
 func _process(delta: float) -> void:

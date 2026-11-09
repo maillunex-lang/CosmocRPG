@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "classes": [
+    "battleship",
+    "carrier",
+    "corvette",
+    "cruiser",
+    "destroyer",
+    "electronic_warfare",
+    "fighter",
+    "frigate",
+    "miner",
+    "scout",
+    "support",
+    "transport"
+  ],
+  "ships": [
+    {
+      "id": "FTR-001",
+      "name": "Стриж",
+      "class_id": "fighter",
+      "specializations": [
+        {
+          "id": "FTR-001:interceptor",
+          "name": "Перехватчик"
+        },
+        {
+          "id": "FTR-001:scout",
+          "name": "Разведчик"
+        }
+      ]
+    },
+    {
+      "id": "FTR-002",
+      "name": "Ястреб",
+      "class_id": "fighter",
+      "specializations": [
+        {
+          "id": "FTR-002:hunter",
+          "name": "Охотник"
+        },
+        {
+          "id": "FTR-002:assault",
+          "name": "Штурмовик"
+        }
+      ]
+    },
+    {
+      "id": "COR-001",
+      "name": "Барс",
+      "class_id": "corvette",
+      "specializations": [
+        {
+          "id": "COR-001:hunter",
+          "name": "Охотник"
+        },
+        {
+          "id": "COR-001:guard",
+          "name": "Страж"
+        }
+      ]
+    },
+    {
+      "id": "COR-002",
+      "name": "Кобра",
+      "class_id": "corvette",
+      "specializations": [
+        {
+          "id": "COR-002:raider",
+          "name": "Рейдер"
+        },
+        {
+          "id": "COR-002:guard",
+          "name": "Страж"
+        }
+      ]
+    },
+    {
+      "id": "FRG-001",
+      "name": "Страж",
+      "class_id": "frigate",
+      "specializations": [
+        {
+          "id": "FRG-001:escort",
+          "name": "Эскорт"
+        },
+        {
+          "id": "FRG-001:support",
+          "name": "Поддержка"
+        }
+      ]
+    },
+    {
+      "id": "FRG-002",
+      "name": "Бастион",
+      "class_id": "frigate",
+      "specializations": [
+        {
+          "id": "FRG-002:bulwark",
+          "name": "Крепость"
+        },
+        {
+          "id": "FRG-002:escort",
+          "name": "Эскорт"
+        }
+      ]
+    },
+    {
+      "id": "DST-001",
+      "name": "Молот",
+      "class_id": "destroyer",
+      "specializations": [
+        {
+          "id": "DST-001:striker",
+          "name": "Ударный"
+        },
+        {
+          "id": "DST-001:siege",
+          "name": "Осадный"
+        }
+      ]
+    },
+    {
+      "id": "CRU-001",
+      "name": "Колосс",
+      "class_id": "cruiser",
+      "specializations": [
+        {
+          "id": "CRU-001:flagship",
+          "name": "Флагман"
+        },
+        {
+          "id": "CRU-001:bombard",
+          "name": "Бомбардир"
+        }
+      ]
+    },
+    {
+      "id": "BSH-001",
+      "name": "Левиафан",
+      "class_id": "battleship",
+      "specializations": [
+        {
+          "id": "BSH-001:dreadnought",
+          "name": "Дредноут"
+        },
+        {
+          "id": "BSH-001:fortress",
+          "name": "Крепость"
+        }
+      ]
+    },
+    {
+      "id": "CAR-001",
+      "name": "Рой",
+      "class_id": "carrier",
+      "specializations": [
+        {
+          "id": "CAR-001:swarm_commander",
+          "name": "Командир роя"
+        },
+        {
+          "id": "CAR-001:tactical_carrier",
+          "name": "Тактический носитель"
+        }
+      ]
+    },
+    {
+      "id": "EWR-001",
+      "name": "Призрак",
+      "class_id": "electronic_warfare",
+      "specializations": [
+        {
+          "id": "EWR-001:jammer",
+          "name": "Глушитель"
+        },
+        {
+          "id": "EWR-001:saboteur",
+          "name": "Диверсант"
+        }
+      ]
+    },
+    {
+      "id": "SCT-001",
+      "name": "Следопыт",
+      "class_id": "scout",
+      "specializations": [
+        {
+          "id": "SCT-001:explorer",
+          "name": "Исследователь"
+        },
+        {
+          "id": "SCT-001:navigator",
+          "name": "Навигатор"
+        }
+      ]
+    },
+    {
+      "id": "SUP-001",
+      "name": "Эгида",
+      "class_id": "support",
+      "specializations": [
+        {
+          "id": "SUP-001:shield_support",
+          "name": "Щитовая поддержка"
+        },
+        {
+          "id": "SUP-001:medic",
+          "name": "Медик"
+        }
+      ]
+    },
+    {
+      "id": "TMP-HAUL",
+      "name": "Тягач",
+      "class_id": "transport",
+      "specializations": [
+        {
+          "id": "TMP-HAUL:hauler",
+          "name": "Перевозчик"
+        },
+        {
+          "id": "TMP-HAUL:smuggler",
+          "name": "Контрабандист"
+        }
+      ]
+    },
+    {
+      "id": "TMP-MINE",
+      "name": "Крот",
+      "class_id": "miner",
+      "specializations": [
+        {
+          "id": "TMP-MINE:geologist",
+          "name": "Геолог"
+        },
+        {
+          "id": "TMP-MINE:industrialist",
+          "name": "Промышленник"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cosmocrpg.invalid/schemas/rpg-identity-v1.json",
+  "title": "Ships RPG identity registry (not runtime passports)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "classes",
+    "ships"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "classes": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z_]{0,31}$"
+      }
+    },
+    "ships": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "class_id",
+          "specializations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}-[A-Z0-9]{3,12}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "class_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z_]{0,31}$"
+          },
+          "specializations": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[A-Z0-9]{3,12}:[a-z][a-z0-9_]{0,31}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

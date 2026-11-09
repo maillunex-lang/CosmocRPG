@@ -392,3 +392,5 @@ Release-APK `zvezdnye-rubezhi-r33-20261108.apk` (37,6 МБ), подпись v2/v
 ## 2026-11-09 — Ships RPG v2.1, R-62, Codex
 
 Read-only аудит выполнен в отдельном cloud-окружении с базы 3b89741, ветка codex/ships-rpg-foundation. [Подробная передача](ships-rpg/HANDOFF.md), [аудит](ships-rpg/AUDIT.md), [карта](ships-rpg/ROADMAP.md), [ошибки](ships-rpg/ERROR_LOG.md), [фактические тесты](ships-rpg/REGRESSION_TESTS.md). Начат этап 1. Системный /usr/bin/go оказался другой программой, toolchain восстанавливается локально. Конфликты caps/деревьев выделены в BLOCKED, вопрос владельцу отправлен. Production и VPS не затронуты, деплой запрещён текущим запросом.
+
+R-62/SR-010: подготовлен и проверен целевой реестр идентичностей 15/12/30 + JSON Schema, без подключения к игре. Коммит аудита 8c7b620. Race-тест shipcatalog PASS, ERROR-SR-001 устранён локальным Go toolchain; полный итог проверок см. ships-rpg/REGRESSION_TESTS.md. Этап 1 ещё не завершён.

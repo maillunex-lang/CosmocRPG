@@ -1,3 +1,10 @@
+# Последняя контрольная точка SR-100b (2026-11-09)
+В main опубликованы **21aaa0b**(server),**d465afe**(client),merge **c9a3391** с сохранением чужого landing545032a. CI42616666345 для c9a3391 — все4 jobs success (Go/PostgreSQL, Godot4.7.2, admin, Docker). Дополнительный **a1c5c9e** исправляет доказанный toast lifetime defect (ERROR-SR-008); локальный real-client race9.034s и HUD161/0 без runtime ERROR, его новый CI проверяется отдельно.
+SR-100b DONE; следующий SR-100c TODO: сохранённая изменяемая экипировка, atomic save/rollback, док вне боя, reconnect/hull/system transitions. Сейчас starter fixed/non-transferable, кнопки снятия/установки нет. APK/production/SQL в этой сессии не публиковались/не менялись.
+Последний SHA реализации a1c5c9e; финальный docs-checkpoint смотреть git log -1. Все подробности/команды/ограничения ниже. ERROR-SR-007 остаётся Open по Vulkan/неподтверждённым render проблемам.
+
+---
+
 # HANDOFF — Ships RPG / SR-100b
 Дата2026-11-09. Ветка codex/ships-rpg-foundation; изменения публикуются в remote main по разрешению владельца. База этой работы a19f7c0, CI42608041551 success. Production только по отдельному разрешению; APK signing окружение пока не подключено.
 

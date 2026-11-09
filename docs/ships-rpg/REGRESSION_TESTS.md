@@ -97,3 +97,5 @@ CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 для m
 - `godot --headless --path client --script res://tests/hud_test.gd` —161/0, ERROR/SCRIPT ERROR отсутствуют.
 - Временный baseline worktree удалён, общий imported cache не удалялся/не менял tracked assets.
 Это дополнительный локальный lifecycle fix после зелёного CI c9a3391; новый push проверит его отдельно. Новый полный Go run не нужен: production Go/механика модулей не менялись, обновлены3 lifecycle/test файла и документы.
+
+Коммиты SR-100b:21aaa0b server, d465afe client, c9a3391 merged main (remote CI42616666345 success); a1c5c9e дополнительный lifecycle fix (локальная red/green regression PASS). Последующий docs-checkpoint не меняет executable code.

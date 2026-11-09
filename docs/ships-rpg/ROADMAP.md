@@ -75,6 +75,6 @@ SR-100a DONE означает код и локальные сквозные те
 
 Публикация SR-100b: main c9a3391 (merge после параллельного landing commit545032a); без force, чужой site/index.html сохранён. CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 проверяет этот head; все4 jobs success.
 
-| SR-100b3 | P1 | SR-100b2 | Уведомление переживает закрытие экрана без freed lambda ERROR; live harness отвергает raw ERROR при exit0 | DONE | 2026-11-09 / 2026-11-09 | alert_bar.gd; passport_online_test.gd; ws/passport_test.go | red→green real-client race9.034s, HUD161/0 без ERROR | следующий lifecycle fix / ERROR-SR-008 |
+| SR-100b3 | P1 | SR-100b2 | Уведомление переживает закрытие экрана без freed lambda ERROR; live harness отвергает raw ERROR при exit0 | DONE | 2026-11-09 / 2026-11-09 | alert_bar.gd; passport_online_test.gd; ws/passport_test.go | red→green real-client race9.034s, HUD161/0 без ERROR | a1c5c9e / ERROR-SR-008 |
 
 CI c9a3391 для полного gameplay шага — success. Дополнительный lifecycle fix проверен локально отдельно и вызывает новый CI после push; Vulkan ERROR-SR-007 остаётся открытым.

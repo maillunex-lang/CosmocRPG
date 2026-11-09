@@ -298,3 +298,27 @@ func TestEventKindsAndChain(t *testing.T) {
 		t.Fatalf("после перезахода: %+v", v)
 	}
 }
+
+func TestSpendCreditsAtomic(t *testing.T) {
+	ctx := context.Background()
+	st := NewMemStore()
+	s := newSvc(st)
+	_ = s.Join(ctx, "p3")
+	// начислим 500
+	if _, _, err := st.GrantCredits(ctx, "p3", "k1", 500); err != nil {
+		t.Fatal(err)
+	}
+	total, err := s.Spend(ctx, "p3", 200)
+	if err != nil || total != 300 {
+		t.Fatalf("списание: %d %v", total, err)
+	}
+	if _, err := s.Spend(ctx, "p3", 1000); err != ErrNotEnough {
+		t.Fatalf("перерасход должен отклоняться: %v", err)
+	}
+	if v, _ := s.View("p3"); v.Credits != 300 {
+		t.Fatalf("баланс после отказа: %d", v.Credits)
+	}
+	if total, err := s.Spend(ctx, "p3", 300); err != nil || total != 0 {
+		t.Fatalf("полное списание: %d %v", total, err)
+	}
+}

@@ -15,14 +15,16 @@ import (
 
 // Ошибки добычи.
 var (
-	ErrNoModule = errors.New("no_module")
-	ErrFull     = errors.New("hold_full")
-	ErrEmpty    = errors.New("deposit_empty")
-	ErrNoDep    = errors.New("no_deposit")
-	ErrNothing  = errors.New("nothing_to_sell")
-	ErrNoStable = errors.New("not_at_station")
-	ErrNoShip   = errors.New("no_ship")
-	ErrHoldBig  = errors.New("hold_too_big")
+	ErrNoModule   = errors.New("no_module")
+	ErrFull       = errors.New("hold_full")
+	ErrEmpty      = errors.New("deposit_empty")
+	ErrNoDep      = errors.New("no_deposit")
+	ErrNothing    = errors.New("nothing_to_sell")
+	ErrNoStable   = errors.New("not_at_station")
+	ErrHoldFull   = errors.New("hold_full")
+	ErrNoResource = errors.New("no_item")
+	ErrNoShip     = errors.New("no_ship")
+	ErrHoldBig    = errors.New("hold_too_big")
 )
 
 // Reward — серверная награда, ожидающая выдачи. Ключ уникален для события: повторная выдача не удваивает награду.
@@ -427,4 +429,90 @@ func (w *World) SellCargo(id string) (int64, error) {
 	}
 	w.emit(Event{Type: "sell", From: p.ID, Amount: float64(credits)})
 	return credits, nil
+}
+
+// --- Станция: ремонт, покупка ресурсов, улучшение (Э-2, Решение №30) ---
+
+// RepairCost — цена полного ремонта у станции: 2 кредита за недостающую единицу корпуса и щита.
+func (w *World) RepairCost(id string) (int64, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok {
+		return 0, ErrNoPlayer
+	}
+	if p.deadUntil > w.t {
+		return 0, ErrDead
+	}
+	if !w.inSafe(p.Pos) {
+		return 0, ErrNoStable
+	}
+	missing := (p.spec.Hull - p.Hull) + (p.spec.Shield - p.Shield)
+	if missing <= 0 {
+		return 0, nil
+	}
+	return int64(math.Ceil(missing * 2.0)), nil
+}
+
+// Repair восстанавливает корпус и щит до максимума (после списания кредитов на уровне hub).
+func (w *World) Repair(id string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok {
+		return ErrNoPlayer
+	}
+	if !w.inSafe(p.Pos) {
+		return ErrNoStable
+	}
+	p.Hull, p.Shield = p.spec.Hull, p.spec.Shield
+	w.emit(Event{Type: "repair", From: id})
+	return nil
+}
+
+// ResourcePrice возвращает цену покупки ресурса у станции (продажная × 1.5, минимум 1).
+func (w *World) ResourcePrice(name string) (float64, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	r, ok := w.wcfg.Resources[name]
+	if !ok || r.Price <= 0 {
+		return 0, false
+	}
+	return math.Max(r.Price*1.5, 1.0), true
+}
+
+// AddCargo добавляет ресурс в трюм с проверкой вместимости (покупка у станции, Э-2).
+func (w *World) AddCargo(id, res string, amt float64) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok {
+		return ErrNoPlayer
+	}
+	if p.deadUntil > w.t {
+		return ErrDead
+	}
+	if !w.inSafe(p.Pos) {
+		return ErrNoStable
+	}
+	if _, ok := w.wcfg.Resources[res]; !ok {
+		return ErrNoResource
+	}
+	free := p.spec.Cargo - holdUsed(p.hold)
+	if amt > free+0.001 {
+		return ErrHoldFull
+	}
+	p.hold[res] += amt
+	return nil
+}
+
+// ShipLevelOf возвращает уровень корабля игрока (покупка улучшения, Э-2).
+func (w *World) ShipLevelOf(id string) (int, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok {
+		return 0, false
+	}
+	return p.shipLevel, true
 }

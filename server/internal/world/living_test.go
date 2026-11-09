@@ -330,3 +330,41 @@ func TestAutoRetaliateKeepsCurrentLiveTarget(t *testing.T) {
 		t.Fatal("автоответ на мёртвого нападающего")
 	}
 }
+
+func TestStationServicesRepairAndCargo(t *testing.T) {
+	w, lay := livingWorld(t)
+	p, _ := w.Join(Record{ID: "svc", Name: "S", Created: true, Pos: Vec{X: lay.Hub[0], Y: lay.Hub[1]}})
+	if err := w.AddCargo(p.ID, "iron_ore", 5); err != nil {
+		t.Fatalf("покупка: %v", err)
+	}
+	if got := p.hold["iron_ore"]; got != 5 {
+		t.Fatalf("груз: %v", got)
+	}
+	// вне станции — отказ
+	p.Pos = Vec{X: 500, Y: 500}
+	if err := w.AddCargo(p.ID, "iron_ore", 1); err != ErrNoStable {
+		t.Fatalf("вне станции: %v", err)
+	}
+	if _, err := w.RepairCost(p.ID); err != ErrNoStable {
+		t.Fatalf("ремонт вне станции: %v", err)
+	}
+	// ремонт у станции
+	p.Pos = Vec{}
+	p.Hull, p.Shield = p.spec.Hull/2, 0
+	cost, err := w.RepairCost(p.ID)
+	if err != nil || cost <= 0 {
+		t.Fatalf("цена ремонта: %d %v", cost, err)
+	}
+	if err := w.Repair(p.ID); err != nil {
+		t.Fatal(err)
+	}
+	if p.Hull != p.spec.Hull || p.Shield != p.spec.Shield {
+		t.Fatalf("не восстановлено: %v/%v", p.Hull, p.Shield)
+	}
+	if _, ok := w.ResourcePrice("iron_ore"); !ok {
+		t.Fatal("цена iron_ore")
+	}
+	if _, ok := w.ResourcePrice("unobtanium"); ok {
+		t.Fatal("неизвестный ресурс")
+	}
+}

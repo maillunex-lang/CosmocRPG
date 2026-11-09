@@ -5,6 +5,7 @@ package quest
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 
@@ -82,7 +83,12 @@ type Store interface {
 	Complete(ctx context.Context, pid string, d Def) (granted bool, credits int64, err error)
 	// GrantCredits начисляет кредиты один раз на ключ события (убийство, исследование, продажа).
 	GrantCredits(ctx context.Context, pid, key string, amount int64) (granted bool, credits int64, err error)
+	// SpendCredits списывает кредиты, если хватает (атомарно, баланс не уходит в минус). ok=false — недостаточно средств.
+	SpendCredits(ctx context.Context, pid string, amount int64) (ok bool, credits int64, err error)
 }
+
+// ErrNotEnough — недостаточно кредитов (ремонт, покупка; Э-2).
+var ErrNotEnough = errors.New("no_credits")
 
 // View — то, что видит клиент.
 type View struct {
@@ -329,6 +335,26 @@ func (s *Service) Evaluate(ctx context.Context, pid string, pos world.Vec) []Com
 		}
 	}
 	return out
+}
+
+// Spend списывает кредиты за покупку/ремонт (Э-2). Отказ без изменений, если не хватает.
+func (s *Service) Spend(ctx context.Context, pid string, amount int64) (int64, error) {
+	if amount <= 0 {
+		return 0, nil
+	}
+	ok, credits, err := s.store.SpendCredits(ctx, pid, amount)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return credits, ErrNotEnough
+	}
+	s.mu.Lock()
+	if ps, has := s.players[pid]; has {
+		ps.data.Credits = credits
+	}
+	s.mu.Unlock()
+	return credits, nil
 }
 
 // Grant выдаёт награду за серверное событие идемпотентно (повтор с тем же ключом ничего не начисляет).

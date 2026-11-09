@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 60
     env:
       GODOT_VERSION: 4.7.2-stable
-      GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ runner.temp }}/release.keystore
+      GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ github.workspace }}/../release.keystore
       GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEY_ALIAS }}
       GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       EXPECTED_CERT: ${{ vars.ANDROID_CERT_SHA256 }}

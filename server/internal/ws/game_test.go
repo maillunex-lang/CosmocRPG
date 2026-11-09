@@ -1,6 +1,7 @@
 package ws
 
 import (
+	// testhelper
 	"context"
 	"encoding/json"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
@@ -19,7 +20,7 @@ import (
 func gameServer(t *testing.T) (*Handler, *world.MemStore, string) {
 	t.Helper()
 	store := world.NewMemStore()
-	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: world.New(), Store: store}
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: testRouter(), Store: store}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -266,7 +267,9 @@ func questServer(t *testing.T) (*quest.MemStore, string) {
 	w := world.New()
 	qs := quest.NewMemStore()
 	svc := quest.NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), qs, w.ObjectPos)
-	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: w, Store: world.NewMemStore(), Quests: svc}
+	r := world.NewRouter(w)
+	r.Add(w)
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: r, Store: world.NewMemStore(), Quests: svc}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -493,7 +496,9 @@ func accountServer(t *testing.T) (*quest.MemStore, string) {
 	qs := quest.NewMemStore()
 	store := world.NewMemStore()
 	svc := quest.NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), qs, w.ObjectPos)
-	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc, Accounts: account.NewService(store)}
+	r := world.NewRouter(w)
+	r.Add(w)
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: r, Store: store, Quests: svc, Accounts: account.NewService(store)}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -597,7 +602,7 @@ func gameServer2(t *testing.T) (*Handler, string) {
 func characterServer(t *testing.T) (*world.MemStore, string) {
 	t.Helper()
 	store := world.NewMemStore()
-	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: world.New(), Store: store, RequireCharacter: true}
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: testRouter(), Store: store, RequireCharacter: true}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

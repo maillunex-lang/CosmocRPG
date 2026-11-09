@@ -28,7 +28,10 @@ func (v Vec) add(o Vec) Vec     { return Vec{v.X + o.X, v.Y + o.Y} }
 func (v Vec) sub(o Vec) Vec     { return Vec{v.X - o.X, v.Y - o.Y} }
 func (v Vec) mul(k float64) Vec { return Vec{v.X * k, v.Y * k} }
 func (v Vec) length() float64   { return math.Hypot(v.X, v.Y) }
-func (v Vec) finite() bool      { return !math.IsNaN(v.X+v.Y) && !math.IsInf(v.X+v.Y, 0) }
+
+// Distance — расстояние между точками (Э-1: проверка близости к точке прыжка).
+func (v Vec) Distance(o Vec) float64 { return math.Hypot(v.X-o.X, v.Y-o.Y) }
+func (v Vec) finite() bool           { return !math.IsNaN(v.X+v.Y) && !math.IsInf(v.X+v.Y, 0) }
 func (v Vec) normalized() Vec {
 	l := v.length()
 	if l < 1e-9 {
@@ -105,6 +108,8 @@ type Record struct {
 	ShipType  string // тип корабля ("" — по умолчанию)
 
 	Hold map[string]float64 // груз (ресурс -> количество)
+
+	System string // текущая звёздная система (Э-1); "" — главная (aurora)
 }
 
 // Object — чужой объект в снимке (корабль другого игрока или станция).
@@ -266,6 +271,20 @@ func (w *World) Join(r Record) (*Player, bool) {
 }
 
 // Disconnect помечает связь потерянной; корабль исчезнет через Grace.
+// Remove безвозвратно убирает игрока из мира и возвращает его запись (гиперпереход, Э-1).
+func (w *World) Remove(id string) (Record, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok {
+		return Record{}, false
+	}
+	rec := p.record()
+	rec.System = w.System().ID
+	delete(w.players, id)
+	return rec, true
+}
+
 func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()

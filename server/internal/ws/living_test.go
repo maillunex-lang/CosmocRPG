@@ -35,7 +35,9 @@ func livingServer(t *testing.T, token, ship string, at world.Vec, hold map[strin
 	_ = store.Save(context.Background(), world.Record{ID: id, Name: "Шахтёр", Pos: at, Dir: world.Vec{X: 1}, Created: true, ShipType: ship, PilotSpec: "miner", Hold: hold})
 	livingPilot = pilot.NewService(pilot.NewMemStore())
 	livingShips = shipxp.NewService(shipxp.NewMemStore())
-	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: w, Store: store, Quests: svc, Pilot: livingPilot, Ships: livingShips}
+	r := world.NewRouter(w)
+	r.Add(w)
+	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: r, Store: store, Quests: svc, Pilot: livingPilot, Ships: livingShips}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

@@ -1,190 +1,278 @@
 {
-  "systems": [
+ "systems": [
+  {
+   "id": "aurora",
+   "name": "Аврора",
+   "background": "xi",
+   "seed": 20261108,
+   "radius": 1400,
+   "specialization": "mixed",
+   "hub": [
+    -12,
+    14
+   ],
+   "difficulty": 2,
+   "features": [
+    "asteroid_belt",
+    "pirate_territory",
+    "anomalies",
+    "busy_lanes",
+    "debris_field",
+    "derelict",
+    "guarded_cache",
+    "boss_lair",
+    "gas_giant"
+   ],
+   "planets": 3,
+   "belts": 2,
+   "pirate_zones": 2,
+   "stations": 2,
+   "anomalies": 3,
+   "derelicts": 2,
+   "caches": 2,
+   "debris_fields": 2,
+   "jumps": [
     {
-      "id": "xi",
-      "name": "Система Кси",
-      "background": "xi",
-      "seed": 20261108,
-      "radius": 1400,
-      "specialization": "mixed",
-      "hub": [
-        -12,
-        14
-      ],
-      "difficulty": 2,
-      "features": [
-        "asteroid_belt",
-        "pirate_territory",
-        "anomalies",
-        "busy_lanes",
-        "debris_field",
-        "derelict",
-        "guarded_cache",
-        "boss_lair",
-        "gas_giant"
-      ],
-      "planets": 3,
-      "belts": 2,
-      "pirate_zones": 2,
-      "stations": 2,
-      "anomalies": 3,
-      "derelicts": 2,
-      "caches": 2,
-      "debris_fields": 2
+     "to": "meridian",
+     "pos": [
+      1150,
+      200
+     ]
     }
-  ],
-  "enemies": {
-    "normal": {
-      "name": "Пиратский разведчик",
-      "hull": 500,
-      "shield": 100,
-      "armor": 40,
-      "speed": 5,
-      "chase_speed": 9,
-      "aggro": 55,
-      "leash": 130,
-      "attack_range": 24,
-      "damage": 9,
-      "period": 1.6,
-      "respawn": 25,
-      "reward": 40
-    },
-    "reinforced": {
-      "name": "Пиратский рейдер",
-      "hull": 900,
-      "shield": 250,
-      "armor": 80,
-      "speed": 5,
-      "chase_speed": 9,
-      "aggro": 60,
-      "leash": 140,
-      "attack_range": 26,
-      "damage": 15,
-      "period": 1.5,
-      "respawn": 40,
-      "reward": 90
-    },
-    "elite": {
-      "name": "Элитный перехватчик",
-      "hull": 1800,
-      "shield": 500,
-      "armor": 120,
-      "speed": 6,
-      "chase_speed": 11,
-      "aggro": 70,
-      "leash": 160,
-      "attack_range": 30,
-      "damage": 26,
-      "period": 1.3,
-      "respawn": 120,
-      "reward": 260
-    },
-    "miniboss": {
-      "name": "Капитан патруля",
-      "hull": 6000,
-      "shield": 1500,
-      "armor": 200,
-      "speed": 6,
-      "chase_speed": 10,
-      "aggro": 80,
-      "leash": 180,
-      "attack_range": 34,
-      "damage": 48,
-      "period": 1.2,
-      "respawn": 600,
-      "reward": 1200
-    },
-    "worldboss": {
-      "name": "Мировой босс",
-      "hull": 40000,
-      "shield": 8000,
-      "armor": 400,
-      "speed": 4,
-      "chase_speed": 8,
-      "aggro": 120,
-      "leash": 250,
-      "attack_range": 45,
-      "damage": 120,
-      "period": 1.0,
-      "respawn": 3600,
-      "reward": 10000
-    }
+   ]
   },
-  "resources": {
-    "iron_ore": {
-      "name": "Железная руда",
-      "module": "mining_laser",
-      "rarity": "common",
-      "amount": 900,
-      "regen_per_min": 30,
-      "yield": 6,
-      "price": 4
+  {
+   "id": "meridian",
+   "name": "Меридиан",
+   "background": "aurora",
+   "seed": 20261210,
+   "radius": 1400,
+   "specialization": "trade",
+   "hub": [
+    30,
+    -20
+   ],
+   "difficulty": 1,
+   "features": [
+    "asteroid_belt",
+    "busy_lanes",
+    "debris_field",
+    "gas_giant"
+   ],
+   "planets": 2,
+   "belts": 1,
+   "pirate_zones": 0,
+   "stations": 3,
+   "anomalies": 1,
+   "derelicts": 1,
+   "caches": 1,
+   "debris_fields": 1,
+   "jumps": [
+    {
+     "to": "aurora",
+     "pos": [
+      -1150,
+      -200
+     ]
     },
-    "crystals": {
-      "name": "Кристаллы",
-      "module": "mining_laser",
-      "rarity": "rare",
-      "amount": 350,
-      "regen_per_min": 6,
-      "yield": 3,
-      "price": 18
-    },
-    "gas": {
-      "name": "Газ",
-      "module": "gas_collector",
-      "rarity": "uncommon",
-      "amount": 700,
-      "regen_per_min": 25,
-      "yield": 5,
-      "price": 7
-    },
-    "scrap": {
-      "name": "Космический лом",
-      "module": "mining_laser",
-      "rarity": "common",
-      "amount": 500,
-      "regen_per_min": 0,
-      "yield": 4,
-      "price": 2
+    {
+     "to": "redstorm",
+     "pos": [
+      200,
+      1150
+     ]
     }
+   ]
   },
-  "visual": {
-    "twinkle": 0.6,
-    "dust": 0.5,
-    "star_layers": 2,
-    "decor": {
-      "asteroids": 1.0,
-      "debris": 1.0,
-      "comets": 1.0,
-      "ships": 1.0,
-      "planets": true,
-      "anomaly_fx": true
-    },
-    "presets": {
-      "low": {
-        "chunk_radius": 1,
-        "asteroids_per_chunk": 3,
-        "debris_per_chunk": 1,
-        "dust_particles": 0,
-        "comets": false,
-        "ships": 0
-      },
-      "medium": {
-        "chunk_radius": 2,
-        "asteroids_per_chunk": 5,
-        "debris_per_chunk": 2,
-        "dust_particles": 24,
-        "comets": true,
-        "ships": 2
-      },
-      "high": {
-        "chunk_radius": 2,
-        "asteroids_per_chunk": 8,
-        "debris_per_chunk": 3,
-        "dust_particles": 48,
-        "comets": true,
-        "ships": 4
-      }
+  {
+   "id": "redstorm",
+   "name": "Красный Шторм",
+   "background": "redstorm",
+   "seed": 20260224,
+   "radius": 1400,
+   "specialization": "pirate",
+   "hub": [
+    -30,
+    30
+   ],
+   "difficulty": 3,
+   "features": [
+    "pirate_territory",
+    "anomalies",
+    "debris_field",
+    "boss_lair"
+   ],
+   "planets": 1,
+   "belts": 2,
+   "pirate_zones": 3,
+   "stations": 1,
+   "anomalies": 3,
+   "derelicts": 2,
+   "caches": 1,
+   "debris_fields": 2,
+   "jumps": [
+    {
+     "to": "meridian",
+     "pos": [
+      -200,
+      -1150
+     ]
     }
+   ]
   }
+ ],
+ "enemies": {
+  "normal": {
+   "name": "Пиратский разведчик",
+   "hull": 500,
+   "shield": 100,
+   "armor": 40,
+   "speed": 5,
+   "chase_speed": 9,
+   "aggro": 55,
+   "leash": 130,
+   "attack_range": 24,
+   "damage": 9,
+   "period": 1.6,
+   "respawn": 25,
+   "reward": 40
+  },
+  "reinforced": {
+   "name": "Пиратский рейдер",
+   "hull": 900,
+   "shield": 250,
+   "armor": 80,
+   "speed": 5,
+   "chase_speed": 9,
+   "aggro": 60,
+   "leash": 140,
+   "attack_range": 26,
+   "damage": 15,
+   "period": 1.5,
+   "respawn": 40,
+   "reward": 90
+  },
+  "elite": {
+   "name": "Элитный перехватчик",
+   "hull": 1800,
+   "shield": 500,
+   "armor": 120,
+   "speed": 6,
+   "chase_speed": 11,
+   "aggro": 70,
+   "leash": 160,
+   "attack_range": 30,
+   "damage": 26,
+   "period": 1.3,
+   "respawn": 120,
+   "reward": 260
+  },
+  "miniboss": {
+   "name": "Капитан патруля",
+   "hull": 6000,
+   "shield": 1500,
+   "armor": 200,
+   "speed": 6,
+   "chase_speed": 10,
+   "aggro": 80,
+   "leash": 180,
+   "attack_range": 34,
+   "damage": 48,
+   "period": 1.2,
+   "respawn": 600,
+   "reward": 1200
+  },
+  "worldboss": {
+   "name": "Мировой босс",
+   "hull": 40000,
+   "shield": 8000,
+   "armor": 400,
+   "speed": 4,
+   "chase_speed": 8,
+   "aggro": 120,
+   "leash": 250,
+   "attack_range": 45,
+   "damage": 120,
+   "period": 1.0,
+   "respawn": 3600,
+   "reward": 10000
+  }
+ },
+ "resources": {
+  "iron_ore": {
+   "name": "Железная руда",
+   "module": "mining_laser",
+   "rarity": "common",
+   "amount": 900,
+   "regen_per_min": 30,
+   "yield": 6,
+   "price": 4
+  },
+  "crystals": {
+   "name": "Кристаллы",
+   "module": "mining_laser",
+   "rarity": "rare",
+   "amount": 350,
+   "regen_per_min": 6,
+   "yield": 3,
+   "price": 18
+  },
+  "gas": {
+   "name": "Газ",
+   "module": "gas_collector",
+   "rarity": "uncommon",
+   "amount": 700,
+   "regen_per_min": 25,
+   "yield": 5,
+   "price": 7
+  },
+  "scrap": {
+   "name": "Космический лом",
+   "module": "mining_laser",
+   "rarity": "common",
+   "amount": 500,
+   "regen_per_min": 0,
+   "yield": 4,
+   "price": 2
+  }
+ },
+ "visual": {
+  "twinkle": 0.6,
+  "dust": 0.5,
+  "star_layers": 2,
+  "decor": {
+   "asteroids": 1.0,
+   "debris": 1.0,
+   "comets": 1.0,
+   "ships": 1.0,
+   "planets": true,
+   "anomaly_fx": true
+  },
+  "presets": {
+   "low": {
+    "chunk_radius": 1,
+    "asteroids_per_chunk": 3,
+    "debris_per_chunk": 1,
+    "dust_particles": 0,
+    "comets": false,
+    "ships": 0
+   },
+   "medium": {
+    "chunk_radius": 2,
+    "asteroids_per_chunk": 5,
+    "debris_per_chunk": 2,
+    "dust_particles": 24,
+    "comets": true,
+    "ships": 2
+   },
+   "high": {
+    "chunk_radius": 2,
+    "asteroids_per_chunk": 8,
+    "debris_per_chunk": 3,
+    "dust_particles": 48,
+    "comets": true,
+    "ships": 4
+   }
+  }
+ }
 }

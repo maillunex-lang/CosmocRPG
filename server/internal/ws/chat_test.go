@@ -1,6 +1,7 @@
 package ws
 
 import (
+	// testhelper
 	"context"
 	"encoding/json"
 	"strings"
@@ -22,7 +23,7 @@ func chatServer(t *testing.T, tokens ...string) (*chat.Service, *chat.MemStore, 
 		cs.AddPlayer(id, "Игрок-"+id[:4])
 	}
 	store := world.NewMemStore()
-	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: world.New(), Store: store, Chat: svc}
+	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: testRouter(), Store: store, Chat: svc}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

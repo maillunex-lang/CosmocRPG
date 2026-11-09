@@ -47,7 +47,7 @@ type Options struct {
 	MaxMessage int64 // максимальный размер входящего сообщения, байт
 	RatePerSec int   // допустимое число сообщений в секунду на сессию
 	Version    string
-	World      *world.World       // игровой мир; nil: игровые сообщения отключены (Этап 00)
+	World      *world.Router      // миры систем и маршрутизация игроков (Э-1); nil: игровые сообщения отключены
 	Store      world.Store        // хранилище игроков; nil: позиции не сохраняются
 	Quests     *quest.Service     // контракты и награды; nil: функция выключена
 	Accounts   *account.Service   // аккаунты (логин и пароль); nil: функция выключена
@@ -204,7 +204,6 @@ func (l *limiter) allow(now time.Time) bool {
 // game обрабатывает игровые сообщения. false: соединение нужно закрыть.
 func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log *slog.Logger, m Message) bool {
 	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
-	w := h.opts.World
 	if m.Type == "join" {
 		if ss.pid != "" {
 			reply(errMsg(m.ID, "already_joined", "вход уже выполнен"))
@@ -263,8 +262,9 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		reply(errMsg(m.ID, "not_joined", "сначала выполните join"))
 		return true
 	}
+	pw := h.opts.World.For(ss.pid)
 	switch m.Type {
-	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option":
+	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "jump":
 		h.gameShip(ctx, c, ss, m)
 	case "shop", "shop_buy", "shop_equip":
 		h.shopMsg(ctx, c, ss, m)
@@ -278,7 +278,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "bad_message", "некорректное движение"))
 			return true
 		}
-		w.SetMove(ss.pid, world.Vec{X: p.X, Y: p.Y})
+		pw.SetMove(ss.pid, world.Vec{X: p.X, Y: p.Y})
 	case "target":
 		var p struct {
 			ID string `json:"id"`
@@ -287,7 +287,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "bad_message", "некорректная цель"))
 			return true
 		}
-		if !w.SetTarget(ss.pid, p.ID) {
+		if !pw.SetTarget(ss.pid, p.ID) {
 			reply(errMsg(m.ID, "bad_target", "такой цели нет"))
 		}
 	case "autopilot":
@@ -298,7 +298,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "bad_message", "некорректная команда"))
 			return true
 		}
-		if !w.SetAutopilot(ss.pid, p.On) {
+		if !pw.SetAutopilot(ss.pid, p.On) {
 			reply(errMsg(m.ID, "no_target", "для автопилота выберите цель"))
 		}
 	}
@@ -307,7 +307,12 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 
 func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
 	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }
-	w := h.opts.World
+	hww := h.opts.World.For(ss.pid)
+	if hww == nil {
+		reply(errMsg(m.ID, "not_joined", "вы не в мире"))
+		return
+	}
+	w := hww
 	fail := func(err error) {
 		code := err.Error()
 		switch err {
@@ -352,6 +357,32 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		}
 	case "mine_stop":
 		w.StopMining(ss.pid)
+	case "jump":
+		var p struct {
+			To string `json:"to"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.To == "" || len(p.To) > 32 {
+			reply(errMsg(m.ID, "bad_message", "некорректный прыжок"))
+			return
+		}
+		rec, spawn, err := h.opts.World.Jump(ss.pid, p.To)
+		if err != nil {
+			reply(errMsg(m.ID, jumpCode(err), jumpText(err)))
+			return
+		}
+		h.save(rec)
+		hw := h.opts.World.For(ss.pid)
+		payload := map[string]any{"system": hw.System(), "spawn": spawn}
+		if lay, wcfg := hw.Layout(); lay.System != "" {
+			payload["layout"] = lay
+			payload["visual"] = wcfg.Visual
+		}
+		payload["systems"] = h.opts.World.Systems()
+		payload["gates"] = h.opts.World.Gates(hw.System().ID)
+		reply(Message{Type: "system_changed", ID: m.ID, Payload: mustJSON(payload)})
+		if st, ok := h.opts.World.Snapshot(ss.pid); ok {
+			h.pushState(ss, st)
+		}
 	case "set_option":
 		var p struct {
 			Name  string `json:"name"`
@@ -881,16 +912,19 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 	}
 	ss.name = rec.Name
 	h.applyCosmetics(ctx, rec.ID)
-	sys := w.System()
+	hw := w.For(rec.ID)
+	sys := hw.System()
 	welcome := map[string]any{
 		"player_id": rec.ID, "name": rec.Name, "system": sys,
 		"character": map[string]any{"gender": rec.Gender, "pilot_spec": rec.PilotSpec, "ship_type": rec.ShipType},
 	}
-	if lay, wcfg := w.Layout(); lay.System != "" {
+	if lay, wcfg := hw.Layout(); lay.System != "" {
 		// раскладка системы и визуальные параметры: клиент строит декор по seed, серверные объекты приходят в state
 		welcome["layout"] = lay
 		welcome["visual"] = wcfg.Visual
 	}
+	welcome["systems"] = h.opts.World.Systems()   // звёздная карта (Э-1)
+	welcome["gates"] = h.opts.World.Gates(sys.ID) // точки прыжков текущей системы
 	if h.opts.Pilot != nil {
 		pctx, pcancel := context.WithTimeout(ctx, 3*time.Second)
 		if ps, err := h.opts.Pilot.State(pctx, rec.ID); err == nil {
@@ -1023,6 +1057,28 @@ func (h *Handler) grantSubscriptionDaily(ctx context.Context, pid string, st sho
 	}
 	if granted {
 		h.log.Info("подписка: ежедневная награда выдана", "player", pid, "credits", daily)
+	}
+}
+
+func jumpCode(err error) string {
+	switch err {
+	case world.ErrNoLink:
+		return "no_link"
+	case world.ErrNoGate:
+		return "no_gate"
+	default:
+		return "no_system"
+	}
+}
+
+func jumpText(err error) string {
+	switch err {
+	case world.ErrNoLink:
+		return "из этой системы нет перехода туда"
+	case world.ErrNoGate:
+		return "подлетите к точке гиперперехода"
+	default:
+		return "система недоступна"
 	}
 }
 

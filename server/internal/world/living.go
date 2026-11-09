@@ -122,6 +122,14 @@ func (w *World) ApplyLayout(l worldgen.Layout, cfg worldgen.Config) error {
 	}
 	w.npcs, w.deposits, w.safe, w.layout, w.wcfg = keep, nil, nil, l, cfg
 	w.radius = l.Radius
+	// Э-1: идентичность системы берётся из раскладки (нефиксированная «Кси»)
+	w.system = System{ID: l.System, Name: l.Name}
+	for _, sp := range cfg.Systems {
+		if sp.ID == l.System {
+			w.system.Background = sp.Background
+			break
+		}
+	}
 	for _, st := range l.Stations {
 		w.safe = append(w.safe, safeZone{Vec{st.Pos[0], st.Pos[1]}, st.SafeRadius})
 		if st.ID != StationID {

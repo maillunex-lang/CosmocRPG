@@ -15,6 +15,12 @@ import (
 var defaultJSON []byte
 
 // SystemParams — параметры системы, из которых по seed строится раскладка.
+// Jump — точка гиперперехода в другую систему (Э-1, Решение №30).
+type Jump struct {
+	To  string     `json:"to"`
+	Pos [2]float64 `json:"pos"`
+}
+
 type SystemParams struct {
 	ID             string     `json:"id"`
 	Name           string     `json:"name"`
@@ -28,6 +34,7 @@ type SystemParams struct {
 	Belts          int        `json:"belts,omitempty"`         // астероидных поясов
 	PirateZones    int        `json:"pirate_zones,omitempty"`  // пиратских территорий
 	Stations       int        `json:"stations,omitempty"`      // дополнительных торговых станций
+	Jumps          []Jump     `json:"jumps,omitempty"`         // гиперпереходы в другие системы (Э-1)
 	Anomalies      int        `json:"anomalies,omitempty"`     // аномалий
 	Derelicts      int        `json:"derelicts,omitempty"`     // заброшенных станций
 	Caches         int        `json:"caches,omitempty"`        // охраняемых тайников

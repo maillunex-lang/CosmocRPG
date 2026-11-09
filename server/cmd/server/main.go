@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -233,8 +234,11 @@ func run() error {
 	}
 	log.Info("запуск зафиксирован", "boots_total", boots, "version", version)
 
+	// Э-1 (Решение №30): три системы — Аврора (главная, бывшая «Кси»), Меридиан, Красный Шторм.
+	// Каждая система — свой изолированный мир; Router направляет игроков и выполняет гиперпереходы.
 	gameWorld := world.New()
 	playerStore := world.NewPGStore(pool)
+	var universe *world.Router
 	var quests *quest.Service
 	if cfg.FeatureQuests {
 		quests = quest.NewService(log, quest.NewPGStore(pool), gameWorld.ObjectPos)
@@ -245,17 +249,48 @@ func run() error {
 	}
 	// конфигурация мира («живые локации»): версии в базе; активная применяется к миру на лету, если функция включена флагом
 	worldCfg := worldcfg.NewService(worldcfg.NewPGStore(pool), func(wc worldgen.Config) {
-		if !cfg.FeatureLiving || len(wc.Systems) == 0 {
+		if !cfg.FeatureLiving || len(wc.Systems) == 0 || universe == nil {
 			return
 		}
-		if err := gameWorld.ApplyLayout(worldgen.Generate(wc.Systems[0], wc), wc); err != nil {
-			log.Error("конфигурация мира не применена", "err", err)
-			return
+		for _, sp := range wc.Systems {
+			if w := universe.WorldOf(sp.ID); w != nil {
+				if err := w.ApplyLayout(worldgen.Generate(sp, wc), wc); err != nil {
+					log.Error("конфигурация мира не применена", "system", sp.ID, "err", err)
+				}
+			}
 		}
-		log.Info("живые локации применены", "system", wc.Systems[0].ID)
+		log.Info("живые локации применены", "systems", len(wc.Systems))
 	})
 	if err := worldCfg.Init(ctx); err != nil {
 		return err
+	}
+	// вселенная: мир на каждую систему из активной конфигурации; главный — первая (Аврора)
+	{
+		active := worldgen.DefaultConfig()
+		if raw, _, err := worldCfg.Active(ctx); err == nil && len(raw) > 0 {
+			var wc worldgen.Config
+			if json.Unmarshal(raw, &wc) == nil && len(wc.Systems) > 0 {
+				active = wc
+			}
+		}
+		universe = world.NewRouter(gameWorld)
+		for _, sp := range active.Systems {
+			w := gameWorld
+			if sp.ID != active.Systems[0].ID {
+				w = world.New()
+			}
+			lay := worldgen.Generate(sp, active)
+			if err := w.ApplyLayout(lay, active); err != nil {
+				return fmt.Errorf("раскладка системы %s: %w", sp.ID, err)
+			}
+			universe.Add(w)
+			gates := make([]world.Gate, 0, len(sp.Jumps))
+			for _, j := range sp.Jumps {
+				gates = append(gates, world.Gate{To: j.To, Pos: world.Vec{X: j.Pos[0], Y: j.Pos[1]}})
+			}
+			universe.SetGates(sp.ID, gates)
+			log.Info("система готова", "id", sp.ID, "переходы", len(gates))
+		}
 	}
 	// каталог кораблей: версии в базе, активный каталог применяется к миру на лету
 	ships := shipcatalog.NewService(shipcatalog.NewPGStore(pool), gameWorld.SetCatalog)
@@ -304,12 +339,12 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
+		World: universe, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
 	if cfg.FeatureAI {
 		studioSvc := aistudio.NewService(aistudio.NewPGStore(pool))
-		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log)
+		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log) // ИИ-1 живёт в Авроре (Э-1)
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
 		dlg.Push = wsHandler.PushChat // реплики ИИ должны доходить до живых клиентов, а не только попадать в историю

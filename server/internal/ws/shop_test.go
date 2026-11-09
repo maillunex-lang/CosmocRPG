@@ -1,6 +1,7 @@
 package ws
 
 import (
+	// testhelper
 	"context"
 	"encoding/json"
 	"testing"
@@ -12,7 +13,7 @@ import (
 func shopServer(t *testing.T) string {
 	t.Helper()
 	store := world.NewMemStore()
-	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: world.New(), Store: store, Shop: shop.NewService(shop.NewMemStore())}
+	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: testRouter(), Store: store, Shop: shop.NewService(shop.NewMemStore())}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

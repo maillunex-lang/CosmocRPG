@@ -496,6 +496,9 @@ func _on_state_for_overlays(state: Dictionary) -> void:
 	var shop := get_node_or_null("ShopLayer/ShopOverlay")
 	if shop != null and state.has("credits"):
 		shop.set_credits(int(state["credits"]))
+	var hangar := get_node_or_null("HangarLayer/HangarOverlay")
+	if hangar != null and str(state.get("ship", {}).get("type", "")) == hangar.ship_id:
+		hangar.set_data(state.get("ship", {}))
 	if _hangar_wait_ship != "" and str(state.get("ship", {}).get("type", "")) == _hangar_wait_ship:
 		_hangar_wait_ship = ""
 		var old := get_node_or_null("HangarLayer")
@@ -539,6 +542,12 @@ func open_hangar() -> Control:
 	h.closed.connect(func() -> void:
 		_hangar_wait_ship = ""
 		layer.queue_free())
+	h.engine_selected.connect(func(equipped: bool, revision: int) -> void:
+		if gateway.has_method("set_starter_engine"):
+			gateway.set_starter_engine(equipped, revision))
+	h.equipment_refresh_requested.connect(func() -> void:
+		if gateway.has_method("refresh_equipment"):
+			gateway.refresh_equipment())
 	h.ship_selected.connect(func(id: String) -> void:
 		_hangar_wait_ship = id
 		gateway.set_ship(id))

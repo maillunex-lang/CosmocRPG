@@ -1,3 +1,8 @@
+# C-RT-02 завершён
+Server bootstrap01bc109; server dock setter — предыдущий commit в git log; client controls и настоящий PG/Godot regression — этот commit. Targeted server race/PG PASS, hangar39/0, HUD161/0, live PG→Godot PASS. Следующий C-RT-03: fetch/merge latest main, исправить отдельно baseline corp fixture, последовательный общий suite/vet/build и сверка новых shared journals. ERROR-SR-007 не менять; production/APK не публиковать. Риск slowDB mutex latency≤3s сохранён в ADR005/API. Старые разделы ниже — история, не актуальный TODO runtime.
+
+---
+
 # Продолжение C-RT-01 (2026-11-09)
 Пользователь разрешил1→2→3: bootstrap, dock-only setter/UI, затем сверка и merge main. C-RT-01 DONE: runtime/main подключены к PG store; tests PG world/equipment/db PASS и targeted WS PASS. Полный параллельный suite имеет timeout account harness(CST-ERROR-005), нужна повторная проверка. Сейчас C-RT-02 TODO. Ветка прежняя, main не менялся. Собственный контейнер cosmoc-sr100c-runtime-20261109 временно нужен для следующих тестов, удалить в конце сессии. Не публиковать production/APK без ключей/разрешения. Подробности новых решений и фактических запусков в DECISIONS/REGRESSION_TESTS.
 

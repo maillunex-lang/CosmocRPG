@@ -10,6 +10,8 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 signal skin_selected(skin_id: String)
 signal spec_selected(spec_id: String)
 signal ship_selected(ship_id: String)
+signal engine_selected(equipped: bool, revision: int)
+signal equipment_refresh_requested
 signal closed
 
 var ship_id := ShipDef.DEFAULT_ID
@@ -19,6 +21,9 @@ var spec := "interceptor"
 var _visual: Node3D
 var _turntable: Node3D
 var _module_info: Label
+var _engine_button: Button
+var _engine_reason: Label
+var _equipment_refresh: Button
 var _passport_info: Label
 var _passport: Dictionary = {}
 var _max_level := 0
@@ -112,6 +117,18 @@ func _ready() -> void:
 	_module_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_module_info.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
 	box.add_child(_module_info)
+
+	_engine_button = ActionButton.new()
+	_engine_button.pressed.connect(_toggle_engine)
+	box.add_child(_engine_button)
+	_engine_reason = Label.new()
+	_engine_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_engine_reason.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	box.add_child(_engine_reason)
+	_equipment_refresh = ActionButton.new()
+	_equipment_refresh.text = "Обновить оснащение"
+	_equipment_refresh.pressed.connect(func() -> void: equipment_refresh_requested.emit())
+	box.add_child(_equipment_refresh)
 
 	_passport_info = Label.new()
 	_passport_info.name = "PassportInfo"
@@ -247,6 +264,7 @@ func _refresh() -> void:
 			var installed := bool(module.get("owned", false)) and bool(module.get("equipped", false))
 			_module_info.text = "Штатный двигатель: %s\nОткрывает M01 · Форсаж" % ("установлен" if installed else "не установлен")
 	_module_info.visible = _module_info.text != ""
+	_refresh_engine_controls()
 	_passport_info.visible = not _passport.is_empty()
 	if not _passport.is_empty():
 		var groups := {"weapon": 0, "defensive": 0, "technical": 0, "special": 0}
@@ -267,3 +285,39 @@ func _refresh() -> void:
 func _process(delta: float) -> void:
 	_turntable.rotation.y += delta * 0.6
 	_visual.update_motion(delta, 0.4, 0.0, false)
+
+
+func _native_engine() -> Dictionary:
+	for module in _data.get("modules", []):
+		if module is Dictionary and str(module.get("prototype_id", "")) == "ENG-S-START":
+			return module
+	return {}
+
+
+func _toggle_engine() -> void:
+	var status: Dictionary = _data.get("equipment", {})
+	var module := _native_engine()
+	if not bool(status.get("can_change", false)) or not status.has("revision") or not bool(module.get("owned", false)):
+		return
+	# Keep presentation unchanged until an authoritative state arrives.
+	engine_selected.emit(not bool(module.get("equipped", false)), int(status["revision"]))
+
+
+func _refresh_engine_controls() -> void:
+	var status: Dictionary = _data.get("equipment", {})
+	var module := _native_engine()
+	var supported := ship_id == "FTR-001" and not status.is_empty()
+	_engine_button.visible = supported
+	_engine_reason.visible = supported
+	_equipment_refresh.visible = supported and not status.has("revision")
+	_engine_button.text = "Снять двигатель" if bool(module.get("equipped", false)) else "Установить двигатель"
+	_engine_button.disabled = not bool(status.get("can_change", false)) or not status.has("revision") or not bool(module.get("owned", false))
+	var reasons := {
+		"not_at_station": "Подлетите к станции для смены оснащения.",
+		"equipment_in_combat": "Недоступно в бою и 10 секунд после него.",
+		"equipment_busy": "Остановитесь, отключите автопилот и дождитесь окончания форсажа.",
+		"equipment_unavailable": "Не удалось подтвердить оснащение. Обновите состояние.",
+		"equipment_unsupported_ship": "Смена оснащения пока доступна только Стрижу.",
+		"dead": "Корабль уничтожен."
+	}
+	_engine_reason.text = str(reasons.get(str(status.get("reason", "")), "Смена у станции вне боя. Снятие отключит M01 · Форсаж."))

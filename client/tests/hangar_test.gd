@@ -94,6 +94,28 @@ func _run() -> void:
 	_c(server_gateway._ability_ids[0] == "boost" and old_state["skills"][0]["enabled"], "старый сервер без новых полей сохраняет прежний навык")
 	hud._apply_buttons(old_state, {}, old_state["ship"])
 	_c(not hud._skill_buttons[0].disabled, "HUD не блокирует старый совместимый навык")
+	_c(not h._engine_button.visible, "старый сервер не показывает неподдерживаемую команду")
+	wire_ship["equipment"] = {"revision": 4, "can_change": true}
+	wire_ship["modules"] = [{"prototype_id": "ENG-S-START", "owned": true, "equipped": true}]
+	server_gateway._on_message("state", {"ship": wire_ship}, "")
+	var saved_state: Dictionary = server_gateway.snapshot()
+	h.set_data(saved_state["ship"])
+	var changes: Array = []
+	h.engine_selected.connect(func(on: bool, revision: int) -> void: changes.append([on, revision]))
+	_c(h._engine_button.visible and not h._engine_button.disabled and h._engine_button.text.contains("Снять"), "сервер разрешил снятие в доке")
+	h._engine_button.pressed.emit()
+	_c(changes == [[false, 4]] and h._data["modules"][0]["equipped"], "команда несёт ревизию и не меняет отображение до подтверждения")
+	wire_ship["equipment"] = {"revision": 5, "can_change": false, "reason": "equipment_in_combat"}
+	wire_ship["modules"][0]["equipped"] = false
+	server_gateway._on_message("state", {"ship": wire_ship}, "")
+	h.set_data(server_gateway.snapshot()["ship"])
+	_c(h._engine_button.disabled and h._engine_reason.text.contains("10 секунд") and h._engine_button.text.contains("Установить"), "снятый двигатель и запрет боя подтверждает сервер")
+	h._engine_button.pressed.emit()
+	_c(changes.size() == 1, "disabled state не отправляет команду даже при прямом сигнале")
+	wire_ship["equipment"] = {"can_change": false, "reason": "equipment_unavailable"}
+	server_gateway._on_message("state", {"ship": wire_ship}, "")
+	h.set_data(server_gateway.snapshot()["ship"])
+	_c(h._equipment_refresh.visible and h._engine_button.disabled, "неопределённое состояние предлагает перечитать оснащение")
 	server_gateway.free()
 	h.closed.emit()
 	await process_frame

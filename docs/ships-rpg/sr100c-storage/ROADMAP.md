@@ -16,8 +16,10 @@ Kimi занимается ERROR-SR-007 в main. Не менять клиент, 
 | ID | Приоритет | Зависимости | Критерии DONE | Статус | Даты | Файлы / проверки |
 |---|---|---|---|---|---|---|
 | C-RT-01 | P0 | C-ST-01…03 | Загрузка до Join; reconnect/hull/jump сохраняют снятый двигатель; fail closed | DONE | 2026-11-09 / 2026-11-09 | world/ws/main; real PG + WS |
-| C-RT-02 | P0 | C-RT-01 | Session-owned CAS команда только у станции вне боя; rollback/reconcile; UI/reasons | IN_PROGRESS | 2026-11-09 / — | world/ws/client; PG/WS/Godot |
+| C-RT-02 | P0 | C-RT-01 | Session-owned CAS команда только у станции вне боя; rollback/reconcile; UI/reasons | DONE | 2026-11-09 / 2026-11-09 | world/ws/client; PG/WS/Godot |
 | C-RT-03 | P0 | C-RT-02 | Сверка актуального main/Kimi, миграций, тестов, объединение и общие журналы | TODO | — / — | main + roadmap/HANDOFF; CI |
 Пользователь разрешил последовательность и последующее объединение. Работа ведётся в feature branch; production не разрешён. ERROR-SR-007 остаётся за Kimi.
 
 C-RT-02a server DONE: `equipment_set/get`, current session ownership, strict payload, actual station radius, motion/active boost/combat grace, bounded commit/reconcile. C-RT-02b client — проверен локально, фиксируется следующим отдельным коммитом.
+
+C-RT-02b client DONE: ангар показывает состояние, кнопку и server reason; старый сервер/демо не предлагают неподдерживаемую команду. Открытый ангар обновляется со state, local optimistic mutation отсутствует. Headless hangar39/0, HUD161/0; реальный Godot→WS→PG unequip/reconnect/refit/M01 PASS. Android/графическая приёмка — SR-100d, не DONE.

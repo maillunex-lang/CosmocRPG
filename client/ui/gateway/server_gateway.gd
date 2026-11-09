@@ -247,7 +247,7 @@ func _on_error(payload: Dictionary) -> void:
 			else:
 				join_failed.emit(text)
 		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec", \
-				"module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big":
+				"equipment_unavailable", "equipment_revision_conflict", "equipment_busy", "equipment_in_combat", "equipment_unsupported_ship", "module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big":
 			command_failed.emit("space", text)
 		_:
 			command_failed.emit("server", text)
@@ -268,6 +268,8 @@ func _ship_dict(ship: Dictionary) -> Dictionary:
 	d["in_safe"] = bool(ship.get("in_safe", false))
 	if ship.has("level"):
 		d["level"] = int(ship["level"])
+	if ship.get("equipment") is Dictionary:
+		d["equipment"] = ship["equipment"]
 	if ship.get("modules") is Array:
 		d["modules"] = ship["modules"]
 	d["cosmetics"] = ship.get("cosmetics", {}) if ship.get("cosmetics") is Dictionary else {}
@@ -564,3 +566,13 @@ func _auto_battle_tick() -> void:
 		_auto_sent_id = id
 		_auto_sent_ms = now
 	attack(id)
+
+
+func set_starter_engine(equipped: bool, revision: int) -> void:
+	if _joined and _client != null:
+		_client.send_message("equipment_set", {"equipped": equipped, "revision": revision})
+
+
+func refresh_equipment() -> void:
+	if _joined and _client != null:
+		_client.send_message("equipment_get", {})

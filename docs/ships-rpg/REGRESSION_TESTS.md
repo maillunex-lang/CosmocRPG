@@ -114,3 +114,14 @@ CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 для m
 - CI: `.github/workflows/ci.yml` клиентский job ставит `mesa-vulkan-drivers libvulkan1 vulkan-tools`.
 
 Граница: проверка desktop/CI; Android-визуальная приёмка — у владельца.
+
+## SR-100c: storage → bootstrap → dock setter → ангар
+2026-11-09. Коммиты38385f2/6cec61f(schema/store),01bc109(bootstrap),ac029a8(setter/reconcile),7407d43(client/livePG),9573379(corp fixture), merge main74f9cfb. [Полная история запусков](sr100c-storage/REGRESSION_TESTS.md).
+- Реальный PostgreSQL16 в отдельном локальном tmpfs контейнере; каждый test — собственная schema.23 initial targeted cases PASS/0 SKIP/FAIL: legacy XP, unique/ownership/cross-hull FK, cascade, rollback, CAS16, concurrent snapshots, old autosave.
+- Bootstrap realPG world/equipment/db race PASS3.152s/5.638s/2.972s; targeted WS PASS3.035s. Reconnect и fresh server запрещают обе boost/M01 aliases для снятого двигателя; hull/jump/stale-bootstrap проверены.
+- Runtime targeted race с реальным PG4 пакета PASS4.137s/5.085s/1.407s/3.803s. Unsafe gate tests, recent outgoing/incoming combat и transfer, CAS, rollback/lost commit response/failed reload+recovery, movement serialization. Missing revision/equipped и чужие owner/item selectors отклоняются.
+- Godot4.6.3 import PASS/0 ERROR; hangar39/0; HUD161/0; оба лога без raw ERROR. Старый payload скрывает новые controls.
+- `COSMOC_TEST_GODOT=godot COSMOC_TEST_DATABASE_URL=<isolated localhost> go test -race -count=1 -v ./internal/ws -run '^TestEquipmentGodotClientPostgres$'` PASS10.426s. Реальный клиент: кнопка снять→SQL revision1→disabled M01→reconnect→состояниеfalse→кнопка установить→revision2→успешный M01; конечное SQL состояние проверяет Go. Harness проверяет raw ERROR и lifecycle после закрытия. Новый сценарий добавлен в tools/test_client.sh при наличии PG_URL/COSMOC_TEST_DATABASE_URL (CI уже имеет PostgreSQL service); renderer шаги не менялись.
+- Corp baseline fix9573379: race+realPG PASS1.523s. Первоначальные FAIL и два account timeout не скрыты, см. ERROR_LOG. Account recheck отдельно PASS14.597s, deadlines не ослаблены.
+- `go vet ./...` и `go build -o /workspace/scratch/cosmoc-sr100c-final ./cmd/server` PASS после merge74f9cfb. `bash -n tools/test_client.sh` PASS. Первый final-suite setup не запустил пакеты из-за ошибочного написания timeout-флага; исправлено на `-timeout=300s`, окончательный результат ниже.
+- Полный последовательный Go+PG+Godot race suite сейчас проверяется; CI — после публикации. Android/Vulkan/release/APK/production не заявлены готовыми. ERROR-SR-007 остаётся Kimi.

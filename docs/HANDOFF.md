@@ -1,3 +1,10 @@
+# Последняя передача — SR-100c (2026-11-09)
+Пользователь разрешил1→2→3: загрузка сохранённого оснащения, dock-only смена+ангар, безопасное объединение main. Codex работал в отдельном worktree/ветке codex/sr100c-storage; root main checkout не менялся. Kimi ведёт ERROR-SR-007, статус его ошибки не менять. Latest main объединяется обычным merge, без force, чужие QUESTJOB документы сохранены.
+Готово локально: native Strizh engine storage/CAS, authoritative bootstrap/reconnect/restart/hull/jump, session-owned оборудование только у станции вне боя, recovery после SQL errors, ангар/HUD. Targeted realPG/race PASS, hangar39/0, HUD161/0, настоящий PG→Godot scenario PASS; полный suite/remote publication проверяются. Corp baseline fixture исправлен9573379; прежние account timeout повторно отдельно PASS без ослабления deadlines. Production/APK не выпущены; SDK/прежние release credentials здесь не настроены.
+Подробная актуальная передача: [ships-rpg/HANDOFF.md](ships-rpg/HANDOFF.md); [roadmap](ships-rpg/ROADMAP.md), [тесты](ships-rpg/REGRESSION_TESTS.md), [ошибки](ships-rpg/ERROR_LOG.md), [task journal](ships-rpg/sr100c-storage/ROADMAP.md). SlowDB mutex latency≤3s — известное ограничение alpha, нагрузочный coordinator ещё нужен. SR-100d (Android/graphical/release) остаётся TODO. Старые указания «Codex в main, Kimi отдельно» ниже — история, заменены текущим разрешением.
+
+---
+
 # Журнал передачи задач
 
 ## 2026-11-08 — Этап 00, шаги 00.1–00.2

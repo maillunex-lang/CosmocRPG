@@ -19,6 +19,14 @@ done
 echo "== Ships RPG: настоящий локальный WebSocket → ангар Стрижа (без БД)"
 (cd "$ROOT/server" && COSMOC_TEST_GODOT=godot go test -count=1 ./internal/ws -run '^TestPassportGodotClient$') || rc=1
 
+echo "== Ships RPG: сохранённый двигатель, настоящий WebSocket → PostgreSQL → Godot"
+EQUIPMENT_TEST_DATABASE_URL="${COSMOC_TEST_DATABASE_URL:-${PG_URL:-}}"
+if [ -n "$EQUIPMENT_TEST_DATABASE_URL" ]; then
+  (cd "$ROOT/server" && COSMOC_TEST_DATABASE_URL="$EQUIPMENT_TEST_DATABASE_URL" COSMOC_TEST_GODOT=godot go test -race -count=1 ./internal/ws -run '^TestEquipmentGodotClientPostgres$') || rc=1
+else
+  echo "SKIP  оборудование PostgreSQL: COSMOC_TEST_DATABASE_URL/PG_URL не заданы"
+fi
+
 echo "== камера: реальная отрисовка обязательных видов (Vulkan Mobile, аудио выключено)"
 CAM_LOG="$(mktemp)"
 timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" \

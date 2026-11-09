@@ -1,37 +1,45 @@
-# C-RT-02 завершён
-Server bootstrap01bc109; server dock setter — предыдущий commit в git log; client controls и настоящий PG/Godot regression — этот commit. Targeted server race/PG PASS, hangar39/0, HUD161/0, live PG→Godot PASS. Следующий C-RT-03: fetch/merge latest main, исправить отдельно baseline corp fixture, последовательный общий suite/vet/build и сверка новых shared journals. ERROR-SR-007 не менять; production/APK не публиковать. Риск slowDB mutex latency≤3s сохранён в ADR005/API. Старые разделы ниже — история, не актуальный TODO runtime.
+# HANDOFF ветки SR-100c, 2026-11-09
 
----
+## Состояние и координация
+Пользователь разрешил1→2→3: подключить сохранение при входе, смену у станции и интерфейс, затем сверить/объединить main. Codex работает в `codex/sr100c-storage`, worktree `/workspace/worktrees/cosmoc-sr100c-storage`. Root `/workspace/CosmocRPG` (main) не переключался и не менялся. Kimi делает ERROR-SR-007 в main; не закрывать его ошибку/не подхватывать незавершённую ветку. Старые указания «Codex непосредственно main» ниже заменены этим разрешением.
+SR-100c-1/2 DONE локально; SR-100c-3 IN_PROGRESS: последние проверки/публикация. Main до публикации содержит чужие новые документы QUESTJOB; merge74f9cfb сохранил их без конфликтов, миграция0020 свободна. Перед push повторить fetch/merge, только non-force. Production и выпуск APK не разрешены этой интеграцией.
 
-# Продолжение C-RT-01 (2026-11-09)
-Пользователь разрешил1→2→3: bootstrap, dock-only setter/UI, затем сверка и merge main. C-RT-01 DONE: runtime/main подключены к PG store; tests PG world/equipment/db PASS и targeted WS PASS. Полный параллельный suite имеет timeout account harness(CST-ERROR-005), нужна повторная проверка. Сейчас C-RT-02 TODO. Ветка прежняя, main не менялся. Собственный контейнер cosmoc-sr100c-runtime-20261109 временно нужен для следующих тестов, удалить в конце сессии. Не публиковать production/APK без ключей/разрешения. Подробности новых решений и фактических запусков в DECISIONS/REGRESSION_TESTS.
+## Коммиты и поведение
+- 38385f2: migration0020 adds player_module_items/player_ship_loadouts/player_ship_loadout_slots; owner+ship FK, unique grant/instance/slot, deferred ownership FK корректно поддерживает owner cascade. Никаких destructive migrations/перезаписи XP.
+- 6cec61f: equipment PG/memory Ensure/Load/SetEngine, idempotent bootstrap, transactional revision CAS, согласованные snapshot, запрет повреждённой/чужой/неподдержанной сборки; старый autosave не пишет эти таблицы.
+- 01bc109: server main включает PG equipment store. До Join загружается сохранённый engine; ошибка закрывает вход до создания/замены сессии. Для других hull Load без grant, Strizh Ensure только первый раз. Runtime-only Record fields не сохраняются old Store.Save; перенос между мирами/корпусами/перезаходом сохраняет состояние. Старая ревизия не затирает новую в live ship.
+- ac029a8: equipment_set/get; payload revision+equipped, owner из текущей joined session. Только Strizh ENG-S-START/tech-1. Живой неподвижный корабль у основной станции(radius20); no autopilot/mining/active boost/attack и10s после входящего/исходящего урона. Combat grace переносится при jump. Проверка/DB/apply сериализованы; SQL error перечитывает authoritative state, неизвестный outcome закрывает boost до recovery. Снятие сохраняет learned rank1/CD/энергию, запрещает обе M01/boost aliases.
+- 7407d43: ангар показывает кнопку и server reason, меняет отображение только по state; открытый ангар обновляется. Старый payload/демо скрывает неподдерживаемые controls; HUD availability использует прежний server-owned путь. Новый настоящий PG/WS/Godot scenario.
+- 9573379: test-only исправление прежней corp fixture (отдельный32-byte token hash); production corp SQL не менялся.
 
----
+## Фактические проверки
+Реальный PostgreSQL16 только в собственном local container/tmpfs; каждый test получает отдельную схему. Initial23 SQL теста/подтеста PASS без skip; bootstrap world/equipment/db race PASS; runtime targeted4 packages race+PG PASS(4.137s/5.085s/1.407s/3.803s). Corp race+PG PASS1.523s. Godot4.6.3 import0 ERROR; hangar39/0; HUD161/0; live equipment PG/Godot PASS10.426s: снять→disabled M01→reconnect→refit→M01, конечный SQL revision2; raw ERROR отвергаются. Vet/build PASS после74f9cfb, bash-n клиентского test runner PASS. Полный последовательный Go+PG+Godot race suite ещё идёт, не объявлять весь CI зелёным до результата.
+Все первоначальные FAIL сохранены в ERROR_LOG/REGRESSION_TESTS. ERROR-SR-009/CST004 Resolved: corp fixture TEXT/BYTEA. CST005:2 прежних account WS теста timed out при параллельном запуске, причина не установлена; отдельный повтор PASS14.597s, deadlines/криптография не менялись. Итог общего suite дописывается после завершения. ERROR-SR-007 остаётся Kimi. Graphical/Vulkan/Android smoke не выполнялись в этом этапе.
 
-# HANDOFF — SR-100c storage, 2026-11-09
+## Известные ограничения и неготовое
+Это native-engine slice SR-100c, не общий inventory/масса/мощность/arbitrary modules/3 builds/все72 навыка. Новых stat modifiers поверх legacy base нет. Основная станция — настоящий station object, не вся safe-zone. Radius20/grace10 — initial alpha параметры, не завершённая балансировка.
+DB callback держит mutex системы до write2s+recovery1s: строгая атомарность без TOCTOU, но медленная DB может задержать систему до3s (и текущий tick Router). До роста нагрузки нужен неблокирующий coordinator/queue/reservation и нагрузочная приёмка. Повтор SetEngine после неоднозначного COMMIT нельзя трактовать как rollback — сначала read.
+APK release требует прежние app ID/signing keystore, SDK/AAR и manifest key; в cloud secrets bindings отсутствуют. Ключи не генерировать/не просить в чат. Новый APK/manifest не публиковались. Реальное обновление Android и production server — SR-100d с отдельным разрешением. Старые клиенты совместимы, новые controls требуют нового клиента.
 
-Ветка `codex/sr100c-storage`, worktree `/workspace/worktrees/cosmoc-sr100c-storage`, база0b77fea. Main checkout `/workspace/CosmocRPG` не переключать: Kimi занимается ERROR-SR-007. В main не объединяли, production не развёртывали. Общие журналы, клиент, HUD, CI не меняли. При объединении обязательно перенести ссылку на этот task journal в главную ROADMAP/HANDOFF/ERROR_LOG/REGRESSION_TESTS.
+## Следующие три шага
+1. Проверить полный локальный suite и последний remote head/CI. Сохранить фактические PASS/FAIL/SKIP и run URL. Не маскировать отмену CI чужим docs-push как успешный прогон этого head.
+2. Завершить публикацию проверенной интеграции в main без force, сохранив все чужие QUESTJOB/другие изменения. Root main checkout не обновлять пока он может принадлежать Kimi; следующему сеансу самостоятельно fetch и согласовать рабочую копию. Сверять migration numbers до любого будущего добавления.
+3. SR-100d: графическая/Android приёмка вместе с результатами ERROR-SR-007, latency coordinator/load test перед масштабированием; подготовка release APK по RELEASE_PROCESS.md при доступных прежних ключах. Production только после разрешения.
 
-## Готово
-C-ST-01/02/03 завершены в пределах storage slice. Коммиты38385f2(schema/interface) и6cec61f(PG/memory stores+tests). Миграция0020 добавляет только3 таблицы; не переписывает players/XP. Native ID совпадает с прежним world starter. Ensure выдаёт начальную связку один раз, не надевает снятый двигатель при reconnect. Load read-only. SetEngine использует CAS revision и SQL-транзакцию; один победитель при16 конкурентных запросах. Старый autosave не пишет эти таблицы. Composite ownership/ship FK запрещает чужой предмет; deferred проверка допускает owner cascade, но запрещает удалить fitted item отдельно. Неизвестные/повреждённые slots отвергаются без потери данных.
+## Возобновление и файлы
+Сначала читать главную docs/ROADMAP.md, ships-rpg/{ROADMAP,ERROR_LOG,REGRESSION_TESTS,HANDOFF,DECISIONS}.md и sr100c-storage journals. Последний SHA — `git log -1`, поскольку этот документ сам входит в очередной docs commit. Paths: server/internal/equipment/*, world/{starter_engine,starter_loadout,equipment,world,combat,store}.go, ws/{equipment*,hub}.go, cmd/server/main.go, db/migrations/0020*, corp/pgstore_test.go; client/ui/ships/hangar.gd, ui/gateway/server_gateway.gd, scripts/space/space_screen.gd, tests/{hangar,equipment_online}_test.gd; tools/test_client.sh (новый PG scenario, render sections untouched).
+```bash
+cd /workspace/worktrees/cosmoc-sr100c-storage
+git status --short --branch
+git fetch origin main
+git log -8 --oneline
+export PATH=/workspace/scratch/toolchain/go/bin:$PATH
+cd server
+# COSMOC_TEST_DATABASE_URL должен указывать только на отдельную тестовую БД.
+COSMOC_TEST_GODOT=godot go test -race -p 1 -count=1 -timeout=300s ./...
+go vet ./...
+go build ./cmd/server
+```
+Системный /usr/bin/go — не Go toolchain. DB test schemas убираются testdb.Pool; контейнер cosmoc-sr100c-runtime-20261109 принадлежит только этой сессии и должен быть удалён в конце. Сырые логи /workspace/scratch/sr100c-* ephemeral; итог хранить в git, тестовый URL не превращать в production конфиг.
 
-## Проверки и ограничения
-Реальный PostgreSQL16:23 targeted теста/подтеста PASS,0 SKIP/FAIL. Race, rollback после промежуточного DELETE, concurrent snapshot, owner cascade, theft/double fit, legacy XP проверены. Vet/build PASS. Общий Go+PG race suite exit1: единственный падающий тест TestPGStoreCorporationFlow, SQLSTATE42P08 в существующей fixture. Воспроизведён на чистом архиве базы0b77fea; CST-ERROR-004 OPEN. Остальные результаты и предыдущие исправленные ошибки описаны в локальных REGRESSION_TESTS/ERROR_LOG. Общий suite нельзя объявлять зелёным.
-Собственный временный PostgreSQL контейнер удалён после проверок, данные были tmpfs. Production DB/сервер/APK не использовались. Клиентский тест Godot здесь не запускался: это зона Kimi.
-
-## Что ещё не сделано
-Store не подключён к runtime, world.Join, WS/RPC или UI. Снятие двигателя в игре пока не включено. Это не завершение всего SR-100c. Отсутствуют серверная авторизация команды, проверка настоящего dock/combat, budget массы/мощности, reconciliation committed DB→world. Новый StarterStore не принимает произвольных item/prototype/slot. Не использовать его как публичный equip API.
-При неоднозначном сетевом сбое COMMIT будущий coordinator должен перечитать authoritative loadout: ошибка ответа не гарантирует откат уже принятой транзакции. Нельзя возвращать world в старое состояние вслепую.
-
-## Следующие шаги
-1. После завершения Kimi fetch origin main, проверить его HANDOFF, изменения API и уникальность номера0020 (0019 уже занята корпорациями). На последней проверке origin/main=c274922, изменения после базы только QUESTJOB/GearScore.md и HiddenMap.md. Нашу draft миграцию можно перенумеровать до применения, опубликованные/применённые чужие миграции не менять.
-2. Согласованно объединить эту feature branch, перенести статусы в общую roadmap и журналы. Перед merge повторить targeted SQL tests и проверить общий CI; baseline corp FAIL не скрывать. Не мержить автоматически одновременно с Kimi.
-3. Отдельным небольшим этапом реализовать coordinator bootstrap до world.Join и dock-only atomic setter с актуальными battle/state checks, затем WS и UI. Обязательно проверить reconnect/rollback/stale autosave до включения игрокам. Production deployment требует разрешения пользователя.
-
-## Повторение проверок
-Нужен настоящий PostgreSQL и COSMOC_TEST_DATABASE_URL на отдельную тестовую БД (testdb создаёт/удаляет отдельные схемы). В server: `go test -race -count=1 ./internal/equipment ./internal/db`, затем `go vet ./...` и `go build ./cmd/server`. В текущем окружении Go находится в /workspace/scratch/toolchain/go/bin (системный /usr/bin/go не toolchain). Полные локальные JSON logs находятся в /workspace/scratch/equipment-storage-final-targeted.jsonl и equipment-storage-all-go-pg.jsonl; они ephemeral, итог сохранён в git.
-
-## C-RT-02a checkpoint
-C-RT-01 commit01bc109. Server setter/reconcile+tests готовы, client changes остаются в worktree и будут отдельным коммитом. Targeted realPG/race PASS; документы API и ADR005 описывают exact gates и latency limitation. Новые тесты equipment_godot_test.go требуют COSMOC_TEST_GODOT и отдельную DB. Следом client commit, затем latest main merge/full checks.
-
-C-RT-03 underway: corp fixture fixed/tested separately (CST-ERROR-004 Resolved), accounts recheck PASS(CST-ERROR-005 Workaround). Latest origin/main72689d0 only QUESTJOB docs since base; no migration0020 collision. Next merge origin/main into feature preserving all commits, global docs, full sequential Go+PG and live Godot, then non-force push main per user1→2→3 authorization. Root main checkout remains untouched.
+Главная карта — ../ROADMAP.md, этот журнал ей подчинён. Детали первоначальных storage failures сохранены в ERROR_LOG.md.

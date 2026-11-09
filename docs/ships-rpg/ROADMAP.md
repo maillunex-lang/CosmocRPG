@@ -99,8 +99,10 @@ CI c9a3391 для полного gameplay шага — success. Дополнит
 |---|---|---|---|---|---|---|
 | SR-100c-4a | P0 | SR-100c | Per-player reservation, callback вне world mutex; tick/snapshot/другие игроки продолжают работу; actor actions guarded; no invulnerability | DONE | 2026-11-09 / 2026-11-09 | blocked-store red→green; полный world race PASS1.787s / этот core commit |
 | SR-100c-4b | P0 | SR-100c-4a | Per-owner session gate вместо global Handler mutex на IO; reconnect/leave/CAS/recovery безопасны | DONE | 2026-11-09 / 2026-11-09 | slowIO red→green; PG row-lock+reconnect/gate cleanup race PASS6.553s / этот WS commit |
-| SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | IN_PROGRESS | 2026-11-09 / — | actual tests/CI/diff / — |
+| SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | DONE | 2026-11-09 / 2026-11-09 | full441/22 PASS, hangar40/0, vet/build PASS; main5b71ca7, remote CI pending |
 
 SR-100c-4c UI substep DONE локально: pending-label + hangar40/0, веточный commit. Server code commitsbc0aed9/aa7f950, vet/build PASS. Сам4c остаётся IN_PROGRESS до полного прогона/интеграции. Нет нового APK/production публикации.
 
 SR-100c-4 validation завершена: полный Go+PG+Godot race suite441 test/subtest PASS/22 пакета,1 старый ambient skip,0 FAIL; hangar40/0; vet/build PASS.4c IN_PROGRESS до подтверждения публикации. Source a5bfd2e, main проверена до9b02d69 (только QUESTJOB/FinalQuest.md). Новых миграций нет; прежняя0020 не менялась.
+
+SR-100c-4c DONE: main7db4176→5b71ca7 и origin/codex/sr100c-coordinator опубликованы обычным non-force push. Свежая main меняла только FinalQuest.md; все чужие изменения сохранены. Source послеa5bfd2e не менялся, поэтому docs-only merge не требовал нового полного прогона. CI code head [42656434874](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42656434874) pending на момент проверки, не success; следующие docs/main commits могут заменить/отменить run. Свой PG container удалён, root main worktree не тронут. Следующий SR-100d; ERROR-SR-007 остаётся Kimi, APK/production не выпущены.

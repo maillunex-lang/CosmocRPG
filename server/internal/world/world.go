@@ -265,7 +265,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 		}
 		p.persistentEquipment = p.persistentEquipment || r.PersistentEquipment
 		if r.StarterLoadout != nil || p.persistentEquipment {
-			p.initStarterEngine()
+			p.refreshStarterEngine()
 		}
 		p.connected = true
 		p.Name = r.Name

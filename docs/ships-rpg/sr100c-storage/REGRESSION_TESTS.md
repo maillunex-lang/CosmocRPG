@@ -40,3 +40,7 @@ Godot4.6.3 `--headless --path client --import`: PASS,0 ERROR. Автоматич
 APK не собирался: release Android SDK/AAR/прежние signing bindings в окружении не настроены. Ключи не генерировались, update manifest не публиковался. Следующий этап — интеграция/main/CI, а не production.
 
 C-RT-03 baseline repair: corp race+realPG PASS1.523s после корректного32-byte fixture hash; account WS recheck PASS14.597s без изменения production/test deadlines. Targeted runtime4 пакета завершилисьPASS, WS3.803s. Полный последовательный suite ещё впереди.
+
+Полный последовательный suite перед final rank fix:431 test/subtest PASS,22 пакета PASS,1 существующий ambient test SKIP,3 пакета без тестов,0 FAIL, exit0. Все SQL и оба Godot live harness выполнены. Code74f9cfb/docs0a1ead6. Новый regression ERROR-SR-010 сначала FAIL(rank1 вместо0), после fix повторяются world/equipment/ws с race+PG+Godot; итог записать после завершения.
+
+После ERROR-SR-010 fix: `COSMOC_TEST_GODOT=godot COSMOC_TEST_DATABASE_URL=<isolated PG> go test -race -p 1 -count=1 -json -timeout=180s ./internal/world ./internal/equipment ./internal/ws` — **157 test/subtest PASS,3 packages PASS,0 SKIP/FAIL,exit0** (3.631s/6.075s/27.850s). Включены новый rank0/4 regression и оба живых Godot harness. `go vet ./...` и `go build ... ./cmd/server` после этого fix — PASS. Более широкий suite не повторялся: все затронутые пакеты перепроверены целиком, остальные Go файлы не менялись.

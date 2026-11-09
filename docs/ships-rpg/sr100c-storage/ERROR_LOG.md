@@ -31,3 +31,6 @@ Schema исправления CST-ERROR-001/003 зафиксированы38385f
 
 ### CST-ERROR-005 Workaround / повторная проверка
 Повтор двух существующих account WS тестов отдельно: `go test -race -count=1 ./internal/ws -run '^TestAccountSurvivesReinstall$|^TestAccountProtocolErrors$'` PASS14.597s. Ранее падали оба теста с five-second client context timeout. Production код/криптография/deadline не менялись. Причина первого сбоя не установлена; выбран последовательный общий suite `-p 1`, чтобы исключить конкуренцию с другими тяжёлыми пакетами, но это не доказательство первопричины. Итог общего прогона фиксируется отдельно.
+
+## ERROR-SR-010 (общий ID, final review)
+До публикации найден и воспроизведён сброс boostRank до1 при runtime refresh. Новый regression rank0/4+energy37+cooldown100 красный: got rank1 want0. Cold initializer заменён на сохраняющий learned rank refresh только для live Join/RestoreStarter/ChangeStarter; initial grant неизменён. Подробности общего ERROR_LOG.md; повтор затронутых пакетов идёт после успешного полного suite.

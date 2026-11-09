@@ -90,7 +90,7 @@ func (w *World) ChangeStarter(id string, revision int64, equipped bool, commit f
 		state = StarterLoadout{}
 	}
 	if state.Valid(id) && p.restoreStarter(&state) {
-		p.initStarterEngine()
+		p.refreshStarterEngine()
 		if !state.Equipped {
 			p.boostUntil = 0
 		}
@@ -98,7 +98,7 @@ func (w *World) ChangeStarter(id string, revision int64, equipped bool, commit f
 	}
 	// Never report success or retain an enabled ability with unknown DB outcome.
 	p.starterLoadout = nil
-	p.initStarterEngine()
+	p.refreshStarterEngine()
 	p.boostUntil = 0
 	return ErrEquipmentUnavailable
 }

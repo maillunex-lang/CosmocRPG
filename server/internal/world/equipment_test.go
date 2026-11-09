@@ -138,3 +138,27 @@ func TestEquipmentCommitSerializesMovement(t *testing.T) {
 		t.Fatal("commit/movement ordering lost")
 	}
 }
+
+func TestEquipmentDoesNotRewriteLearnedRankOrCombatResources(t *testing.T) {
+	for _, rank := range []int{0, 4} {
+		w, p := dockedEngine(t)
+		p.boostRank = rank
+		p.Energy = 37
+		p.cooldowns["boost"] = 100
+		if err := w.ChangeStarter(p.ID, 0, false, func() (StarterLoadout, error) {
+			return savedStarter(p.ID, false, 1), nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if p.boostRank != rank || p.Energy != 37 || p.cooldowns["boost"] != 100 {
+			t.Fatalf("equipment rewrote learned/resources: rank=%d want=%d energy=%v cd=%v", p.boostRank, rank, p.Energy, p.cooldowns["boost"])
+		}
+		if !w.RestoreStarter(p.ID, savedStarter(p.ID, true, 2)) {
+			t.Fatal("reload")
+		}
+		w.Join(Record{ID: p.ID, PersistentEquipment: true, StarterLoadout: copyStarter(p.starterLoadout)})
+		if p.boostRank != rank || p.Energy != 37 || p.cooldowns["boost"] != 100 {
+			t.Fatal("reload/reconnect rewrote learned/resources")
+		}
+	}
+}

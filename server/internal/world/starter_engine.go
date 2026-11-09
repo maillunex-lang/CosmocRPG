@@ -56,6 +56,14 @@ func (p *Player) initStarterEngine() {
 	p.boostRank = 1
 }
 
+// Refreshing equipment must not relearn a disabled skill or erase trained ranks.
+// Only cold ship initialization grants the existing native rank 1.
+func (p *Player) refreshStarterEngine() {
+	rank := p.boostRank
+	p.initStarterEngine()
+	p.boostRank = rank
+}
+
 func (p *Player) boostAccess() error {
 	if p.ShipType != DefaultShip {
 		return nil

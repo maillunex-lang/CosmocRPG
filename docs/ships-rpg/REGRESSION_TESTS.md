@@ -125,3 +125,9 @@ CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 для m
 - Corp baseline fix9573379: race+realPG PASS1.523s. Первоначальные FAIL и два account timeout не скрыты, см. ERROR_LOG. Account recheck отдельно PASS14.597s, deadlines не ослаблены.
 - `go vet ./...` и `go build -o /workspace/scratch/cosmoc-sr100c-final ./cmd/server` PASS после merge74f9cfb. `bash -n tools/test_client.sh` PASS. Первый final-suite setup не запустил пакеты из-за ошибочного написания timeout-флага; исправлено на `-timeout=300s`, окончательный результат ниже.
 - Полный последовательный Go+PG+Godot race suite сейчас проверяется; CI — после публикации. Android/Vulkan/release/APK/production не заявлены готовыми. ERROR-SR-007 остаётся Kimi.
+
+### Полный suite перед final rank fix
+`COSMOC_TEST_GODOT=godot COSMOC_TEST_DATABASE_URL=<isolated PG> go test -race -p 1 -count=1 -json -timeout=300s ./...` — **PASS exit0:431 test/subtest PASS,22 packages PASS,1 test SKIP(существующий AmbientFollowFromAnotherCaptain),3 packages без тестов,0 FAIL**. Ни один SQL/equipment/live Godot test не пропущен; оба Godot harness выполнены. Это полный прогон кода74f9cfb/документационного0a1ead6, до последующего final rank fix.
+Новый red test ERROR-SR-010 подтвердил сброс learned rank; после исправления отдельно повторяются все3 затронутых пакета world/equipment/ws с PG/Godot. Не приравнивать предыдущий общий прогон к повторному полному suite после нового изменения.
+
+После ERROR-SR-010 fix: `COSMOC_TEST_GODOT=godot COSMOC_TEST_DATABASE_URL=<isolated PG> go test -race -p 1 -count=1 -json -timeout=180s ./internal/world ./internal/equipment ./internal/ws` — **157 test/subtest PASS,3 packages PASS,0 SKIP/FAIL,exit0** (3.631s/6.075s/27.850s). Включены новый rank0/4 regression и оба живых Godot harness. `go vet ./...` и `go build ... ./cmd/server` после этого fix — PASS. Более широкий suite не повторялся: все затронутые пакеты перепроверены целиком, остальные Go файлы не менялись.

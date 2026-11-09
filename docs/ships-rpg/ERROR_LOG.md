@@ -75,3 +75,9 @@ SR-100b2 (2026-11-09): новых ошибок не выявлено. Полны
 
 ### Ошибки изолированной SR-100c ветки
 [CST-ERROR-001…005](sr100c-storage/ERROR_LOG.md): duplicate draft migration19→20, FK test-fixture precedence, deferred ownership FK для owner cascade — Resolved/реальные SQL тесты. CST-ERROR-005: в широком параллельном запуске2 прежних account WS теста получили5s context timeout; повтор отдельно PASS14.597s без изменения production/deadlines. Причина не установлена; последовательный общий прогон фиксируется в REGRESSION_TESTS. ERROR-SR-007 не изменён: им занимается Kimi.
+
+## ERROR-SR-010 — обновление оснащения переписывало изученный ранг
+Дата2026-11-09; SR-100c-2/final review; Medium; Resolved (fix commit см. git log: preserve learned rank). Воспроизведение: новый TestEquipmentDoesNotRewriteLearnedRankOrCombatResources на valid server rank0/4, energy37 и cooldown100 вызывает ChangeStarter/RestoreStarter/live Join. До исправления FAIL: rank=1 want=0, energy37/cd100 сохранены. Причина доказана: runtime refresh переиспользовал cold initStarterEngine, который выдаёт начальный ранг1. Это не должно заново изучать отсутствующий навык или стирать обученный ранг4.
+Исправление: отдельный refreshStarterEngine сохраняет прежний rank; используется только при runtime смене/reload/live reconnect, cold initShip остаётся начальной выдачейrank1. Модульная availability остаётся независимой. Файлы world/{starter_engine,starter_loadout,equipment,world,equipment_test}.go. До публикации повторяются world/equipment/ws race+realPG+Godot; фактический результат ниже/в REGRESSION_TESTS. Профилактика: тестировать learned state отдельно от наличия модуля, в том числе rank0 и4; не считать подтверждение одного startup rank1 достаточным.
+
+Проверка ERROR-SR-010 после fix:157 test/subtest PASS,3 затронутых пакета целиком с race+PG+Godot,0 SKIP/FAIL. Vet/build PASS.

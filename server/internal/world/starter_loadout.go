@@ -52,6 +52,6 @@ func (w *World) RestoreStarter(id string, s StarterLoadout) bool {
 	if p == nil || !p.restoreStarter(&s) {
 		return false
 	}
-	p.initStarterEngine()
+	p.refreshStarterEngine()
 	return true
 }

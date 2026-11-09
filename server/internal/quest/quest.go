@@ -104,9 +104,9 @@ type QuestView struct {
 type Completion struct {
 	QuestID string
 	Title   string
-	Credits int64 // начислено сейчас
-	Total   int64 // кредитов всего
-	Next string // название следующего контракта цепочки (если выдан)
+	Credits int64  // начислено сейчас
+	Total   int64  // кредитов всего
+	Next    string // название следующего контракта цепочки (если выдан)
 }
 
 // Service — оперативное состояние контрактов подключённых игроков (запись сквозная в хранилище).

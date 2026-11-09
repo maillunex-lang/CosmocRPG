@@ -1,0 +1,339 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "preliminary": {
+      "const": true
+    },
+    "hulls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+          },
+          "class": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+          },
+          "mass_budget_tons": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 1000000000.0
+          },
+          "reactor_power_mw": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 1000000000.0
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+                },
+                "max_size": {
+                  "enum": [
+                    "S",
+                    "M",
+                    "L",
+                    "XL"
+                  ]
+                },
+                "categories": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "weapon",
+                      "engine",
+                      "shield",
+                      "armor",
+                      "reactor",
+                      "electronics",
+                      "repair",
+                      "support",
+                      "drone",
+                      "industrial",
+                      "cargo"
+                    ]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "id",
+                "max_size",
+                "categories"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 64
+          },
+          "starter": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "prototype_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+                },
+                "slot_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+                }
+              },
+              "required": [
+                "prototype_id",
+                "slot_id"
+              ]
+            },
+            "maxItems": 64
+          },
+          "abilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+            },
+            "uniqueItems": true
+          },
+          "specializations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "class",
+          "mass_budget_tons",
+          "reactor_power_mw",
+          "slots",
+          "starter",
+          "abilities",
+          "specializations"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "family": {
+            "enum": [
+              "LAS",
+              "KIN",
+              "MSL",
+              "ENG",
+              "DEF",
+              "REA",
+              "ELE",
+              "SUP",
+              "DRN",
+              "IND",
+              "CRG"
+            ]
+          },
+          "category": {
+            "enum": [
+              "weapon",
+              "engine",
+              "shield",
+              "armor",
+              "reactor",
+              "electronics",
+              "repair",
+              "support",
+              "drone",
+              "industrial",
+              "cargo"
+            ]
+          },
+          "size": {
+            "enum": [
+              "S",
+              "M",
+              "L",
+              "XL"
+            ]
+          },
+          "rarity": {
+            "enum": [
+              "common",
+              "improved",
+              "rare",
+              "epic",
+              "legendary"
+            ]
+          },
+          "mass_tons": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000.0
+          },
+          "power_draw_mw": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000.0
+          },
+          "power_supply_mw": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000.0
+          },
+          "min_pilot": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "min_ship": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000000000
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+            },
+            "uniqueItems": true
+          },
+          "unique_group": {
+            "type": "string",
+            "maxLength": 96
+          },
+          "abilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{0,95}$"
+            },
+            "uniqueItems": true
+          },
+          "modifiers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "const": ""
+                },
+                "layer": {
+                  "const": 5
+                },
+                "stat": {
+                  "enum": [
+                    "hull",
+                    "shield",
+                    "armor",
+                    "resist",
+                    "damage",
+                    "accuracy",
+                    "range",
+                    "crit_chance",
+                    "crit_damage",
+                    "speed",
+                    "maneuver",
+                    "energy",
+                    "energy_regen",
+                    "sensors",
+                    "cargo",
+                    "mining",
+                    "fuel_use",
+                    "repair_cost",
+                    "haul"
+                  ]
+                },
+                "op": {
+                  "enum": [
+                    "add",
+                    "mul"
+                  ]
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": -0.9,
+                  "maximum": 1000000.0
+                }
+              },
+              "required": [
+                "source",
+                "layer",
+                "stat",
+                "op",
+                "value"
+              ]
+            },
+            "maxItems": 16
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "family",
+          "category",
+          "size",
+          "rarity",
+          "mass_tons",
+          "power_draw_mw",
+          "power_supply_mw",
+          "min_pilot",
+          "min_ship",
+          "price",
+          "classes",
+          "unique_group",
+          "abilities",
+          "modifiers"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 4096
+    }
+  },
+  "required": [
+    "version",
+    "preliminary",
+    "hulls",
+    "modules"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cosmocrpg.invalid/equipment.json"
+}

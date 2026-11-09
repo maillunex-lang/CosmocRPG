@@ -106,3 +106,21 @@ SR-100c-4c UI substep DONE локально: pending-label + hangar40/0, вет�
 SR-100c-4 validation завершена: полный Go+PG+Godot race suite441 test/subtest PASS/22 пакета,1 старый ambient skip,0 FAIL; hangar40/0; vet/build PASS.4c IN_PROGRESS до подтверждения публикации. Source a5bfd2e, main проверена до9b02d69 (только QUESTJOB/FinalQuest.md). Новых миграций нет; прежняя0020 не менялась.
 
 SR-100c-4c DONE: main7db4176→5b71ca7 и origin/codex/sr100c-coordinator опубликованы обычным non-force push. Свежая main меняла только FinalQuest.md; все чужие изменения сохранены. Source послеa5bfd2e не менялся, поэтому docs-only merge не требовал нового полного прогона. CI code head [42656434874](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42656434874) pending на момент проверки, не success; следующие docs/main commits могут заменить/отменить run. Свой PG container удалён, root main worktree не тронут. Следующий SR-100d; ERROR-SR-007 остаётся Kimi, APK/production не выпущены.
+
+## Новое поручение: пункты4→5, отдельная ветка, main только после подтверждения
+База5089cd8, ветка codex/equipment-builds-progression, worktree /workspace/worktrees/cosmoc-equipment-builds. Пользователь запретил публикацию в main до готового результата и отдельного вопроса. Ранние разрешения main не применять к этой работе. Production также не разрешён. Kimi ERROR-SR-007 не затрагивать.
+| ID | P | Зависимости | Проверяемый результат | Статус | Даты | Тесты/SHA |
+|---|---|---|---|---|---|---|
+| EB-000 | P0 | SR-100c-4 | Аудит и декомпозиция4/5, текущие legacy contracts сохранены | DONE | 2026-11-09 / 2026-11-09 | read-only audit; этот docs commit |
+| EB-010 | P0 | EB-000 | Общий каталог modules/hulls; owner/slots/size/class/levels/unique/mass/reactor validation; данные/refs | DONE | 2026-11-09 / 2026-11-09 | fitting race PASS5.316s;15 passports+72 sources+negative rules; этот catalog commit |
+| EB-020 | P0 | EB-010 | Additive PG state, memory parity, atomic equipment/research/engineering transactions+реальная валюта; legacy engine сохраняется | DONE | 2026-11-09 / 2026-11-09 | realPG/race/rollback/ownership; typed service |
+| EB-030 | P0 | EB-020 | Runtime coordinator/WS + ангар inventory/slots/budgets/reasons | TODO | — / — | slowIO/PG/WS/Godot |
+| EB-040 | P0 | EB-030 | Три билда, четыре active slots+separate ultimate/autoattack; atomic dock-only switch/stale skill prevention | TODO | — / — | rollback/CAS/disabled source/real client |
+| EB-050 | P0 | EB-040 | Skill rank1–5; passive36; spec30 rank1–20/6 gated nodes+alternatives; rank20 ultimate enhancement; paid respec | TODO | — / — | budget/prerequisites/idempotent grants/old XP |
+| EB-060 | P0 | EB-050 | Ultimate charge/profile actions/reset/anti-farm and runtime effects; UI skills/tree/builds | TODO | — / — | combat/profile/anti-exploit/Godot |
+| EB-070 | P0 | EB-060 | Full regression, branch commits/journals/reviewable diff, detailed HANDOFF; спросить о main | TODO | — / — | fullPG/race/Godot/vet/build; NO MAIN PUSH |
+Полная библиотека72 уникальных эффектов SR-012/020 остаётся отдельным требованием; unsupported abilities явно недоступны до реализации эффекта, нельзя объявлять их рабочими только по наличию ID. Нельзя завершать пункт5 фиктивными эффектами/пустыми ультами. При исчерпании сессии записать точный checkpoint и продолжить, не выдавать незавершённое за готовое/не спрашивать main до reviewable результата.
+
+EB-020a storage substep DONE: additive0021, owner-global pilot learning/research vs hull profiles, canonical SQL slots/shared owned inventory/engineering, dual CAS revisions, atomic real credits, idempotent specialization grants. Реальный PG+memory parity подтверждены. EB020 в целом IN_PROGRESS: typed command pricing/requirements ещё нужны до EB030 runtime/UI. Старый двигательfalse/instance ID/XP сохранены. Ни main, ни production не обновлялись.
+
+EB-020b DONE: typed service buy/equip/unequip/engineer/research, серверные цены/level gates/ownership, общий атомарный wallet и rollback live-check. Итог equipment/fitting/db realPG+race PASS10.373s/4.616s/2.870s. EB020 закрывает storage/business layer; подключение игрового сервера и клиента относится к EB030 и пока TODO. Пункты4/5 целиком НЕ завершены.

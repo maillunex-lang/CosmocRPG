@@ -1,36 +1,204 @@
-:root{--bg:#081421;--surface:#14283c;--raised:#1d3854;--accent:#42c6e5;--accent2:#9575e8;--rare:#f3c46b;--text:#e8f2fa;--muted:#93a9bf;--border:rgba(66,198,229,.3)}
+/* Звёздные рубежи — лендинг: глубокий космос и «жидкое стекло» (liquid glass).
+   Без внешних ресурсов и инлайн-стилей (политика CSP: style-src 'self'). Шрифт — Golos Text (OFL), лежит рядом. */
+@font-face{font-family:"Golos Text";src:url("/fonts/GolosText-VF.ttf") format("truetype");font-weight:400 900;font-style:normal;font-display:swap}
+
+:root{
+  --bg:#040815;--bg2:#0a1330;
+  --cyan:#5ad6ff;--violet:#9b7bff;--pink:#ff7ac6;--gold:#f3c46b;
+  --text:#eaf3ff;--muted:#9db1cc;
+  --glass:rgba(255,255,255,.07);--glass-hi:rgba(255,255,255,.16);--rim:rgba(255,255,255,.2);
+  --r:26px;
+}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background-image:radial-gradient(1200px 600px at 80% -10%,rgba(149,117,232,.18),transparent),radial-gradient(900px 500px at -10% 10%,rgba(66,198,229,.14),transparent)}
-a{color:var(--accent)}
-.top{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;max-width:1100px;margin:0 auto;padding:1rem}
-.brand{font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text);text-decoration:none}
-nav a{margin-left:1.1rem;color:var(--muted);text-decoration:none}
-nav a:hover,nav a:focus{color:var(--text)}
-main,footer{max-width:1100px;margin:0 auto;padding:0 1rem}
-section{padding:2.2rem 0}
-h1{font-size:clamp(2.4rem,7vw,4.4rem);line-height:1.05;margin:.3rem 0 1rem;letter-spacing:.04em;text-transform:uppercase}
-h2{font-size:1.7rem;margin:0 0 1.1rem}
-h3{margin:.1rem 0 .4rem;color:var(--accent)}
-.hero{padding-top:3rem;text-align:center}
-.badge{display:inline-block;margin:0;padding:.2rem .8rem;border:1px solid var(--border);border-radius:99px;color:var(--rare);font-size:.9rem;letter-spacing:.12em;text-transform:uppercase}
-.lead{max-width:44rem;margin:0 auto 1.6rem;color:#cfe0ee;font-size:1.15rem}
-.cta{display:flex;justify-content:center;gap:.8rem;flex-wrap:wrap}
-.btn{display:inline-block;padding:.85rem 1.6rem;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;text-decoration:none;min-height:48px}
-.btn:hover,.btn:focus{background:var(--raised)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#06222b;box-shadow:0 0 28px rgba(66,198,229,.35)}
-.btn.primary:hover,.btn.primary:focus{filter:brightness(1.08)}
+html{scroll-behavior:smooth;scroll-padding-top:90px;background:var(--bg);overflow-x:hidden;overflow-x:clip}
+body{margin:0;min-height:100vh;color:var(--text);font:17px/1.6 "Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  background:
+    radial-gradient(1.2px 1.2px at 12% 18%,rgba(255,255,255,.85),transparent 60%),
+    radial-gradient(1px 1px at 68% 34%,rgba(255,255,255,.7),transparent 60%),
+    radial-gradient(1.4px 1.4px at 84% 72%,rgba(190,225,255,.8),transparent 60%),
+    radial-gradient(1px 1px at 30% 80%,rgba(255,255,255,.6),transparent 60%),
+    radial-gradient(1px 1px at 52% 8%,rgba(255,255,255,.7),transparent 60%),
+    linear-gradient(180deg,var(--bg) 0%,var(--bg2) 55%,#070d22 100%);
+  background-attachment:fixed;overflow-x:hidden;overflow-x:clip}
+a{color:var(--cyan)}
+img{max-width:100%;height:auto;display:block}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:10px}
+
+/* ---------- фон ---------- */
+#space{position:fixed;inset:0;width:100%;height:100%;z-index:-3;display:block}
+.nebula{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.7;will-change:transform}
+.blob.b1{width:60vmax;height:60vmax;left:-18vmax;top:-12vmax;background:radial-gradient(circle,#2b6bff 0%,transparent 68%);animation:drift1 38s ease-in-out infinite alternate}
+.blob.b2{width:55vmax;height:55vmax;right:-20vmax;top:10vmax;background:radial-gradient(circle,#8a4dff 0%,transparent 68%);animation:drift2 46s ease-in-out infinite alternate}
+.blob.b3{width:48vmax;height:48vmax;left:20vmax;bottom:-24vmax;background:radial-gradient(circle,#00c2d8 0%,transparent 70%);opacity:.38;animation:drift3 52s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(14vmax,10vmax) scale(1.12)}}
+@keyframes drift2{to{transform:translate(-12vmax,14vmax) scale(.92)}}
+@keyframes drift3{to{transform:translate(-16vmax,-8vmax) scale(1.18)}}
+
+/* ---------- жидкое стекло ---------- */
+.glass{position:relative;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.045) 55%,rgba(255,255,255,.08) 100%);
+  -webkit-backdrop-filter:blur(22px) saturate(170%) brightness(1.06);backdrop-filter:blur(22px) saturate(170%) brightness(1.06);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.42),inset 0 -1px 1px rgba(255,255,255,.08),inset 0 0 26px rgba(110,190,255,.07),0 26px 60px -18px rgba(0,4,28,.75);
+  isolation:isolate}
+/* световая кромка: градиентная обводка, как у стекла с фаской */
+.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.75),rgba(255,255,255,0) 32%,rgba(255,255,255,0) 66%,rgba(120,210,255,.55));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+/* блик, следующий за курсором (переменные задаёт app.js) */
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity .35s;
+  background:radial-gradient(380px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.26),rgba(255,255,255,.07) 40%,transparent 70%)}
+.glass:hover::before{opacity:1}
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){.glass{background:rgba(16,28,60,.9)}}
+@media (prefers-reduced-transparency:reduce){.glass{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(16,28,60,.92)}}
+
+/* ---------- шапка ---------- */
+.top{position:sticky;top:0;z-index:20;padding:.8rem 1rem 0;max-width:1180px;margin:0 auto}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.55rem .7rem .55rem 1.1rem;border-radius:999px}
+.brand{display:flex;align-items:center;gap:.65rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text);text-decoration:none;font-size:.95rem;white-space:nowrap}
+.logo{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0,#9be7ff 22%,#4a7bff 58%,#2b1b8a 100%);box-shadow:0 0 18px rgba(90,214,255,.7)}
+nav{display:flex;gap:1.3rem;flex-wrap:wrap}
+nav a{color:var(--muted);text-decoration:none;font-weight:500;font-size:.95rem}
+nav a:hover,nav a:focus-visible{color:var(--text)}
+
+/* ---------- кнопки ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.6rem;min-height:48px;padding:.8rem 1.5rem;border-radius:999px;border:1px solid var(--rim);color:var(--text);font-weight:700;font-size:1rem;text-decoration:none;cursor:pointer;
+  background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.05));-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.4),0 10px 30px -10px rgba(0,4,30,.7);transition:transform .2s,box-shadow .2s,filter .2s}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.12)}
+.btn.primary{border-color:rgba(255,255,255,.5);color:#031625;background:linear-gradient(135deg,#aef0ff 0%,#5ad6ff 45%,#8fa2ff 100%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.8),0 0 36px rgba(90,214,255,.5),0 12px 30px -10px rgba(40,120,255,.7);position:relative;overflow:hidden}
+.btn.primary::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-20deg);animation:sheen 4.5s ease-in-out infinite}
+@keyframes sheen{0%,55%{left:-60%}100%{left:130%}}
+.btn.big{min-height:56px;padding:.95rem 1.9rem;font-size:1.08rem}
+.btn.small{min-height:40px;padding:.5rem 1.1rem;font-size:.92rem}
+
+/* ---------- заголовки ---------- */
+main,footer{max-width:1180px;margin:0 auto;padding:0 1rem}
+section{padding:2.6rem 0;position:relative}
+h1{font-size:clamp(2.6rem,7.5vw,5rem);line-height:1.02;margin:.4rem 0 1.1rem;font-weight:900;letter-spacing:.01em}
+.shine{background:linear-gradient(100deg,#7fe3ff 0%,#b79bff 35%,#ff9bd6 55%,#7fe3ff 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:shine 9s linear infinite}
+@keyframes shine{to{background-position:220% 0}}
+h2{font-size:clamp(1.6rem,3.4vw,2.2rem);margin:0 0 1.3rem;font-weight:800}
+h3{margin:.2rem 0 .45rem;font-size:1.15rem}
+.lead{max-width:36rem;color:#cfe0f5;font-size:1.12rem}
 .muted{color:var(--muted);font-size:.95rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
-.card{background:rgba(20,40,60,.7);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.2rem}
-.card p{margin:0;color:#cfe0ee}
-.plain{padding-left:1.2rem}
-.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
-figure{margin:0}
-img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--border);display:block}
-figcaption{color:var(--muted);font-size:.9rem;margin-top:.4rem}
-ol li{margin-bottom:.4rem}
-footer{padding-bottom:2.5rem;color:var(--muted);font-size:.9rem}
-:focus-visible{outline:3px solid var(--rare);outline-offset:2px}
-@media (max-width:560px){nav a{margin:0 .8rem 0 0}.top{gap:.4rem}body{font-size:16px}}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.badge{display:inline-flex;align-items:center;gap:.55rem;margin:0;padding:.3rem .95rem;border:1px solid rgba(243,196,107,.45);border-radius:999px;color:var(--gold);font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;background:rgba(243,196,107,.07)}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35;transform:scale(.8)}}
+
+/* ---------- первый экран ---------- */
+.hero{padding-top:2.2rem;padding-bottom:1rem}
+.hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:2.2rem;align-items:center;position:relative;z-index:1}
+.cta{display:flex;gap:.9rem;flex-wrap:wrap;margin:1.6rem 0 1.1rem}
+.chips{list-style:none;display:flex;flex-wrap:wrap;gap:.5rem;padding:0;margin:0 0 .7rem}
+.chip{padding:.25rem .8rem;border-radius:999px;border:1px solid var(--rim);background:rgba(255,255,255,.07);font-size:.88rem;color:#d9e8fb}
+.chip[hidden]{display:none}
+.hero-shot{position:relative;padding:1.4rem 0 1.8rem}
+.device{padding:.6rem;border-radius:30px;transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .25s ease-out}
+.device img{border-radius:22px;border:1px solid rgba(255,255,255,.14)}
+.float{position:absolute;padding:.65rem 1.1rem;border-radius:20px;display:flex;flex-direction:column;line-height:1.15;animation:bob 7s ease-in-out infinite;background:linear-gradient(135deg,rgba(10,20,52,.72),rgba(10,20,52,.5))}
+.float b{font-size:1.7rem;font-weight:900;background:linear-gradient(120deg,#8fe9ff,#c1a8ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.float span{font-size:.8rem;color:var(--muted)}
+.float.f1{left:-1rem;bottom:0}
+.float.f2{right:-.6rem;top:0;animation-delay:-3.5s}
+@keyframes bob{50%{transform:translateY(-10px)}}
+
+/* планета за стеклом: именно её и размывает «жидкое стекло» */
+.planet{position:absolute;right:-8vmax;top:-2rem;width:min(42vmax,520px);aspect-ratio:1;border-radius:50%;z-index:0;pointer-events:none;
+  background:radial-gradient(circle at 32% 28%,#d6f6ff 0%,#6fd3ff 14%,#2f6fe6 40%,#1a2a8c 68%,#0a0f3a 100%);
+  box-shadow:inset -40px -30px 80px rgba(2,6,30,.8),inset 12px 10px 40px rgba(255,255,255,.25),0 0 120px rgba(80,150,255,.45);animation:float-planet 30s ease-in-out infinite alternate}
+.planet::before{content:"";position:absolute;inset:0;border-radius:50%;background:
+  radial-gradient(60% 18% at 40% 38%,rgba(255,255,255,.18),transparent 70%),radial-gradient(70% 14% at 55% 56%,rgba(150,120,255,.22),transparent 70%),radial-gradient(50% 12% at 38% 72%,rgba(255,255,255,.12),transparent 70%)}
+.ring{position:absolute;left:-26%;right:-26%;top:38%;height:24%;border-radius:50%;border:10px solid rgba(190,170,255,.35);border-top-color:rgba(255,255,255,.55);transform:rotate(-14deg);box-shadow:0 0 30px rgba(150,120,255,.35)}
+.moon{position:absolute;left:-14%;bottom:12%;width:17%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#b9c4d8 40%,#5a6482 100%);box-shadow:0 0 30px rgba(200,220,255,.4)}
+@keyframes float-planet{to{transform:translate(-3vmax,2.5vmax) rotate(4deg)}}
+
+/* ---------- цифры ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;padding-top:1.4rem}
+.stat{padding:1.2rem 1.3rem;display:flex;flex-direction:column;gap:.15rem}
+.stat b{font-size:2.5rem;line-height:1;font-weight:900;background:linear-gradient(120deg,#8fe9ff,#c1a8ff 60%,#ff9bd6);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.stat span{color:var(--muted);font-size:.93rem}
+
+/* ---------- карточки ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.1rem}
+.card{padding:1.35rem 1.4rem 1.4rem;transition:transform .25s}
+.card:hover{transform:translateY(-4px)}
+.card p{margin:0;color:#cddff3;font-size:.98rem}
+.ico{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;margin-bottom:.6rem;color:var(--cyan);
+  background:linear-gradient(135deg,rgba(90,214,255,.22),rgba(155,123,255,.18));box-shadow:inset 0 1px 1px rgba(255,255,255,.4),0 0 22px rgba(90,214,255,.25)}
+.ico svg{width:24px;height:24px}
+
+/* ---------- скриншоты ---------- */
+.shots{display:grid;grid-template-columns:repeat(2,1fr);gap:1.1rem}
+.shot{margin:0;padding:.6rem .6rem .8rem}
+.zoom{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in;border-radius:20px;overflow:hidden}
+.zoom img{border-radius:20px;border:1px solid rgba(255,255,255,.12);transition:transform .5s}
+.zoom:hover img{transform:scale(1.04)}
+figcaption{color:var(--muted);font-size:.9rem;margin:.55rem .4rem 0}
+
+/* ---------- что дальше ---------- */
+.soon{padding:1.6rem 1.7rem}
+.timeline{list-style:none;margin:0 0 1rem;padding:0 0 0 1.6rem;position:relative}
+.timeline::before{content:"";position:absolute;left:6px;top:.5rem;bottom:.5rem;width:2px;background:linear-gradient(180deg,var(--cyan),var(--violet),var(--pink));border-radius:2px;opacity:.7}
+.timeline li{position:relative;margin:0 0 1.1rem;display:flex;flex-direction:column}
+.timeline li::before{content:"";position:absolute;left:-1.6rem;top:.45rem;width:14px;height:14px;border-radius:50%;background:var(--bg2);border:2px solid var(--cyan);box-shadow:0 0 14px rgba(90,214,255,.7)}
+.timeline b{font-size:1.05rem}
+.timeline span{color:var(--muted);font-size:.95rem}
+
+/* ---------- установка ---------- */
+.steps{list-style:none;padding:0;margin:0 0 1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem}
+.steps li{padding:1.2rem 1.3rem;display:flex;gap:1rem;align-items:flex-start}
+.steps b{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;font-size:1.05rem;color:#04202e;background:linear-gradient(135deg,#aef0ff,#5ad6ff 55%,#9b7bff);box-shadow:0 0 20px rgba(90,214,255,.45)}
+.steps span{color:#d4e4f7;font-size:.98rem}
+.note{padding:1.5rem 1.7rem}
+.note h2{margin-bottom:.6rem;font-size:1.4rem}
+.note p{margin:0;color:#cddff3}
+footer{padding-bottom:3rem;color:var(--muted);font-size:.9rem;text-align:center}
+
+/* ---------- просмотр снимка ---------- */
+dialog{border:0;padding:1rem;background:rgba(6,12,32,.82);color:var(--text);border-radius:24px;max-width:min(94vw,1200px);max-height:92vh;
+  -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);box-shadow:0 30px 100px rgba(0,0,0,.7),inset 0 1px 1px rgba(255,255,255,.3)}
+dialog::backdrop{background:rgba(2,5,18,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+dialog img{border-radius:16px;max-height:76vh;margin:0 auto}
+dialog p{text-align:center;margin:.6rem 0 0}
+.close{position:absolute;right:.8rem;top:.8rem;width:42px;height:42px;border-radius:50%;border:1px solid var(--rim);background:rgba(255,255,255,.12);color:var(--text);font-size:1.1rem;cursor:pointer;z-index:2}
+
+/* ---------- появление при прокрутке (только если работает JS) ---------- */
+.js .reveal{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.js .reveal.in{opacity:1;transform:none}
+.js .device.reveal.in,.js .hero-shot.in .device{transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))}
+
+/* ---------- узкие экраны ---------- */
+@media (max-width:900px){
+  .hero-grid{grid-template-columns:1fr}
+  .hero-text{text-align:center}
+  .lead{margin-left:auto;margin-right:auto}
+  .cta,.chips{justify-content:center}
+  .planet{right:-22vmax;top:-4rem;opacity:.42}
+  .moon{display:none}
+  .lead{text-shadow:0 1px 14px rgba(2,6,24,.9)}
+  .float.f1{left:.2rem}.float.f2{right:.2rem}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .shots{grid-template-columns:1fr}
+  nav{display:none}
+  .bar{padding-left:.9rem}
+  section{padding:2rem 0}
+  .shots{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr;gap:.7rem}
+  .stat{padding:.9rem}
+  .stat b{font-size:2rem}
+  .stat span{font-size:.85rem}
+  .btn.big{width:100%}
+  .float b{font-size:1.35rem}
+}
+
+/* ---------- уменьшенная анимация ---------- */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .blob,.planet,.shine,.float,.btn.primary::after,.badge .dot{animation:none}
+  .js .reveal{opacity:1;transform:none;transition:none}
+  .device,.card,.btn{transition:none}
+}

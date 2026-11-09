@@ -159,3 +159,6 @@ Own tmpfs PostgreSQL16 container cosmoc-equipment-builds-20261109, loopback only
 
 ## EB-020b: typed equipment service
 `COSMOC_TEST_DATABASE_URL=<own local PG> go test -race -p 1 -count=1 ./internal/equipment ./internal/fitting ./internal/db`: PASS10.373s/4.616s/2.870s. Memory и настоящий PostgreSQL: цены и исследования определяет сервер, бесплатная покупка starter запрещена, ограничения уровней/редкости, ownership/slot compatibility, реальные atomic debits, engineering native даёт настоящий rpg modifier; trusted live-check error откатывает покупку и деньги. Полный runtime/Godot здесь ещё не проверялся: интеграция EB030 не реализована.
+
+## EB-020: интеграция с параллельной main
+2026-11-09: merge base main3026811, дополнительно сохранены b3349a7 и f9c3340 (QUESTJOB/AI.md, без пересечений кода). `COSMOC_TEST_DATABASE_URL=<own local PG16> go test -race -p 1 -count=1 -timeout=300s ./...`: exit0, все пакеты PASS. equipment17.477s/fitting6.464s/db3.162s/world7.907s/ws26.143s. `go vet ./...`, `go build ./cmd/server`, gofmt выбранных пакетов, git diff --check и python3 tools/validate_roadmap.py PASS. Godot live harness не запускался (COSMOC_TEST_GODOT не задан), Android/production не проверялись и не выпускались. Новая миграция0021 прогнана на отдельной локальной БД, production не затрагивался. Существующие client/site/QUESTJOB изменения main сохранены.

@@ -21,3 +21,5 @@ EB020 storage+typed service DONE; EB030 runtime/WS/ангар TODO; EB040/050/06
 
 ## Разрешённая интеграция EB-020 в main
 Пользователь явно разрешил безопасную публикацию текущей работы в main при параллельной Cloud-сессии. Это отменяет прежний запрет публикации именно текущего checkpoint, но не разрешает production. Интеграция в отдельном worktree cosmoc-equipment-main-integration; исходная ветка codex/equipment-builds-progression сохранена. В main новая структура roadmap сохранена; конфликт только docs/ROADMAP.md решён с сохранением нового дашборда. Следующий этап EB030, пункты4/5 целиком ещё не готовы. Параллельные QUESTJOB/client/site изменения не переписываются.
+
+Финальная локальная проверка объединённого кода: весь Go suite+realPG+race exit0, vet/build/roadmap validator PASS; Godot live не запускался. Исходная feature-ветка f4e9608 сохранена. Объединение выполняется обычным non-force push HEAD:main после последнего fetch; при non-FF сначала сохранить новые commits main. Продолжение EB030…070 — отдельная работа, не объявлять готовой. Для продолжения от main создавать отдельную ветку/worktree и сверяться с активной Cloud-сессией.

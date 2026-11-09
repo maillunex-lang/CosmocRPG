@@ -112,8 +112,8 @@ SR-100c-4c DONE: main7db4176→5b71ca7 и origin/codex/sr100c-coordinator опу
 | ID | P | Зависимости | Проверяемый результат | Статус | Даты | Тесты/SHA |
 |---|---|---|---|---|---|---|
 | EB-000 | P0 | SR-100c-4 | Аудит и декомпозиция4/5, текущие legacy contracts сохранены | DONE | 2026-11-09 / 2026-11-09 | read-only audit; этот docs commit |
-| EB-010 | P0 | EB-000 | Общий каталог modules/hulls; owner/slots/size/class/levels/unique/mass/reactor validation; данные/refs | IN_PROGRESS | 2026-11-09 / — | pure/negative/catalog refs |
-| EB-020 | P0 | EB-010 | Additive PG state, memory parity, atomic equipment/research/engineering transactions+реальная валюта; legacy engine сохраняется | TODO | — / — | realPG/race/rollback/ownership/reconnect |
+| EB-010 | P0 | EB-000 | Общий каталог modules/hulls; owner/slots/size/class/levels/unique/mass/reactor validation; данные/refs | DONE | 2026-11-09 / 2026-11-09 | fitting race PASS5.316s;15 passports+72 sources+negative rules; этот catalog commit |
+| EB-020 | P0 | EB-010 | Additive PG state, memory parity, atomic equipment/research/engineering transactions+реальная валюта; legacy engine сохраняется | IN_PROGRESS | 2026-11-09 / — | realPG/race/rollback/ownership/reconnect |
 | EB-030 | P0 | EB-020 | Runtime coordinator/WS + ангар inventory/slots/budgets/reasons | TODO | — / — | slowIO/PG/WS/Godot |
 | EB-040 | P0 | EB-030 | Три билда, четыре active slots+separate ultimate/autoattack; atomic dock-only switch/stale skill prevention | TODO | — / — | rollback/CAS/disabled source/real client |
 | EB-050 | P0 | EB-040 | Skill rank1–5; passive36; spec30 rank1–20/6 gated nodes+alternatives; rank20 ultimate enhancement; paid respec | TODO | — / — | budget/prerequisites/idempotent grants/old XP |

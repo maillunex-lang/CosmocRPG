@@ -1,3 +1,9 @@
+# EB-010 checkpoint
+Каталог/validator готовы и проверены (fitting race5.316s):15 hulls,346 module prototypes,72 reachable skill IDs, strict schema+ownership/size/class/levels/unique/mass/reactor tests. Это ещё не handlers/SQL/runtime/UI. EB010 DONE, EB020 IN_PROGRESS. Commit этого блока смотреть git log.
+Дальше:0021 general profile state+item engineering+shared ownership FK/native binding constraint (EB-ADR002), PG/memory parity/real credits/legacy engine bridge. Глобальные pilot learned/talents/research должны быть owner-level, spec XP/builds — hull-level. Все3 build refs на item instances, не копии; у одной вещи не может быть2 active assignments. Stored skills/ultimates не считать executable без handler. После пункта4 продолжитьпункт5, не останавливаться на первой foundation. MAIN ЗАПРЕЩЁН до готового результата и отдельного ответа пользователя.
+
+---
+
 # В работе — пункты4→5 (EB), 2026-11-09
 Ветка codex/equipment-builds-progression/base5089cd8, worktree /workspace/worktrees/cosmoc-equipment-builds. НОВОЕ ограничение: main не выгружать до готового результата и отдельного вопроса пользователю. Production не трогать. Предыдущие разрешения автоматического main merge больше не действуют на этот этап. Kimi ERROR-SR-007 отдельно.
 EB-000 аудит завершён, EB-010 IN_PROGRESS, EB020…070 TODO (см. ROADMAP). Следующие3 шага: pure fitting catalogue/strict validation; additive general storage с reuse SQL0020+real credits; runtime/ангар, затем3 builds/4 slots/progression/ultimates. Новые unsupported effect IDs не объявлять реализованными. Подробности AUDIT/EB-ADR001. Пока изменений gameplay нет. Readme/roadmap/HANDOFF/master prompt/SQL/rpg/pilot/shipxp/legacy engine/world/WS/passports изучены.

@@ -117,6 +117,19 @@ func (c *Catalog) Validate(owner, hullID string, pilotLevel, shipLevel int, item
 			mod.Value *= Quality(m.Rarity) * (1 + 0.03*float64(item.Engineering))
 			out.Modifiers = append(out.Modifiers, mod)
 		}
+		if len(m.Modifiers) == 0 && item.Engineering > 0 {
+			// Stock already represents the legacy base. Engineering adds only its
+			// explicit improvement, never the original stock stats a second time.
+			stats := map[string]rpg.StatID{"weapon": rpg.StatDamage, "engine": rpg.StatSpeed, "shield": rpg.StatShield, "armor": rpg.StatArmor, "reactor": rpg.StatEnergyRegen, "electronics": rpg.StatSensors, "repair": rpg.StatRepairCost, "support": rpg.StatShield, "drone": rpg.StatDamage, "industrial": rpg.StatMining, "cargo": rpg.StatCargo}
+			bonus := 0.005
+			if m.Category == "shield" || m.Category == "electronics" || m.Category == "industrial" || m.Category == "cargo" {
+				bonus = 0.01
+			}
+			if m.Category == "repair" {
+				bonus = -bonus
+			}
+			out.Modifiers = append(out.Modifiers, rpg.Modifier{Source: "module:" + id, Layer: rpg.LayerModules, Stat: stats[m.Category], Op: rpg.OpMul, Value: bonus * float64(item.Engineering)})
+		}
 	}
 	if !finite(out.Mass) || out.Mass > out.MassBudget+1e-9 {
 		return Result{}, invalid("mass_budget", fmt.Sprint(out.MassBudget))

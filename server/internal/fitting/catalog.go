@@ -123,6 +123,17 @@ func size(s string) int     { return map[string]int{"S": 1, "M": 2, "L": 3, "XL"
 func Quality(s string) float64 {
 	return map[string]float64{"common": 1, "improved": 1.10, "rare": 1.25, "epic": 1.40, "legendary": 1.60}[s]
 }
+func KnownFamily(id string) bool {
+	for _, xs := range families {
+		if slices.Contains(xs, id) {
+			return true
+		}
+	}
+	return false
+}
+func ResearchRequired(rarity string) int {
+	return map[string]int{"rare": 1, "epic": 2, "legendary": 3}[rarity]
+}
 
 var categories = map[string]bool{"weapon": true, "engine": true, "shield": true, "armor": true, "reactor": true, "electronics": true, "repair": true, "support": true, "drone": true, "industrial": true, "cargo": true}
 var families = map[string][]string{"weapon": {"LAS", "KIN", "MSL"}, "engine": {"ENG"}, "shield": {"DEF"}, "armor": {"DEF"}, "reactor": {"REA"}, "electronics": {"ELE"}, "repair": {"SUP"}, "support": {"SUP"}, "drone": {"DRN"}, "industrial": {"IND"}, "cargo": {"CRG"}}

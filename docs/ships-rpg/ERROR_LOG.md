@@ -100,3 +100,5 @@ ERROR-SR-011 опубликован в main5b71ca7, без force; full441/22 PAS
 
 ## EB-ERROR-002 — сообщение Cloud «не удалось выполнить удалённый шаг»
 Дата2026-11-09; окружение/UI; Low; Workaround, первопричина не установлена. Пользователь прислал screenshot с этой надписью после file edits. Проверка environment_status: ready/connected/failure=null. Git и все general*.go/0021/state.go на месте,903522e сохранён в feature branch. Код заново скомпилирован; затем general+legacy PG/race tests PASS (4.464s/8.686s/2.691s). Утрату файлов не обнаружено, причина UI-сбоя не доказана. Работа продолжена с проверенного состояния, main не тронут. После storage substep сделать отдельный backup commit в feature branch, не выдавать platform diagnostics за ошибку игрового сервера.
+
+EB-ERROR-002 checkpoint: после сообщения Cloud файлы и коммиты проверены, origin feature branch содержит f624748. Последний локальный service suite завершился успешно (equipment10.373s/fitting4.616s/db2.870s). Причина ошибки интерфейса Cloud не установлена; успешные тесты не доказывают исправление самого Cloud.

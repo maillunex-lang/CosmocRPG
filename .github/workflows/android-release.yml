@@ -1,0 +1,93 @@
+name: Android release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GODOT_VERSION: 4.7.2-stable
+      GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ runner.temp }}/release.keystore
+      GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEY_ALIAS }}
+      GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      EXPECTED_CERT: ${{ vars.ANDROID_CERT_SHA256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверить настройки подписи
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" && test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_USER" && test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD" && test -n "$EXPECTED_CERT"
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Установить Android SDK
+        run: sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.1.0' 'ndk;29.0.14206865'
+      - name: Установить Godot и библиотеки шаблона
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/$GODOT_VERSION"
+          curl -fL --retry 4 "$base/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          sudo install -m 755 "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot
+          curl -fL --retry 4 "$base/Godot_v${GODOT_VERSION}_export_templates.tpz" -o "$RUNNER_TEMP/templates.tpz"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/templates"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION/-/.}"
+          mkdir -p "$template_dir"
+          cp -a "$RUNNER_TEMP/templates/templates/." "$template_dir/"
+          # Только библиотеки движка: сохранить собственные Java-плагины и manifest.
+          unzip -qo "$template_dir/android_source.zip" 'libs/*' -d client/android/build
+          chmod +x client/android/build/gradlew
+          mkdir -p "$HOME/.config/godot"
+          python3 - <<'PY'
+          import os,pathlib
+          p=pathlib.Path.home()/'.config/godot/editor_settings-4.7.tres'
+          p.write_text('[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "'+os.environ['ANDROID_HOME']+'"\nexport/android/java_sdk_path = "'+os.environ['JAVA_HOME']+'"\n')
+          PY
+      - name: Собрать подписанный APK
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          godot --headless --path client --import
+          godot --headless --path client --export-release Android "$GITHUB_WORKSPACE/dist/cosmocrpg-release.apk"
+      - name: Проверить сертификат, версию и размер
+        run: |
+          set -euo pipefail
+          sdk="$ANDROID_HOME/build-tools/36.1.0"
+          "$sdk/apksigner" verify --verbose --print-certs dist/cosmocrpg-release.apk > dist/signature.txt
+          actual=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' dist/signature.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          expected=$(printf '%s' "$EXPECTED_CERT" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+          test -n "$actual" && test "$actual" = "$expected"
+          "$sdk/aapt" dump badging dist/cosmocrpg-release.apk > dist/badging.txt
+          python3 - <<'PY'
+          import pathlib,re
+          s=pathlib.Path('client/project.godot').read_text()
+          version=re.search(r'^config/version="(.*?)"',s,re.M)[1]
+          code=re.search(r'^version_code=(\d+)',s,re.M)[1]
+          b=pathlib.Path('dist/badging.txt').read_text().splitlines()[0]
+          assert "name='ru.cosmocrpg.game'" in b and f"versionCode='{code}'" in b and f"versionName='{version}'" in b,b
+          assert pathlib.Path('dist/cosmocrpg-release.apk').stat().st_size <= 95*1024*1024
+          PY
+          sha256sum dist/cosmocrpg-release.apk > dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cosmocrpg-signed-apk-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+      - name: Удалить ключ из runner
+        if: always()
+        run: rm -f "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH"

@@ -388,3 +388,7 @@ Release-APK `zvezdnye-rubezhi-r33-20261108.apk` (37,6 МБ), подпись v2/v
 Важно: сервер на production НЕ выкачан (миграция 0018 + три мира). Клиент 0.3.11 с ним совместим (новые поля опциональны): играть можно, прыжки активируются после выкатки сервера.
 
 Технические заметки для сборки APK из копии Kimi: шаблон `client/android/build` нужно держать в синхроне с основной папкой — не в git: `libs/` (206 МБ, engine AAR), `src/main/assets/` и сгенерированные `res/mipmap*/icon_background.webp` (адаптивная иконка ссылается на него; при недостающем файле копировать `icon.webp` → `icon_background.webp` во все mipmap-*). APK собирать в `~/apk`, не в `~/apk-share`.
+
+## 2026-11-09 — Ships RPG v2.1, R-62, Codex
+
+Read-only аудит выполнен в отдельном cloud-окружении с базы 3b89741, ветка codex/ships-rpg-foundation. [Подробная передача](ships-rpg/HANDOFF.md), [аудит](ships-rpg/AUDIT.md), [карта](ships-rpg/ROADMAP.md), [ошибки](ships-rpg/ERROR_LOG.md), [фактические тесты](ships-rpg/REGRESSION_TESTS.md). Начат этап 1. Системный /usr/bin/go оказался другой программой, toolchain восстанавливается локально. Конфликты caps/деревьев выделены в BLOCKED, вопрос владельцу отправлен. Production и VPS не затронуты, деплой запрещён текущим запросом.

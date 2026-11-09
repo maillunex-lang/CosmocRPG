@@ -112,6 +112,10 @@ func _run() -> void:
 	_c(h._engine_button.disabled and h._engine_reason.text.contains("10 секунд") and h._engine_button.text.contains("Установить"), "снятый двигатель и запрет боя подтверждает сервер")
 	h._engine_button.pressed.emit()
 	_c(changes.size() == 1, "disabled state не отправляет команду даже при прямом сигнале")
+	wire_ship["equipment"] = {"revision": 5, "can_change": false, "pending": true, "reason": "equipment_busy"}
+	server_gateway._on_message("state", {"ship": wire_ship}, "")
+	h.set_data(server_gateway.snapshot()["ship"])
+	_c(h._engine_button.disabled and h._engine_reason.text.contains("Сохраняем"), "pending status объясняет сохранение оснащения")
 	wire_ship["equipment"] = {"can_change": false, "reason": "equipment_unavailable"}
 	server_gateway._on_message("state", {"ship": wire_ship}, "")
 	h.set_data(server_gateway.snapshot()["ship"])

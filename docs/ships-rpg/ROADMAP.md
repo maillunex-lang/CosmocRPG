@@ -100,3 +100,5 @@ CI c9a3391 для полного gameplay шага — success. Дополнит
 | SR-100c-4a | P0 | SR-100c | Per-player reservation, callback вне world mutex; tick/snapshot/другие игроки продолжают работу; actor actions guarded; no invulnerability | DONE | 2026-11-09 / 2026-11-09 | blocked-store red→green; полный world race PASS1.787s / этот core commit |
 | SR-100c-4b | P0 | SR-100c-4a | Per-owner session gate вместо global Handler mutex на IO; reconnect/leave/CAS/recovery безопасны | DONE | 2026-11-09 / 2026-11-09 | slowIO red→green; PG row-lock+reconnect/gate cleanup race PASS6.553s / этот WS commit |
 | SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | IN_PROGRESS | 2026-11-09 / — | actual tests/CI/diff / — |
+
+SR-100c-4c UI substep DONE локально: pending-label + hangar40/0, веточный commit. Server code commitsbc0aed9/aa7f950, vet/build PASS. Сам4c остаётся IN_PROGRESS до полного прогона/интеграции. Нет нового APK/production публикации.

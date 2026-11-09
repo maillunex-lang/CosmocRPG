@@ -321,3 +321,5 @@ func _refresh_engine_controls() -> void:
 		"dead": "Корабль уничтожен."
 	}
 	_engine_reason.text = str(reasons.get(str(status.get("reason", "")), "Смена у станции вне боя. Снятие отключит M01 · Форсаж."))
+	if bool(status.get("pending", false)):
+		_engine_reason.text = "Сохраняем оснащение…"

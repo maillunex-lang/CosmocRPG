@@ -47,7 +47,7 @@ func TestWorldAdminFlow(t *testing.T) {
 		Preview       worldcfg.Preview
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &st)
-	if rec.Code != 200 || st.Version != 1 || !st.LivingEnabled || len(st.Versions) != 1 || !st.Preview.OK || len(st.Preview.Systems) != 1 {
+	if rec.Code != 200 || st.Version != 1 || !st.LivingEnabled || len(st.Versions) != 1 || !st.Preview.OK || len(st.Preview.Systems) != 3 {
 		t.Fatalf("состояние: %d %s", rec.Code, rec.Body.String()[:200])
 	}
 	// предпросмотр некорректной конфигурации: 200 с ошибками, ничего не меняется

@@ -21,7 +21,8 @@ signal camera_mode_requested   # кнопка «Вид»: следующий р�
 signal world_tapped(pos: Vector2)   # короткое касание в зоне джойстика: выбор объекта под пальцем
 signal hangar_requested   # кнопка «Ангар»
 signal shop_requested   # кнопка «Магазин»
-signal map_requested   # кнопка «Карта»
+signal map_requested
+signal star_map_requested   # Э-1: звёздная карта   # кнопка «Карта»
 signal settings_requested   # пункт меню «Настройки»
 signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
@@ -217,6 +218,8 @@ func _ready() -> void:
 		if ev is InputEventMouseButton and ev.pressed:
 			_set_menu_open(false))
 	%ProfileMenuButton.pressed.connect(func() -> void: _set_menu_open(false); profile_requested.emit())
+	%StarMapMenuButton.pressed.connect(func() -> void: _set_menu_open(false); star_map_requested.emit())
+	Icons.apply(%StarMapMenuButton, "globe", Tokens.ACCENT, 22)
 	%ShopMenuButton.pressed.connect(func() -> void: _set_menu_open(false); shop_requested.emit())
 	%HangarMenuButton.pressed.connect(func() -> void: _set_menu_open(false); hangar_requested.emit())
 	%ChatMenuButton.pressed.connect(func() -> void: _set_menu_open(false); chat_requested.emit())

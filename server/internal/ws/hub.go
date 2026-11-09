@@ -371,6 +371,9 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			return
 		}
 		h.save(rec)
+		if h.opts.Quests != nil {
+			h.completeQuests(ss.pid, h.opts.Quests.Event(ctx, ss.pid, "jump", p.To, 1))
+		}
 		hw := h.opts.World.For(ss.pid)
 		payload := map[string]any{"system": hw.System(), "spawn": spawn}
 		if lay, wcfg := hw.Layout(); lay.System != "" {
@@ -423,6 +426,8 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 	case "sell":
 		if _, err := w.SellCargo(ss.pid); err != nil {
 			fail(err)
+		} else if h.opts.Quests != nil {
+			h.completeQuests(ss.pid, h.opts.Quests.Event(ctx, ss.pid, "sell", "", 1))
 		}
 	case "set_skin", "set_spec":
 		var p struct {
@@ -774,6 +779,26 @@ func (h *Handler) pilotMsg(ctx context.Context, c *websocket.Conn, ss *session, 
 }
 
 // grantRewards выдаёт награды локаций идемпотентно (ключ события) и сообщает игроку о зачислении.
+// completeQuests доставляет клиенту уведомления о выполненных контрактах (и следующем звене цепочки).
+func (h *Handler) completeQuests(pid string, cs []quest.Completion) {
+	for _, c := range cs {
+		h.mu.Lock()
+		ss := h.active[pid]
+		h.mu.Unlock()
+		if ss == nil {
+			continue
+		}
+		payload := map[string]any{"id": c.QuestID, "title": c.Title, "reward": map[string]any{"credits": c.Credits}, "credits": c.Total}
+		if c.Next != "" {
+			payload["next"] = c.Next
+		}
+		select {
+		case ss.events <- Message{Type: "quest_completed", Payload: mustJSON(payload)}:
+		default:
+		}
+	}
+}
+
 func (h *Handler) grantRewards(rs []world.Reward) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -788,6 +813,11 @@ func (h *Handler) grantRewards(rs []world.Reward) {
 		}
 		h.log.Info("награда выдана", "player", r.Player, "kind", r.Kind, "ref", r.Ref, "credits", r.Credits, "total", total)
 		h.grantXP(ctx, r.Player, "xp:"+r.Key, r.Kind, pilot.XPFor(r.Kind, r.Credits))
+		if r.Kind == "kill" {
+			h.completeQuests(r.Player, h.opts.Quests.Event(ctx, r.Player, "kill", "", 1))
+		} else if r.Kind == "mine" {
+			h.completeQuests(r.Player, h.opts.Quests.Event(ctx, r.Player, "mine", r.Ref, int(r.Amount)))
+		}
 		h.mu.Lock()
 		ss := h.active[r.Player]
 		h.mu.Unlock()

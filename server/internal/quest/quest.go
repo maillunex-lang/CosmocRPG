@@ -18,24 +18,41 @@ type Def struct {
 	Version int
 	Title   string
 	Text    string
-	Kind    string  // "reach": подлететь к объекту
-	Target  string  // идентификатор объекта мира
-	Radius  float64 // дистанция выполнения, ед.
+	Kind    string  // reach | kill | mine | sell | jump
+	Target  string  // идентификатор объекта/ресурса/системы
+	Radius  float64 // дистанция выполнения, ед. (reach)
 	Goal    int
 	Reward  Reward
+	After   string // цепочка: выдаётся только после завершения этого контракта (сюжет, Э-3)
 }
 
 // Reward — награда (пока только кредиты; остальные виды добавятся расширением).
 type Reward struct{ Credits int64 }
 
-// Catalog — доступные контракты. Версионирование: старые версии остаются в списке, пока по ним есть активные задания.
+// Catalog — цепочка начала кампании (Акт I, глава 1 «Сигнал из пустоты» — вертикальный срез, Э-3).
 func Catalog() []Def {
-	return []Def{{
-		ID: "first_flight", Version: 1, Title: "Первый полёт",
-		Text: "Долетите до станции «Рубеж».",
-		Kind: "reach", Target: world.StationID, Radius: 12, Goal: 1,
-		Reward: Reward{Credits: 500},
-	}}
+	return []Def{
+		{ID: "first_flight", Version: 1, Title: "Первый полёт",
+			Text: "Долетите до станции «Рубеж» в Авроре.",
+			Kind: "reach", Target: world.StationID, Radius: 12, Goal: 1,
+			Reward: Reward{Credits: 500}},
+		{ID: "first_blood", Version: 1, Title: "Сигнал тревоги",
+			Text: "Победите пирата в зоне опасности Авроры.",
+			Kind: "kill", Goal: 1, After: "first_flight",
+			Reward: Reward{Credits: 700}},
+		{ID: "first_ore", Version: 1, Title: "Руда из пустоты",
+			Text: "Добудьте 5 единиц железной руды из астероидов.",
+			Kind: "mine", Target: "iron_ore", Goal: 5, After: "first_blood",
+			Reward: Reward{Credits: 800}},
+		{ID: "first_deal", Version: 1, Title: "Первый контракт",
+			Text: "Продайте добытый груз на любой станции Авроры.",
+			Kind: "sell", Goal: 1, After: "first_ore",
+			Reward: Reward{Credits: 600}},
+		{ID: "first_jump", Version: 1, Title: "За границей",
+			Text: "Совершите гиперпереход из Авроры в Меридиан.",
+			Kind: "jump", Target: "meridian", Goal: 1, After: "first_deal",
+			Reward: Reward{Credits: 1000}},
+	}
 }
 
 // Progress — состояние контракта у игрока.
@@ -83,11 +100,13 @@ type QuestView struct {
 }
 
 // Completion — событие выполнения контракта.
+// Completion — завершённый контракт и начисленная награда.
 type Completion struct {
 	QuestID string
 	Title   string
 	Credits int64 // начислено сейчас
 	Total   int64 // кредитов всего
+	Next string // название следующего контракта цепочки (если выдан)
 }
 
 // Service — оперативное состояние контрактов подключённых игроков (запись сквозная в хранилище).
@@ -129,11 +148,15 @@ func (s *Service) Join(ctx context.Context, pid string) error {
 		return err
 	}
 	have := map[string]bool{}
+	done := map[string]bool{}
 	for _, q := range data.Quests {
 		have[q.QuestID] = true
+		if q.State == "completed" {
+			done[q.QuestID] = true
+		}
 	}
 	for _, d := range s.defs {
-		if d.Version != latestVersion(s.defs, d.ID) || have[d.ID] {
+		if d.Version != latestVersion(s.defs, d.ID) || have[d.ID] || (d.After != "" && !done[d.After]) {
 			continue
 		}
 		created, err := s.store.Assign(ctx, pid, d)
@@ -192,6 +215,97 @@ func (s *Service) View(pid string) (View, bool) {
 
 // Evaluate проверяет активные контракты игрока по его положению. Возвращает события выполнения.
 // Награда выдаётся хранилищем атомарно и однократно, даже при повторном вызове или гонке сессий.
+// completeOne завершает контракт и активирует следующие звенья цепочки. Возвращает Completion (без Next).
+func (s *Service) completeOne(ctx context.Context, pid string, d Def) (Completion, bool) {
+	granted, credits, err := s.store.Complete(ctx, pid, d)
+	if err != nil {
+		s.log.Error("выполнение контракта", "player", pid, "quest", d.ID, "err", err)
+		return Completion{}, false
+	}
+	if !granted {
+		return Completion{}, false
+	}
+	s.mu.Lock()
+	if ps, ok := s.players[pid]; ok {
+		for i := range ps.data.Quests {
+			if ps.data.Quests[i].QuestID == d.ID {
+				ps.data.Quests[i].State = "completed"
+				ps.data.Quests[i].Progress = ps.data.Quests[i].Goal
+			}
+		}
+		ps.data.Credits = credits
+	}
+	s.mu.Unlock()
+	s.log.Info("контракт выполнен, награда выдана", "player", pid, "quest", d.ID, "credits", d.Reward.Credits, "total", credits)
+	return Completion{QuestID: d.ID, Title: d.Title, Credits: d.Reward.Credits, Total: credits}, true
+}
+
+// activateFollowers выдаёт контракты, ожидающие завершения doneID; возвращает название первого выданного.
+func (s *Service) activateFollowers(ctx context.Context, pid, doneID string) string {
+	next := ""
+	for _, d := range s.defs {
+		if d.After != doneID || d.Version != latestVersion(s.defs, d.ID) {
+			continue
+		}
+		created, err := s.store.Assign(ctx, pid, d)
+		if err != nil {
+			s.log.Error("выдача следующего контракта", "player", pid, "quest", d.ID, "err", err)
+			continue
+		}
+		if created {
+			s.mu.Lock()
+			if ps, ok := s.players[pid]; ok {
+				ps.data.Quests = append(ps.data.Quests, Progress{QuestID: d.ID, Version: d.Version, State: "active", Goal: d.Goal})
+			}
+			s.mu.Unlock()
+			s.log.Info("контракт выдан", "player", pid, "quest", d.ID, "после", doneID)
+			if next == "" {
+				next = d.Title
+			}
+		}
+	}
+	return next
+}
+
+// Event учитывает серверное событие (kill/mine/sell/jump) в активных контрактах игрока.
+// Возвращает завершённые контракты (с Next — названием следующего).
+func (s *Service) Event(ctx context.Context, pid, kind, ref string, n int) []Completion {
+	if n <= 0 {
+		return nil
+	}
+	s.mu.Lock()
+	ps, ok := s.players[pid]
+	if !ok {
+		s.mu.Unlock()
+		return nil
+	}
+	var bumped []Def
+	for i := range ps.data.Quests {
+		q := &ps.data.Quests[i]
+		if q.State != "active" {
+			continue
+		}
+		d, dok := s.def(q.QuestID, q.Version)
+		if !dok || d.Kind != kind || (d.Target != "" && d.Target != ref) {
+			continue
+		}
+		q.Progress += n
+		if q.Progress >= q.Goal {
+			bumped = append(bumped, d)
+		}
+	}
+	s.mu.Unlock()
+	var out []Completion
+	for _, d := range bumped {
+		c, done := s.completeOne(ctx, pid, d)
+		if done {
+			c.Next = s.activateFollowers(ctx, pid, d.ID)
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 func (s *Service) Evaluate(ctx context.Context, pid string, pos world.Vec) []Completion {
 	s.mu.Lock()
 	ps, ok := s.players[pid]
@@ -209,25 +323,9 @@ func (s *Service) Evaluate(ctx context.Context, pid string, pos world.Vec) []Com
 	s.mu.Unlock()
 	var out []Completion
 	for _, d := range todo {
-		granted, credits, err := s.store.Complete(ctx, pid, d)
-		if err != nil {
-			s.log.Error("выполнение контракта", "player", pid, "quest", d.ID, "err", err)
-			continue
-		}
-		s.mu.Lock()
-		if ps, ok := s.players[pid]; ok {
-			for i := range ps.data.Quests {
-				if ps.data.Quests[i].QuestID == d.ID {
-					ps.data.Quests[i].State = "completed"
-					ps.data.Quests[i].Progress = ps.data.Quests[i].Goal
-				}
-			}
-			ps.data.Credits = credits
-		}
-		s.mu.Unlock()
-		if granted {
-			s.log.Info("контракт выполнен, награда выдана", "player", pid, "quest", d.ID, "credits", d.Reward.Credits, "total", credits)
-			out = append(out, Completion{QuestID: d.ID, Title: d.Title, Credits: d.Reward.Credits, Total: credits})
+		if c, done := s.completeOne(ctx, pid, d); done {
+			c.Next = s.activateFollowers(ctx, pid, d.ID)
+			out = append(out, c)
 		}
 	}
 	return out

@@ -41,16 +41,17 @@ func TestContractFlowAndIdempotentReward(t *testing.T) {
 		t.Fatalf("повторная награда: %+v", again)
 	}
 	v, _ = s.View("p1")
-	if len(v.Quests) != 0 || v.Credits != 500 {
+	// цепочка: вместо выполненного контракта активировано следующее звено (Э-3)
+	if len(v.Quests) != 1 || v.Quests[0].ID != "first_blood" || v.Credits != 500 {
 		t.Fatalf("после выполнения: %+v", v)
 	}
-	// перезаход: контракт не выдаётся заново, кредиты на месте
+	// перезаход: выполненный не выдаётся заново, цепочка продолжается со следующего звена
 	s.Leave("p1")
 	if err := s.Join(ctx, "p1"); err != nil {
 		t.Fatal(err)
 	}
 	v, _ = s.View("p1")
-	if len(v.Quests) != 0 || v.Credits != 500 {
+	if len(v.Quests) != 1 || v.Quests[0].ID != "first_blood" || v.Credits != 500 {
 		t.Fatalf("после перезахода: %+v", v)
 	}
 	if again := s.Evaluate(ctx, "p1", station); len(again) != 0 {
@@ -234,5 +235,61 @@ func TestMemGrantCreditsIdempotent(t *testing.T) {
 	g2, t2, _ := m.GrantCredits(ctx, "p", "k", 10)
 	if !g1 || g2 || t1 != 10 || t2 != 10 {
 		t.Fatalf("%v %v %d %d", g1, g2, t1, t2)
+	}
+}
+
+func TestEventKindsAndChain(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc(NewMemStore())
+	if err := s.Join(ctx, "p2"); err != nil {
+		t.Fatal(err)
+	}
+	// цепочка не выдаётся сразу: только first_flight
+	if v, _ := s.View("p2"); len(v.Quests) != 1 || v.Quests[0].ID != "first_flight" {
+		t.Fatalf("старт цепочки: %+v", v)
+	}
+	// чужие события не считаются
+	if got := s.Event(ctx, "p2", "kill", "", 1); len(got) != 0 {
+		t.Fatalf("kill без контракта: %+v", got)
+	}
+	// выполняем звенья событиями
+	if got := s.Event(ctx, "p2", "kill", "", 1); len(got) != 0 {
+		t.Fatalf("kill рано: %+v", got)
+	}
+	// first_flight выполняем через Evaluate (позиция станции)
+	cs := s.Evaluate(ctx, "p2", station)
+	if len(cs) != 1 || cs[0].Next != "Сигнал тревоги" {
+		t.Fatalf("следующее звено: %+v", cs)
+	}
+	// kill ×1 → first_blood; mine 5 → first_ore; sell → first_deal; jump → first_jump
+	if got := s.Event(ctx, "p2", "kill", "", 1); len(got) != 1 || got[0].Next != "Руда из пустоты" {
+		t.Fatalf("kill: %+v", got)
+	}
+	if got := s.Event(ctx, "p2", "mine", "iron_ore", 3); len(got) != 0 {
+		t.Fatalf("mine 3/5: %+v", got)
+	}
+	if got := s.Event(ctx, "p2", "mine", "scrap", 5); len(got) != 0 {
+		t.Fatalf("другой ресурс не считается: %+v", got)
+	}
+	if got := s.Event(ctx, "p2", "mine", "iron_ore", 2); len(got) != 1 || got[0].Next != "Первый контракт" {
+		t.Fatalf("mine 5/5: %+v", got)
+	}
+	if got := s.Event(ctx, "p2", "sell", "", 1); len(got) != 1 || got[0].Next != "За границей" {
+		t.Fatalf("sell: %+v", got)
+	}
+	if got := s.Event(ctx, "p2", "jump", "meridian", 1); len(got) != 1 || got[0].Next != "" {
+		t.Fatalf("jump: %+v", got)
+	}
+	// View показывает активные: после финального прыжка активных нет — цепочка пройдена целиком
+	if v, _ := s.View("p2"); len(v.Quests) != 0 {
+		t.Fatalf("активные после финала: %+v", v.Quests)
+	}
+	// перезаход: заново не выдаётся, все пять в журнале завершённых
+	s.Leave("p2")
+	if err := s.Join(ctx, "p2"); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := s.View("p2"); len(v.Quests) != 0 || v.Credits != 3600 {
+		t.Fatalf("после перезахода: %+v", v)
 	}
 }

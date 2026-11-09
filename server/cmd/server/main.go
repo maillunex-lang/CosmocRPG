@@ -269,8 +269,11 @@ func run() error {
 		active := worldgen.DefaultConfig()
 		if raw, _, err := worldCfg.Active(ctx); err == nil && len(raw) > 0 {
 			var wc worldgen.Config
-			if json.Unmarshal(raw, &wc) == nil && len(wc.Systems) > 0 {
+			// Э-1: конфигурации эпохи одной системы («Кси») больше не применяем: берём встроенные три системы
+			if json.Unmarshal(raw, &wc) == nil && len(wc.Systems) >= 3 && wc.Systems[0].ID != "xi" {
 				active = wc
+			} else if err == nil && len(raw) > 0 {
+				log.Info("опубликованная конфигурация эпохи одной системы не применена, используются встроенные три системы")
 			}
 		}
 		universe = world.NewRouter(gameWorld)

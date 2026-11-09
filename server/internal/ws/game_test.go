@@ -322,7 +322,7 @@ func TestQuestFlowThroughProtocol(t *testing.T) {
 			break
 		}
 	}
-	if s2.Credits == nil || *s2.Credits != 500 || len(s2.Quests) != 0 {
+	if s2.Credits == nil || *s2.Credits != 500 || len(s2.Quests) != 1 {
 		t.Fatalf("после выполнения: %+v", s2)
 	}
 	// повторный вход тем же токеном: контракт и награда не повторяются, кредиты сохранены
@@ -330,7 +330,7 @@ func TestQuestFlowThroughProtocol(t *testing.T) {
 	b.join("questaaaaaaaaaaaaa")
 	for i := 0; i < 15; i++ {
 		s3 := b.questState()
-		if s3.Credits != nil && (*s3.Credits != 500 || len(s3.Quests) != 0) {
+		if s3.Credits != nil && (*s3.Credits != 500 || len(s3.Quests) != 1) {
 			t.Fatalf("после перезахода: %+v", s3)
 		}
 	}
@@ -543,7 +543,7 @@ func TestAccountSurvivesReinstall(t *testing.T) {
 			break
 		}
 	}
-	if s.Credits == nil || *s.Credits != 500 || len(s.Quests) != 0 {
+	if s.Credits == nil || *s.Credits != 500 || len(s.Quests) != 1 {
 		t.Fatalf("прогресс не перенесён: %+v", s)
 	}
 	// без аккаунта токен без привязки создаёт нового игрока

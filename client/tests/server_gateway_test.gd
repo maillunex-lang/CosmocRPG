@@ -87,7 +87,7 @@ func _run() -> void:
 	_check(await _wait(a, func() -> bool: return not a.snapshot().is_empty()), "вход выполнен, пришло состояние")
 	var st: Dictionary = a.snapshot()
 	_check(str(st["player"]["name"]).begins_with("Tst_A"), "ник персонажа применён (%s)" % str(st["player"]["name"]))
-	_check(st["system"].get("id", "") == "xi", "система Кси")
+	_check(st["system"].get("id", "") == "aurora", "система Аврора")
 	var has_station := false
 	for o in st["objects"]:
 		if o["kind"] == "station":
@@ -133,7 +133,8 @@ func _run() -> void:
 	var notes_live: Array = []
 	a.notification.connect(func(t: String) -> void: notes_live.append(t))
 	await _wait(a, func() -> bool: return int(a.snapshot().get("credits", 0)) == 500, 30.0)
-	_check(int(a.snapshot().get("credits", 0)) == 500 and a.snapshot()["quests"].is_empty(), "награда 500 кредитов получена, контракт закрыт")
+	var q_after: Array = a.snapshot()["quests"]
+	_check(int(a.snapshot().get("credits", 0)) == 500 and q_after.size() == 1 and str(q_after[0].get("id", "")) == "first_blood", "награда 500 кредитов получена, открыто следующее задание цепочки")
 	await _wait(a, func() -> bool: return notes_live.any(func(t: String) -> bool: return t.contains("опыта") or t.contains("Новый уровень")), 5.0)   # опыт за контракт приходит отдельным сообщением (RPG-1); 100 опыта — это уже уровень 2
 	_check(notes_live.filter(func(t: String) -> bool: return t.contains("Задание выполнено")).size() == 1, "уведомление о выполнении задания пришло один раз")
 	_check(notes_live.any(func(t: String) -> bool: return t.contains("опыта") or t.contains("Новый уровень")) and a.has_pilot(), "за контракт начислен опыт пилота (RPG-1)")

@@ -28,6 +28,8 @@ var player_id := ""
 ## Имя при создании игрока (по умолчанию сервер даёт «Пилот-NNNN»); нужно тестам, чтобы отличать своих игроков.
 var join_name := ""
 var system: Dictionary = {}
+var systems: Array = []   # Э-1: все системы (звёздная карта)
+var gates: Array = []     # Э-1: точки прыжков текущей системы
 var layout: Dictionary = {}   # раскладка системы с сервера (зоны, тела, станции, месторождения) и параметры декора
 var visual: Dictionary = {}
 
@@ -145,6 +147,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			player_id = str(payload.get("player_id", ""))
 			_pilot = payload.get("pilot", {}) if payload.get("pilot") is Dictionary else {}
 			system = payload.get("system", {})
+			systems = payload.get("systems", []) if payload.get("systems") is Array else []
+			gates = payload.get("gates", []) if payload.get("gates") is Array else []
 			layout = payload.get("layout", {}) if payload.get("layout") is Dictionary else {}
 			visual = payload.get("visual", {}) if payload.get("visual") is Dictionary else {}
 			alert_cleared.emit(ALERT_LINK)
@@ -152,6 +156,17 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			joined.emit()
 			request_chat_history()
 			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
+		"system_changed":
+			system = payload.get("system", {}) if payload.get("system") is Dictionary else {}
+			if payload.get("layout") is Dictionary:
+				layout = payload["layout"]
+			if payload.get("visual") is Dictionary:
+				visual = payload["visual"]
+			systems = payload.get("systems", systems) if payload.get("systems") is Array else systems
+			gates = payload.get("gates", []) if payload.get("gates") is Array else []
+			_target_id = ""
+			_sent_move = Vector2.INF
+			system_changed.emit(payload)
 		"state":
 			_apply_state(payload)
 		"combat_events":
@@ -342,7 +357,7 @@ func _apply_state(p: Dictionary) -> void:
 		_state["credits"] = int(p["credits"])
 	var quests: Array = []
 	for q in p.get("quests", []):
-		quests.append({"title": str(q.get("title", "")), "progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
+		quests.append({"id": str(q.get("id", "")), "title": str(q.get("title", "")), "progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
 	_state["quests"] = quests
 	_auto_battle_tick()
 	state_updated.emit(_state)
@@ -408,6 +423,15 @@ func set_spec(spec_id: String) -> void:
 	if _joined:
 		_client.send_message("set_spec", {"value": spec_id})
 
+
+func star_systems() -> Array:
+	return systems
+
+func jump_gates() -> Array:
+	return gates
+
+func jump(to: String) -> void:
+	_client.send_message("jump", {"to": to})
 
 func has_chat() -> bool:
 	return true

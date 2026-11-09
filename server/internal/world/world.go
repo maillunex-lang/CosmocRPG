@@ -191,6 +191,7 @@ type System struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	Background string `json:"background"`
+	Faction    string `json:"faction,omitempty"` // владение фракции (Галактика R30)
 }
 
 // World — состояние системы. Безопасен для вызова из нескольких горутин.

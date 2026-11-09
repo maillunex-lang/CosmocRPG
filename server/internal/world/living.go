@@ -29,9 +29,10 @@ var (
 type Reward struct {
 	Player  string
 	Key     string
-	Kind    string // kill | discover | sell
+	Kind    string // kill | discover | sell | mine
 	Ref     string
 	Credits int64
+	Amount  float64 // mine: сколько единиц ресурса добыто
 }
 
 type safeZone struct {
@@ -127,6 +128,7 @@ func (w *World) ApplyLayout(l worldgen.Layout, cfg worldgen.Config) error {
 	for _, sp := range cfg.Systems {
 		if sp.ID == l.System {
 			w.system.Background = sp.Background
+			w.system.Faction = sp.Faction
 			break
 		}
 	}
@@ -370,6 +372,8 @@ func (w *World) stepMining(p *Player) {
 		d.Amount -= amt
 		p.hold[d.Resource] += amt
 		w.emit(Event{Type: "mine", From: p.ID, To: d.ID, Amount: amt})
+		w.rewards = append(w.rewards, Reward{Player: p.ID, Key: fmt.Sprintf("mine:%d", time.Now().UnixNano()),
+			Kind: "mine", Ref: d.Resource, Amount: amt})
 	}
 	if free-amt < 0.01 || d.Amount < 0.01 {
 		stop()

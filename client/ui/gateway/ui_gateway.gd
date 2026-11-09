@@ -66,12 +66,23 @@ signal shop_updated(data: Dictionary)
 signal shop_failed(text: String)
 ## Пилот: опыт, уровень и очки характеристик (серверный режим): словарь состояния пилота.
 signal pilot_updated(pilot: Dictionary)
+signal system_changed(info: Dictionary)   # Э-1: гиперпереход завершён {system, layout, spawn...}
 
 
 ## Игровая настройка (например, автоответ на атаку). В демо без сервера ничего не делает.
 func set_option(_name: String, _value: bool) -> void:
 	pass
 
+
+## Звёздная карта (Э-1): системы, точки прыжков текущей системы, команда прыжка.
+func star_systems() -> Array:
+	return []
+
+func jump_gates() -> Array:
+	return []
+
+func jump(_to: String) -> void:
+	pass
 
 func has_chat() -> bool:
 	return false

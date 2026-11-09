@@ -28,6 +28,7 @@ type SystemParams struct {
 	Seed           int64      `json:"seed"`
 	Radius         float64    `json:"radius"`
 	Specialization string     `json:"specialization"`          // mixed | mining | trade | pirate | explore
+	Faction        string     `json:"faction"`                 // фракция системы (Галактика R30)
 	Hub            [2]float64 `json:"hub"`                     // главная станция
 	Difficulty     int        `json:"difficulty"`              // 1..3: состав PvE
 	Planets        int        `json:"planets,omitempty"`       // число планет (по умолчанию 1)

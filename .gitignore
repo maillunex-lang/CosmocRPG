@@ -17,6 +17,8 @@ client/android/build/libs/
 .env.*
 secrets/
 *.pem
+# Публичный ключ обновлений — часть контракта APK, не секрет.
+!client/assets/update_public.pem
 # Godot
 client/.godot/
 client/.import/

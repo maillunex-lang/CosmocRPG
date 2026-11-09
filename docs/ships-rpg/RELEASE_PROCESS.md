@@ -17,3 +17,5 @@
 
 ## Проверки R-63
 Локально Godot4.6.3: updater_test 31/0, apk_installer_test 9/0. Проверка openssl с настоящим ключом манифеста в updater_test пропущена, ключ не настроен; это не тест подписи выпущенного APK. Для SR-100a новый APK требуется перед доставкой секции игрокам, но version_code остаётся14 до готового release-кандидата и проверки последнего публичного манифеста. SDK/AAR и прежние release/manifest credentials в этом executor не настроены; подписанный APK не собран/не опубликован, установка на Android не заявляется.
+
+SR-093: выяснено, что общий *.pem скрывал public update key из свежих clone. Тот же client/assets/update_public.pem восстановлен из embedded PUBLIC_KEY_PEM (проверен подписанным production manifest), добавлено узкое .gitignore исключение и обязательный тест наличия/тождественности. Приватные ключи остаются исключёнными. Updater33/0. READ-ONLY проверка канала: latest0.3.11/code14, подписьVerified OK; updater с кодом13 видит available, с14 up_to_date. Это проверка текущего опубликованного обновления, не новый APK.

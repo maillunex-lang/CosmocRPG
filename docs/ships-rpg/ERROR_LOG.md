@@ -34,8 +34,17 @@ SR-011b (2026-11-09): новых ошибок не выявлено. Полны�
 Причина: Join существующего player ID сохраняет прежний корабль (world.go:245); тест в действительности остался на Стриже. Исправление: штатный w.SetShip с обязательной проверкой ошибки. Повторный race ws/cmd/server PASS (13.910s/3.307s). Неудачная попытка: повторный Join как смена корабля. Регрессия: тот же live WS тест, включая активные админские параметры/уровень/старый decoder/чужой корпус. Коммит: SR-100a после фиксации. Профилактика: проверять состояние fixture через публичные команды.
 
 ## ERROR-SR-005
-Дата: 2026-11-09. Задача SR-091. Компонент quest/quest_test.go, существующий CI. Серьёзность Medium. Статус Investigating (исправление теста подготовлено, PostgreSQL-проверка ожидается).
+Дата: 2026-11-09. Задача SR-091. Компонент quest/quest_test.go, существующий CI. Серьёзность Medium. Статус Resolved (PostgreSQL CI нового main подтвердил исправление).
 Воспроизведение: GitHub Actions run 42604786797, job 129117865467, `go test -race -count=1 ./...` с PostgreSQL. FAIL TestPGRewardOnceAndPersistence: после restart Credits500 и активный first_blood, а тест ожидает ноль заданий.
 Причина подтверждена кодом/логом: Catalog уже содержит цепочку, Service.Join выдаёт next при completed predecessor; memory TestContractFlowAndIdempotentReward уже ожидает first_blood. Старое PG-ожидание не обновлено. Между исходной main 3b89741 и предыдущими Ships RPG коммитами runtime quest не менялся.
 Исправление: только PG-тест ожидает ровно first_blood с Progress0, Credits500 и отсутствие повторной награды после restart. Игровой код/SQL/production не меняются. Локально DB cases пропускаются, поэтому исправление нельзя объявить проверенным PostgreSQL до нового CI. Неудачные попытки: gh run view --log до завершения run недоступен; redirect job log через gh CLI не скачался; лог получен GitHub connector fetch_workflow_job_logs.
 Файлы: server/internal/quest/quest_test.go. Регрессия: этот тест + существующий memory flow. Коммит: SR-091. Профилактика: следить за DB-веткой CI, не выдавать локальный SKIP за PASS.
+
+Проверка ERROR-SR-005: GitHub Actions run42606462785, Go job129123615616 — success, PostgreSQL race/vet/build выполнены. Коммит исправления88a060c, проверяемый head cb34353.
+
+## ERROR-SR-006
+Дата: 2026-11-09. Задача SR-093. Компонент release workflow/.gitignore. Серьёзность Medium. Статус Resolved.
+Воспроизведение в свежем checkout: `git ls-files client/assets/update_public.pem` пуст; openssl -verify client/assets/update_public.pem завершился ошибкой открытия файла. publish_release.sh использует именно этот путь.
+Причина доказана: общее правило `*.pem` исключало публичный файл, а updater_test проверял совпадение файла только при его наличии. Встроенный PUBLIC_KEY_PEM в updater.gd корректен: им проверен опубликованный signed manifest. На VPS файл мог существовать вне git, но в clone отсутствовал.
+Исправление: восстановлен тот же PUBLIC KEY из updater.gd, добавлено точечное исключение !client/assets/update_public.pem, тест требует наличие файла и совпадение со встроенным ключом. Ни новый ключ, ни приватный материал не создавались/не копировались.
+Файлы: .gitignore, client/assets/update_public.pem, client/tests/updater_test.gd. Проверка: updater33/0, openssl Verified OK для реально опубликованного latest.json (0.3.11/code14), Godot evaluate code13→available/code14→up_to_date. Неудачная попытка: первоначальная проверка отсутствующим файлом; рабочая диагностика через публичный PEM из кода. Регрессия: updater_test обязательное наличие+тождество ключа. Коммит: SR-093. Профилактика: публичные контракты подписи хранить в репозитории с точечным разрешением; приватные *.pem по-прежнему исключены.

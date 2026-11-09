@@ -1,3 +1,10 @@
+# Обновление статуса (2026-11-09, после публикации SR-100a)
+main содержит cb34353: read-only паспорт Стрижа в игровом ангаре; 88a060c: PG-test цепочки. CI42606462785: Go/PG job129123615616 success, admin/Docker success; Godot job129123615478 ещё выполняется. ERROR-SR-005 Resolved. Новый APK/production не выпущены.
+SR-093 добавляет тот же public update PEM в git и тест его наличия (33/0): *.pem раньше исключал его из clone. Production signed manifest0.3.11/code14 Verified OK, updater installed13→available/14→up_to_date. Приватных ключей/SDK в cloud нет, сборка обновляемого APK остаётся ограничением выпуска.
+При позднем опросе gh CLI получил401; GitHub connector fetch_workflow_run_jobs работает, причина401 не установлена. Не логиниться чужими токенами и не печатать секреты; пользоваться connector. Следующий шаг — проверить финальный Godot CI для cb34353, затем SR-100b/c. Исторические ожидания CI ниже заменены этим статусом.
+
+---
+
 # Передача R-63: поэтапная игровая интеграция
 Дата: 2026-11-09. Ветка локально codex/ships-rpg-foundation; публикация в remote main разрешена пользователем.
 

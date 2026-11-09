@@ -84,6 +84,7 @@ func _run() -> void:
 	var pem := Updater.PUBLIC_KEY_PEM
 	var pk := CryptoKey.new()
 	# файл ключа (*.pem) не хранится в git: в CI его нет, сверка только там, где файл есть (на машине разработчика)
+	_c(FileAccess.file_exists(Updater.PUBLIC_KEY_PATH), "публичный ключ обновлений присутствует в checkout для publish_release.sh")
 	if FileAccess.file_exists(Updater.PUBLIC_KEY_PATH):
 		_c(FileAccess.get_file_as_string(Updater.PUBLIC_KEY_PATH).strip_edges() == pem.strip_edges(), "вшитый в код ключ совпадает с файлом ключа")
 	else:

@@ -105,6 +105,7 @@ func TestPassportRejectsInvalidData(t *testing.T) {
 			s.Base.Abilities["boost"] = a
 		}, "unknown base specialization"},
 		{"duplicate legacy spec", func(s *ShipPassport) { s.Base.Specs = append(s.Base.Specs, s.Base.Specs[0]) }, ""},
+		{"empty base role", func(s *ShipPassport) { s.Base.Role = "" }, ""},
 		{"negative hull", func(s *ShipPassport) { s.Base.Hull = -1 }, ""},
 		{"base invalid boost", func(s *ShipPassport) {
 			ab := s.Base.Abilities["boost"]

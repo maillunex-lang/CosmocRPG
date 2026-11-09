@@ -1,27 +1,49 @@
 # Передача Ships RPG v2.1
-Дата: 2026-11-09. Ветка: codex/ships-rpg-foundation. Предыдущая контрольная точка: 79df286.
+Дата: 2026-11-09. Ветка: `codex/ships-rpg-foundation`. Исходная контрольная точка этой задачи: `79df286`.
 
-Текущая задача: SR-011 (полные паспорта). SR-011a DONE: типы, JSON Schema на основе существующей SchemaJSON для base, семантический валидатор, стартовые бюджеты и крепления, negative/roundtrip/race-тесты. SR-011b TODO: добавить авторские 15 паспортов и проверить совпадение всех 12 legacy ShipSpec. Весь этап 1 IN_PROGRESS.
+## Текущая стадия
+**SR-011 DONE**: полный проверяемый каталог 15 моделей / 12 классов / 30 специализаций. SR-011a (контракт/schema/валидатор) — `6a657db`. SR-011b (авторские данные и реальные compatibility/coverage-тесты) — текущий коммит; точный SHA будет добавлен финальной записью после фиксации. Весь этап 1 **IN_PROGRESS**, SR-012/013/014 остаются TODO. Прежние SR-000/010/015/014a DONE; caps 100/50 уже реализованы и подтверждены владельцем, шесть узлов + усиление ульты на 20 согласованы, но деревья ещё не созданы.
 
-Последние проверки: race shipcatalog PASS 7.007s; vet shipcatalog PASS. ERROR-SR-003 (тест ошибочно ожидал семантический текст вместо schema uniqueItems) исправлена; ERROR-SR-001/002 также Resolved. PostgreSQL/Godot/production в этой задаче не проверялись и не менялись.
+## Что реализовано
+- `server/internal/shipcatalog/passport.go`: PassportCatalog/ShipPassport, compiler JSON Schema с существующей SchemaJSON для base, семантические проверки ID/спек/слотов/категорий/размеров/бюджетов/старта/геометрии; DefaultPassportCatalog; полное сравнение старых base через CheckLegacyPassportBases.
+- `data/rpg_passports.schema.json`: все поля полного паспорта обязательны; unknown fields отклоняются; диапазоны 72 skill ID, размеры S/M/L/XL, группы слотов, предварительность новых групп полей и новых base. Регистрирует внешний `ship-patch-v1.json` из SchemaJSON(), поэтому базовые диапазоны не дублируются.
+- `data/rpg_passports.json`: все 15 паспортов. base 12 старых — полный неизменённый снимок ShipSpec, новые три base — предварительные. Всё новое явно помечено preliminary_fields.
+- `passport_test.go`: synthetic negative/schema/roundtrip/concurrent tests; `passport_data_test.go`: реальные 15/12/30, полное legacy equality, 15 разных силуэтов, все weapon/engine mounts, hull permissions для всех 72 ID, нет неявной публикации, нет shared mutable state, точные бюджеты и их независимость от combat energy.
+- `docs/ships-rpg/PASSPORTS.md`: человекочитаемая таблица, единицы, предварительность, расчёты/ограничения; SR-ADR-003 описывает архитектуру. Обновлены главные ROADMAP/HANDOFF и профильные AUDIT/ROADMAP/DECISIONS/ERROR_LOG/REGRESSION_TESTS/HANDOFF.
 
-Файлы SR-011a: server/internal/shipcatalog/passport.go, passport_test.go, data/rpg_passports.schema.json; docs/ships-rpg/{ROADMAP,DECISIONS,ERROR_LOG,REGRESSION_TESTS,HANDOFF}.md; главная docs/HANDOFF.md. Schema использует ship-patch-v1.json, который компилятор регистрирует из существующей SchemaJSON().
+## Реальные проверки
+- Полный `go test -race -count=1 -json ./...` — exit 0: 20 пакетов PASS, 304 test/subtest PASS, 62 SKIP, 0 FAIL; 3 пакета без тестов.
+- После финального усиления required base schema и добавления отрицательного теста роли: `go test -race -count=1 -json ./internal/shipcatalog` — exit 0, 8.392s, 68 PASS, 1 SKIP.
+- `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-sr011 ./cmd/server`, gofmt, git diff --check — PASS; после усиления schema vet/build повторяются перед финальной фиксацией. Бинарник не запускался.
+- Тестовая PostgreSQL URL не настроена: DB cases пропущены. Godot/Android/production не проверялись: код БД/клиента не менялся.
+- ERROR-SR-003: документ корректно отклонялся schema uniqueItems, но тест ошибочно ожидал текст Go-проверки. Исправлено в 6a657db. Все ERROR-SR-001/002/003 Resolved, открытых ошибок на этой точке нет. Не стирать исторические неудачные прогоны.
 
-Решение SR-ADR-003: полный документ v2 отделён от runtime Service/Store. base — точный снимок прежнего ShipSpec, не новый слой бонусов. Активные админские версии не перезаписывать. Старые local specs и новые global specialization IDs пока живут раздельно. Стартовые blueprints самодостаточные, их family — классификация, не ID будущего модуля. Реализация эффектов/достижимость unlock-путей — SR-012/013/020, владение/транзакции — SR-030. Новые числа помечены preliminary_fields.
+## Границы и важные решения
+Каталог v2 пока не подключён к world/Service/Store/клиенту. Runtime по-прежнему 12 моделей; три новых корабля ещё нельзя выбрать в игре. Не публиковать документ через старую структуру world.Doc: новые поля потеряются. Активные админские версии PostgreSQL могут отличаться от seed; будущая миграция должна сохранить их значения, не заменить встроенным snapshot.
 
-Следующие три шага:
-1. SR-011b: внести 15 паспортов, DefaultPassportCatalog и реальные legacy/coverage/geometry тесты. Черновой генератор и данные подготовлены в /workspace/scratch/create_passport_data.py и rpg_passports.json; перепроверить, не считать этот scratch готовым артефактом.
-2. Прогнать schema/race/vet/build, завершить SR-011, обновить основную карту, журналы, подробный HANDOFF и SHA.
-3. SR-012: типизированные контракты навыков и первое закончённое семейство; затем вся библиотека. Caps 100/50 уже реализованы, 6 узлов + усиление 20 согласованы, деревья ещё TODO.
+base включает прежние local specs, а specializations — новые global IDs: например, Ястреб пока хранит interceptor/scout в base, целевые ветки hunter/assault в новом поле. Это намеренное сохранение совместимости, не уже выполненная миграция. pulse остаётся автоатакой и не становится W01 автоматически. boost/intercept/scan при будущих alias/migration должны сохранить per-ship параметры.
 
-Возобновление:
+Стартовые модули — self-contained **предлагаемые blueprints**, не предметы игрока и не финальный общий каталог. Семейства — классификация; в SR-013 вынести в общий модульный справочник, добавить полные ограничения/редкости и доказать все unlock-пути. Текущая проверка hull permissions всех 72 ID не доказывает доступность их через модули/изучение. В SR-030 нужны владение, сохранённые билды и атомарные транзакции.
+
+Новые сопротивления и стартовые модули не меняют старые боевые статы; не складывать их повторно с base. MW размещения отдельно от энергии. dimensions_m = [длина,ширина,высота], visual [X,Y,Z] метры, -Z вперёд/+Y вверх, collision box полуразмеры [ширина/2,высота/2,длина/2]. Игровые скорость/ускорение/дальность остаются в world units. Placeholder IDs/силуэты/крепления — данные; сами процедурные meshes относятся к SR-050, GLB Стрижа сохранены.
+
+## Следующие три шага
+1. SR-012: декомпозировать контракт 72 навыков/30 ульт на малые проверяемые семейства, сначала IN_PROGRESS; ввести строгие типы целей/эффектов, JSON Schema, refs и предварительные формулы. Не объявлять библиотеку готовой по одним ID.
+2. Реализовать первое закончённое семейство данных и тесты с per-rank параметрами/развилками/PvP; сохранить старые pulse/boost/intercept/scan через явные compatibility tests. Runtime effect registry — отдельный SR-020, не исполнение строк JSON.
+3. SR-013: общий каталог модулей/36 пассивов с rpg.Compute, полный граф module → abilities и достижимость всех 72. Затем SR-014: шесть узлов 1/4/7/10/14/18 + усиление ульты 20.
+
+## Возобновление
 ```bash
 cd /workspace/CosmocRPG
 git status --short --branch
-git log -6 --oneline
+git log -8 --oneline
+cat docs/ships-rpg/ROADMAP.md docs/ships-rpg/ERROR_LOG.md docs/ships-rpg/HANDOFF.md
 export PATH=/workspace/scratch/toolchain/go/bin:$PATH
 cd server
 go version
 go test -race -count=1 ./internal/shipcatalog
+go vet ./...
 ```
-Toolchain Go1.27.3 уже установлен локально с проверкой официального SHA-256; /usr/bin/go здесь другая программа. Scratch может исчезнуть при смене окружения. Для истории прежней сессии см. основную docs/HANDOFF.md и git show 79df286:docs/ships-rpg/HANDOFF.md. Последний SHA кода SR-011a — git log -- passport.go после коммита. Все коммиты локальные; push/PR/deploy не выполнялись. Другие проекты VPS не затрагивать, production без отдельного разрешения запрещён.
+Go1.27.3 установлен локально с проверкой официального SHA-256; go.mod/CI не менялись. /usr/bin/go — другая программа, при потере scratch установить официальный toolchain заново, сперва проверив версию/хеш.
+
+Вне Git: toolchain, генератор черновых данных (итоговый JSON — авторитетный артефакт), логи `ships-rpg-passport-contract*.log`, `ships-rpg-passports-data-tests.jsonl`, `ships-rpg-sr011-all-tests.jsonl`, `ships-rpg-passports-final-tests.jsonl` в /workspace/scratch. Они могут исчезнуть при смене окружения; сводка сохранена в REGRESSION_TESTS. Ни серверов, ни контейнеров эта задача не запускала. Коммиты локальные, push/PR/deploy не выполнялись. **Другие проекты VPS не трогать; production-деплой без отдельного разрешения запрещён.**

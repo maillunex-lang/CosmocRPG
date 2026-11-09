@@ -327,3 +327,19 @@ func validatePassportVisual(ship ShipPassport) error {
 	}
 	return nil
 }
+
+//go:embed data/rpg_passports.json
+var passportsJSON []byte
+
+// DefaultPassportCatalog returns an independently decoded draft catalog. It
+// verifies every legacy base against the existing seed and has no publish hook.
+func DefaultPassportCatalog() (PassportCatalog, error) {
+	c, err := LoadPassportCatalog(passportsJSON)
+	if err != nil {
+		return PassportCatalog{}, err
+	}
+	if err := CheckLegacyPassportBases(c, world.DefaultDoc()); err != nil {
+		return PassportCatalog{}, err
+	}
+	return c, nil
+}

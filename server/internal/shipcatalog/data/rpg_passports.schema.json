@@ -57,7 +57,45 @@
             "maxLength": 1200
           },
           "base": {
-            "$ref": "ship-patch-v1.json"
+            "$ref": "ship-patch-v1.json",
+            "required": [
+              "id",
+              "name",
+              "class",
+              "role",
+              "temporary",
+              "specs",
+              "default_spec",
+              "skins",
+              "dimensions_m",
+              "crew",
+              "engines",
+              "weapons",
+              "hull",
+              "shield",
+              "armor",
+              "energy",
+              "cargo",
+              "speed",
+              "shield_regen",
+              "shield_regen_delay",
+              "energy_regen",
+              "abilities"
+            ],
+            "properties": {
+              "class": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "weapons": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "preliminary_fields": {
             "type": "array",

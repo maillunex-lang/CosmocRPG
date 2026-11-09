@@ -130,8 +130,13 @@ func TestPGRewardOnceAndPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	v, _ := s2.View(pid)
-	if v.Credits != 500 || len(v.Quests) != 0 {
+	// The campaign now continues after first_flight. A restart must preserve
+	// the reward and activate first_blood rather than expect an empty journal.
+	if v.Credits != 500 || len(v.Quests) != 1 || v.Quests[0].ID != "first_blood" || v.Quests[0].Progress != 0 {
 		t.Fatalf("после перезапуска: %+v", v)
+	}
+	if again := s2.Evaluate(ctx, pid, station); len(again) != 0 {
+		t.Fatal("после перезапуска повторная награда")
 	}
 }
 

@@ -46,3 +46,7 @@ TestExtendedCurvesPreserveLegacyXP проверяет все прежние по
 Новые ошибки SR-011b не обнаружены; ERROR-SR-003 исправлена в 6a657db. Godot, реальная БД и production не менялись/не проверялись. Модульное открытие всех 72 навыков и реализация эффектов ещё не проверяются, это следующие задачи.
 
 SHA текущей задачи: `6a657db` — SR-011a, `699e8b5` — SR-011b/завершение SR-011. Финальный gofmt/vet/build после последней schema — PASS.
+
+## 2026-11-09 — R-63/SR-090/091, публикация и CI
+`git fetch origin main`: remote 3b89741, divergence 0/8; `git push origin HEAD:main` — PASS, main fast-forward до 75931d4 (накопленные тестированные Ships RPG + новый план). Автодеплоя нет. CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42604786797: Go vet/gofmt PASS, PostgreSQL race FAIL на прежнем TestPGRewardOnceAndPersistence (ERROR-SR-005). admin/Docker PASS; client ещё выполнялся на момент проверки. PostgreSQL shipcatalog/shipxp/pilot/world/ws в этом run PASS — это первая фактическая удалённая DB-проверка накопленных изменений. Не объявлять весь CI зелёным.
+Исправление SR-091 затрагивает только тест квестовой цепочки. Следующая push/CI должна подтвердить его с БД.

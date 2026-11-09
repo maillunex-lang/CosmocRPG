@@ -38,8 +38,12 @@ services:
       COSMOC_FEATURE_QUESTS: ${FEATURE_QUESTS:-true}   # контракты и награды (Этап С-01); false выключает
       COSMOC_FEATURE_AI: ${FEATURE_AI:-true}   # ИИ-игроки в мире (R-42); false выключает
       COSMOC_FEATURE_LIVING: ${FEATURE_LIVING:-true}   # живые локации (враги, добыча, исследование, большая карта); false выключает
+      COSMOC_ASSET_SIGN_KEY_FILE: /run/secrets/assets_sign_key   # ключ подписи ресурсов дизайна (R-53); нет ключа — публикация выключена
     ports:
       - "${GAME_BIND:-0.0.0.0}:8080:8080"    # игровой порт (HTTP/WS без TLS до появления домена)
+    volumes:
+      # приватный ключ подписи ресурсов: только чтение, владелец файла — пользователь контейнера (65532), права 400; не тот ключ, что у обновлений APK
+      - ${ASSET_SIGN_KEY_FILE:-/dev/null}:/run/secrets/assets_sign_key:ro
     networks: [db, edge]
 
   caddy:

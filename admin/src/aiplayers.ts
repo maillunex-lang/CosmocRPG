@@ -1,5 +1,7 @@
 // Клиент админ-API «ИИ-игроки» (ИИ-3).
 
+import { API } from "./api";
+
 export interface AiStatus {
   enabled: boolean;
   paused: boolean;
@@ -44,8 +46,6 @@ export interface AiPlayersData {
   settings: AiSettings;
   captains: AiCaptain[];
 }
-
-const API = "/api";
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {

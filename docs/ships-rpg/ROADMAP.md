@@ -98,5 +98,5 @@ CI c9a3391 для полного gameplay шага — success. Дополнит
 | ID | P | Зависимости | Критерии DONE | Статус | Даты | Проверки / SHA |
 |---|---|---|---|---|---|---|
 | SR-100c-4a | P0 | SR-100c | Per-player reservation, callback вне world mutex; tick/snapshot/другие игроки продолжают работу; actor actions guarded; no invulnerability | DONE | 2026-11-09 / 2026-11-09 | blocked-store red→green; полный world race PASS1.787s / этот core commit |
-| SR-100c-4b | P0 | SR-100c-4a | Per-owner session gate вместо global Handler mutex на IO; reconnect/leave/CAS/recovery безопасны | IN_PROGRESS | 2026-11-09 / — | WS two players/replacement/cancellation/PG / — |
-| SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | TODO | — / — | actual tests/CI/diff / — |
+| SR-100c-4b | P0 | SR-100c-4a | Per-owner session gate вместо global Handler mutex на IO; reconnect/leave/CAS/recovery безопасны | DONE | 2026-11-09 / 2026-11-09 | slowIO red→green; PG row-lock+reconnect/gate cleanup race PASS6.553s / этот WS commit |
+| SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | IN_PROGRESS | 2026-11-09 / — | actual tests/CI/diff / — |

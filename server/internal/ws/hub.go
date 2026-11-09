@@ -74,8 +74,10 @@ type Handler struct {
 	opts     Options
 	sessions atomic.Int64
 
-	mu     sync.Mutex
-	active map[string]*session // публичный id игрока -> его текущая сессия
+	mu           sync.Mutex
+	active       map[string]*session // публичный id игрока -> его текущая сессия
+	operationsMu sync.Mutex
+	operations   map[string]*playerOperation
 }
 
 // session — игровая сессия: состояние рассылается через очередь, чтобы медленный клиент не тормозил мир.
@@ -270,7 +272,23 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		reply(errMsg(m.ID, "not_joined", "сначала выполните join"))
 		return true
 	}
+	unlock, err := h.lockPlayer(ctx, ss.pid)
+	if err != nil {
+		return false
+	}
+	defer unlock()
+	h.mu.Lock()
+	current := h.active[ss.pid] == ss
+	h.mu.Unlock()
+	if !current {
+		reply(errMsg(m.ID, "replaced", "сессия заменена"))
+		return false
+	}
 	pw := h.opts.World.For(ss.pid)
+	if pw == nil {
+		reply(errMsg(m.ID, "not_joined", "вы не в мире"))
+		return true
+	}
 	switch m.Type {
 	case "equipment_set", "equipment_get":
 		h.equipmentMsg(ctx, ss, m)
@@ -595,6 +613,8 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 
 func abilityText(code string) string {
 	switch code {
+	case "equipment_busy":
+		return "дождитесь завершения смены оснащения"
 	case "cooldown":
 		return "способность перезаряжается"
 	case "no_energy":
@@ -698,6 +718,8 @@ func (h *Handler) leave(ss *session, log *slog.Logger) {
 	if ss.pid == "" {
 		return
 	}
+	unlock, _ := h.lockPlayer(context.Background(), ss.pid)
+	defer unlock()
 	h.mu.Lock()
 	current := h.active[ss.pid] == ss
 	if current {
@@ -1057,6 +1079,11 @@ func (h *Handler) accountMsg(ctx context.Context, c *websocket.Conn, ss *session
 func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger, m Message, rec world.Record) bool {
 	w := h.opts.World
 	reply := func(msg Message) { _ = writeJSON(ctx, ss.conn, msg) }
+	unlock, lockErr := h.lockPlayer(ctx, rec.ID)
+	if lockErr != nil {
+		return false
+	}
+	defer unlock()
 	if err := h.loadStarter(ctx, &rec); err != nil {
 		log.Error("ws: load equipment", "player", rec.ID, "err", err)
 		reply(errMsg(m.ID, "equipment_unavailable", "не удалось загрузить оснащение; повторите вход"))
@@ -1375,6 +1402,8 @@ func corpText(err error) string {
 
 func jumpCode(err error) string {
 	switch err {
+	case world.ErrEquipmentBusy:
+		return "equipment_busy"
 	case world.ErrNoLink:
 		return "no_link"
 	case world.ErrNoGate:
@@ -1386,6 +1415,8 @@ func jumpCode(err error) string {
 
 func jumpText(err error) string {
 	switch err {
+	case world.ErrEquipmentBusy:
+		return "дождитесь завершения смены оснащения"
 	case world.ErrNoLink:
 		return "из этой системы нет перехода туда"
 	case world.ErrNoGate:

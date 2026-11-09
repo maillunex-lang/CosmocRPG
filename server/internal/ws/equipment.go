@@ -47,18 +47,11 @@ func (h *Handler) equipmentMsg(ctx context.Context, ss *session, m Message) {
 		reply(errMsg(m.ID, "equipment_unavailable", "оснащение недоступно"))
 		return
 	}
-	// Serialize session replacement with the equipment command; a replaced
-	// connection must not mutate equipment belonging to its successor.
-	h.mu.Lock()
-	if h.active[ss.pid] != ss {
-		h.mu.Unlock()
-		reply(errMsg(m.ID, "replaced", "сессия заменена"))
-		return
-	}
+	// game holds this owner's cancellable gate; join/leave use the same gate.
+	// Handler.mu is only used for short active-map checks, never storage IO.
 	w := h.opts.World.For(ss.pid)
 	if w == nil {
-		h.mu.Unlock()
-		reply(errMsg(m.ID, "not_joined", "сначала войдите в игру"))
+		reply(errMsg(m.ID, "not_joined", "вы не в мире"))
 		return
 	}
 	var err error
@@ -77,7 +70,6 @@ func (h *Handler) equipmentMsg(ctx context.Context, ss *session, m Message) {
 		dec := json.NewDecoder(bytes.NewReader(m.Payload))
 		dec.DisallowUnknownFields()
 		if dec.Decode(&p) != nil || dec.Decode(new(any)) != io.EOF || p.Revision == nil || p.Equipped == nil || *p.Revision < 0 {
-			h.mu.Unlock()
 			reply(errMsg(m.ID, "bad_message", "укажите ревизию и состояние двигателя"))
 			return
 		}
@@ -102,7 +94,6 @@ func (h *Handler) equipmentMsg(ctx context.Context, ss *session, m Message) {
 			return state, world.ErrEquipmentUnavailable
 		})
 	}
-	h.mu.Unlock()
 	if err != nil {
 		code := err.Error()
 		if errors.Is(err, world.ErrNoPlayer) {

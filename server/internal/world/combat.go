@@ -395,6 +395,10 @@ func (w *World) abilityList(p *Player) []AbilityInfo {
 				info.UnavailableReason = err.Error()
 			}
 		}
+		if p.equipmentLease != nil {
+			info.Enabled = false
+			info.UnavailableReason = ErrEquipmentBusy.Error()
+		}
 		out = append(out, info)
 	}
 	return out

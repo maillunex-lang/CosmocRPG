@@ -136,3 +136,7 @@ CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 для m
 
 ## SR-100c-4a: core reservation
 Ветка codex/sr100c-coordinator/baseb945efb. `TestEquipmentSlowStoreDoesNotBlockSimulation` сначала FAIL1.00s: blocked IO блокирует tick/snapshot/other player/damage. После переноса callback вне world mutex — PASS. Полный `go test -race -count=1 ./internal/world` PASS1.787s. Дополнительно: actor-only guards, panic fail-closed cleanup, grace retention до commit, Router leave/jump не теряют reserved actor; post-commit transfer сохраняетrevision1. Это unit/race, не новый SQL прогон. WS Handler.mu пока не исправлен; новый end-to-end slowIO regression следующий.
+
+## SR-100c-4b: owner gate, настоящий row lock
+Memory-backed slowIO WS red FAIL1.03s → green PASS2.441s. `COSMOC_TEST_DATABASE_URL=<отдельный localhost PG> go test -race -count=1 ./internal/ws -run '^TestEquipment|^TestPlayerOperation'` PASS6.553s: реальный FOR UPDATE stall для A не задерживает B move/ships, Tick, C join; commit сохраняетrev+1. Конкурирующий join того же owner ждёт accepted operation, получаетunequipped rev1 и затем успешно refit rev2. Reference-counted gate cancel/other owner/idempotent release/zero idle entries проверены.
+Повтор world/ws targeted с PG: PASS1.047s/5.793s. Богатый общий прогон с Godot ещё впереди; targeted run без COSMOC_TEST_GODOT пропускает live Godot и не является его проверкой. SQL cases выполнялись в новых testdb schemas внутри собственного tmpfs PG контейнера cosmoc-equipment-coordinator-20261109; удалить контейнер в конце.

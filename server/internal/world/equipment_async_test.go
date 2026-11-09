@@ -60,6 +60,11 @@ func TestEquipmentReservationGuardsOnlyItsActor(t *testing.T) {
 	if !st.Ship.Equipment.Pending || st.Ship.Equipment.CanChange || st.Ship.Equipment.Reason != ErrEquipmentBusy.Error() {
 		t.Fatal("pending status missing")
 	}
+	for _, ab := range st.Ship.Abilities {
+		if ab.Enabled || ab.UnavailableReason != ErrEquipmentBusy.Error() {
+			t.Fatal("pending ability advertised as usable")
+		}
+	}
 	if w.SetMove(p.ID, Vec{1, 0}) || w.SetAutopilot(p.ID, true) {
 		t.Fatal("reserved actor can leave dock")
 	}
@@ -170,5 +175,25 @@ func TestEquipmentReservationBlocksRouterTransfer(t *testing.T) {
 	st, _ := r.Snapshot(p.ID)
 	if st.Ship.Modules[0].Equipped || *st.Ship.Equipment.Revision != 1 {
 		t.Fatal("post-commit jump reset equipment")
+	}
+}
+
+func TestEquipmentPendingCommitDoesNotUndoDeath(t *testing.T) {
+	w, p := dockedEngine(t)
+	entered, release := make(chan struct{}), make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- w.ChangeStarter(p.ID, 0, false, func() (StarterLoadout, error) { close(entered); <-release; return savedStarter(p.ID, false, 1), nil })
+	}()
+	<-entered
+	w.DamagePlayer(p.ID, 1e9)
+	dead, _ := w.Snapshot(p.ID)
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	after, _ := w.Snapshot(p.ID)
+	if !dead.Ship.Dead || !after.Ship.Dead || after.Ship.Hull != 0 || after.Ship.Modules[0].Equipped || *after.Ship.Equipment.Revision != 1 {
+		t.Fatal("commit rolled back death or lost accepted equipment change")
 	}
 }

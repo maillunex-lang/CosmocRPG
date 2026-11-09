@@ -1,3 +1,8 @@
+# SR-100c-4b checkpoint
+Corebc0aed9 + per-owner WS gate готовы. Targeted race world/ws+realPG PASS1.047s/5.793s; новый настоящий row-lock regression и replacement/CAS/gate cancellation PASS. ERROR-SR-011 Resolved локально,4a/4b DONE,4c IN_PROGRESS: полный server/PG/Godot и final review/журналы/безопасная интеграция. В worktree остаётся UI pending-label и hangar regression для отдельного client commit; Godot import ещё идёт. Собственный PG cosmoc-equipment-coordinator-20261109 нужен до конца проверок, затем удалить. Main/root checkout/production не менять до финальной сверки. Kimi ERROR-SR-007 не трогать.
+
+---
+
 # SR-100c-4a checkpoint
 Core reservation готов, world race PASS1.787s, ERROR-SR-011 world red→green. callback больше не держит world.mu; pending actor не покидает dock, damage/другие actors/ticks продолжаются. SR-100c-4a DONE;4b IN_PROGRESS: Handler.mu всё ещё удерживается в equipmentMsg, дальше per-owner cancellable gate для game/finishJoin/leave. Не публиковать частичный code в main до WS интеграции/тестов. Working branch codex/sr100c-coordinator, main не переключать; production не затронут.
 

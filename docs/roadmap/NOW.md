@@ -69,3 +69,7 @@ PP-02 IN_PROGRESS: cap 150 и базовый бюджет до 60 реализо
 ### Публикация beta-исправления / Android
 
 75a68dd в main; production ещё не обновлён (нет доступа к VPS из executor). Android workflow подготовлен для ручной сборки после настройки Secrets; инструкция [ANDROID_ACTIONS](../beta/ANDROID_ACTIONS.md). Сборка/подпись/новый APK ещё не подтверждены.
+
+## AI-CIVILIZATION
+
+Новое поручение: реализовать AI.md по этапам AIC-010…110. Первым — foundation и shadow; затем общий ActionGateway и реальные персонажи. Матрица: [IMPLEMENTATION](../ai/IMPLEMENTATION.md). Неутверждённые корпоративные полномочия/постоянная смерть и отсутствующие gameplay-системы остаются выключенными по ответу владельца.

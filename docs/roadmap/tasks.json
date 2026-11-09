@@ -800,6 +800,279 @@
    "tests": [
     "Тесты этапа из спецификации; интеграция сохранений и релогина"
    ]
+  },
+  {
+   "id": "AIC-010",
+   "title": "Создать постоянные идентичности, память и ограниченный планировщик",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "IN_PROGRESS",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [],
+   "spec": "QUESTJOB/AI.md#ai-players-001--замена-ии-игроков-на-автономную-игровую-цивилизацию",
+   "acceptance": "Studio-ID сохраняется при restart; shadow не создаёт players/наград/spawn; память максимум128 на капитана, TTL и дедуп; CAS привязки и уникальность player; bounded GOAP учитывает depth/cost/capability; flag off по умолчанию.",
+   "components": [
+    "server/internal/aiciv",
+    "server/internal/db/migrations/0022_ai_civilization.sql",
+    "server/internal/config",
+    "server/cmd/server/main.go"
+   ],
+   "tests": [
+    "go test -race ./internal/aiciv ./internal/config ./internal/db ./cmd/server с отдельной PostgreSQL",
+    "go vet ./...",
+    "go build ./..."
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-020",
+   "title": "Подключить AI-player и общий ActionGateway",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-010"
+   ],
+   "spec": "QUESTJOB/AI.md#5-контракты-действий-псевдо-go-адаптировать-к-реальным-пакетам",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "server/internal/aiagent",
+    "server/internal/aistudio",
+    "server/internal/world",
+    "server/internal/ws"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-030",
+   "title": "Подключить реальные квесты и существующие занятия AI",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-020"
+   ],
+   "spec": "QUESTJOB/AI.md#11-приёмочные-сценарии-автоматизировать",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "server/internal/aiagent",
+    "server/internal/aistudio",
+    "server/internal/world",
+    "server/internal/ws"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-040",
+   "title": "Добавить схемы речевого пакета, топиков и Speech DNA",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-010"
+   ],
+   "spec": "QUESTJOB/AI.md#ai-players-004--living-conversation-graph-единая-речевая-библиотека-память-и-контекстное-планирование",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-050",
+   "title": "Реализовать контекст диалога и persistent память с ACL",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-040"
+   ],
+   "spec": "QUESTJOB/AI.md#7-память-четыре-уровня",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-060",
+   "title": "Добавить проверяемые знания и социальные связи",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-020",
+    "AIC-050"
+   ],
+   "spec": "QUESTJOB/AI.md#17-ai-players-005-полная-архитектура-гибридной-информационной-экосистемы",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-070",
+   "title": "Добавить distributed антиспам, доставку и replay-корпус",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-050",
+    "AIC-060"
+   ],
+   "spec": "QUESTJOB/AI.md#9-chat-ecology-director-антиспам-как-обязательная-подсистема",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-080",
+   "title": "Подключить реальные потребности и surplus к текущим рынкам",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-030"
+   ],
+   "spec": "QUESTJOB/AI.md#23-ai-players-008-техническое-тз-гибридной-автономной-экономики-с-будущим-аукционом",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-090",
+   "title": "Интегрировать будущие производство, аукцион, операции и карьеру",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "BLOCKED",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Нет базовых игровых API; по решению владельца не имитировать успех.",
+   "updated": "2026-11-09",
+   "depends_on": [],
+   "spec": "QUESTJOB/AI.md#25-ai-players-009-полное-тз-эволюционной-карьеры-ии",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-100",
+   "title": "Добавить admin diagnostics и выполнить canary и нагрузку",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "AIC-030",
+    "AIC-070",
+    "AIC-080"
+   ],
+   "spec": "QUESTJOB/AI.md#10-админка",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-110",
+   "title": "Реализовать автономность корпораций и преемственность после решения",
+   "module": "AI_PLAYERS",
+   "priority": "P2",
+   "status": "BLOCKED",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. AI-003/011 не утверждены, возможности выключены.",
+   "updated": "2026-11-09",
+   "depends_on": [],
+   "spec": "QUESTJOB/AI.md#29-следующая-существенная-развилка-ai-players-011-постоянная-смерть-и-преемственность-ии-капитанов",
+   "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
+   "components": [
+    "уточнить по аудиту этапа"
+   ],
+   "tests": [
+    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
   }
  ]
 }

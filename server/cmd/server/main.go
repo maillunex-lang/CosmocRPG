@@ -18,6 +18,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/admin"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aiciv"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
@@ -376,6 +377,11 @@ func run() error {
 			return chat.Person{ID: c.ID, Name: c.Name, AI: true}, true
 		}
 		go agent.Run(ctx, 2*time.Second)
+		if cfg.FeatureAICivilizationShadow {
+			shadow := &aiciv.Shadow{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiciv.NewStore(pool), Log: log}
+			go shadow.Run(ctx)
+			log.Info("AI civilization shadow: без действий, имущества и нового spawn")
+		}
 		log.Info("ИИ-игроки включены (COSMOC_FEATURE_AI), реплики в чате (ИИ-2)")
 	}
 	worldDone := make(chan struct{})

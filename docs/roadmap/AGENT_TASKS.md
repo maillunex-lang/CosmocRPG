@@ -37,3 +37,7 @@ Markdown — НЕ блокировка. Перед изменениями све
 ## Закрытый тест — первый сеанс и сохранность
 
 По поручению владельца Codex проверяет серверный сценарий и исправляет потерю частичного прогресса квестов в ветке beta/first-session-reliability, worktree CosmocRPG-beta. Область: internal/quest и регрессионные тесты, docs/beta/FIRST_SESSION.md. PROTO-12 остаётся за владельцем, PROTO-05B не закрывается и не переназначается. Production запрещён.
+
+## AI-CIVILIZATION — текущая работа
+
+Codex, ветка feature/ai-civilization, отдельный worktree CosmocRPG-ai: aiciv foundation, config/main shadow wiring, SQL0022, тесты и docs/ai. Изменений QUESTJOB/AI.md другой сессии не перезаписывать. Runtime world/WS/aiagent остаётся прежним; будущий ActionGateway согласовать с оснащением. AIC-090/110 не выполнять: владелец подтвердил gates. Production этого этапа не разрешён автоматически.

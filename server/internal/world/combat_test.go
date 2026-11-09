@@ -439,3 +439,29 @@ func TestCatalogStartersValidation(t *testing.T) {
 
 func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }
 func jsonMarshal(v any) ([]byte, error)   { return json.Marshal(v) }
+
+// Catalogs can contain future or externally imported ability keys. Until a
+// handler exists they must fail explicitly without committing any combat state.
+func TestUnsupportedCatalogAbilityFailsAtomically(t *testing.T) {
+	w := New()
+	p := newPilot(t, w, "unsupported")
+	c := w.Catalog()
+	sp := c.Ships[p.ShipType]
+	sp.Abilities["custom"] = AbilityCfg{Name: "Unsupported", Energy: 10, Cooldown: 5}
+	c.Ships[p.ShipType] = sp
+	w.SetCatalog(c)
+	energy := p.Energy
+	cooldowns := len(p.cooldowns)
+	position := p.Pos
+	for _, ability := range []string{"custom", "missing", "pulse"} {
+		if err := w.UseAbility(p.ID, ability); err != ErrUnknown {
+			t.Errorf("%s: got %v, want ErrUnknown", ability, err)
+		}
+	}
+	if p.Energy != energy || len(p.cooldowns) != cooldowns || p.Pos != position {
+		t.Fatal("rejected ability changed player state")
+	}
+	if events := w.DrainEvents(); len(events) != 0 {
+		t.Fatalf("rejected ability emitted events: %+v", events)
+	}
+}

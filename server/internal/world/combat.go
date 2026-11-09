@@ -125,8 +125,15 @@ func (w *World) cooldownLeft(p *Player, ab string) float64 {
 }
 
 func (w *World) available(p *Player, ab string) (AbilityCfg, error) {
+	// Catalog presence does not imply an implemented handler. Fail before any
+	// resource checks so imported/future keys cannot report a successful cast.
+	switch ab {
+	case "boost", "intercept", "scan":
+	default:
+		return AbilityCfg{}, ErrUnknown
+	}
 	cfg, ok := p.spec.Abilities[ab]
-	if !ok || ab == "pulse" {
+	if !ok {
 		return cfg, ErrUnknown
 	}
 	if cfg.Spec != "" && cfg.Spec != p.Spec {

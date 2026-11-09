@@ -20,6 +20,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/rpg"
@@ -56,6 +57,7 @@ type Options struct {
 	Accounts      *account.Service             // аккаунты (логин и пароль); nil: функция выключена
 	Shop          *shop.Service                // VIP и магазин косметики; nil: функция выключена
 	Chat          *chat.Service                // чат (общий и личные сообщения); nil: функция выключена
+	Corp          *corp.Service                // корпорации минимум (R-64); nil: функция выключена
 	Pilot         *pilot.Service               // опыт, уровень и характеристики пилота; nil: функция выключена
 	Ships         *shipxp.Service              // опыт и уровни экземпляров кораблей; nil: функция выключена
 	ShipPassports *shipcatalog.PassportCatalog // optional read-only RPG metadata; first integration is FTR-001 only
@@ -153,7 +155,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "ship_upgrade":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -274,6 +276,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.shopMsg(ctx, c, ss, m)
 	case "chat_send", "chat_history":
 		h.chatMsg(ctx, c, ss, m)
+	case "corp_create", "corp_join", "corp_leave", "corp_info":
+		h.corpMsg(ctx, ss, m)
 	case "pilot", "pilot_spend":
 		h.pilotMsg(ctx, c, ss, m)
 	case "move":
@@ -1249,6 +1253,106 @@ func stationText(err error) string {
 	case world.ErrDead:
 		return "корабль уничтожен: дождитесь восстановления"
 	default:
+		return "операция отклонена"
+	}
+}
+
+// corpMsg обрабатывает корпоративные сообщения (R-64, К-1).
+func (h *Handler) corpMsg(ctx context.Context, ss *session, m Message) {
+	reply := func(msg Message) {
+		select {
+		case ss.events <- msg:
+		default:
+		}
+	}
+	if h.opts.Corp == nil {
+		reply(errMsg(m.ID, "unknown_type", "корпорации выключены"))
+		return
+	}
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	switch m.Type {
+	case "corp_create":
+		var p struct {
+			Name string `json:"name"`
+			Tag  string `json:"tag"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || len(p.Name) > 32 || len(p.Tag) > 4 {
+			reply(errMsg(m.ID, "bad_message", "некорректные имя или тег"))
+			return
+		}
+		c, err := h.opts.Corp.Create(cctx, ss.pid, p.Name, p.Tag)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "members": []corp.Member{{ID: ss.pid, Name: ss.name, Role: "owner"}}})})
+	case "corp_join":
+		var p struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Name == "" || len(p.Name) > 32 {
+			reply(errMsg(m.ID, "bad_message", "некорректное имя корпорации"))
+			return
+		}
+		c, err := h.opts.Corp.Join(cctx, ss.pid, p.Name, ss.name)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c})})
+	case "corp_leave":
+		if err := h.opts.Corp.Leave(cctx, ss.pid); err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp_left", ID: m.ID, Payload: mustJSON(map[string]any{"ok": true})})
+	case "corp_info":
+		c, mem, err := h.opts.Corp.Info(cctx, ss.pid)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "members": mem})})
+	}
+}
+
+func corpCode(err error) string {
+	switch err {
+	case corp.ErrBadName:
+		return "bad_name"
+	case corp.ErrBadTag:
+		return "bad_tag"
+	case corp.ErrTaken:
+		return "corp_taken"
+	case corp.ErrHasCorp:
+		return "already_in_corp"
+	case corp.ErrNoCorp, corp.ErrNotMember:
+		return "no_corp"
+	default:
+		if errors.Is(err, quest.ErrNotEnough) {
+			return "no_credits"
+		}
+		return "internal"
+	}
+}
+
+func corpText(err error) string {
+	switch err {
+	case corp.ErrBadName:
+		return "имя корпорации: 3–32 символа, русские/латинские буквы, цифры, пробел, «-», «_»"
+	case corp.ErrBadTag:
+		return "тег: 2–4 символа A–Z или цифры"
+	case corp.ErrTaken:
+		return "имя или тег уже заняты"
+	case corp.ErrHasCorp:
+		return "вы уже в корпорации: сначала выйдите"
+	case corp.ErrNoCorp, corp.ErrNotMember:
+		return "вы не состоите в корпорации"
+	default:
+		if errors.Is(err, quest.ErrNotEnough) {
+			return "взнос 10 000 кр.: не хватает кредитов"
+		}
 		return "операция отклонена"
 	}
 }

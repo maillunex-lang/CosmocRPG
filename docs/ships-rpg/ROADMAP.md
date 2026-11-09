@@ -47,7 +47,7 @@ SR-014a не закрывает SR-014: данные/ранги/таланты �
 |---|---|---|---|---|---|---|---|---|
 | SR-090 | P0 | SR-011 | Опубликовать накопленные проверенные изменения и новый порядок в main; изучить APK Claude | DONE | 2026-11-09 / 2026-11-09 | docs; существующая ветка | main fast-forward push PASS | 75931d4 / — |
 | SR-100a | P0 | SR-011 | Серверный паспорт Стрижа в ангаре; активные base/stats не подменяются, старые клиенты совместимы | DONE | 2026-11-09 / 2026-11-09 | shipcatalog; ws; gateway; hangar | live Go WS + Godot PASS; полный race PASS; hangar28/0 | cb34353 / ERROR-SR-004 |
-| SR-100b | P0 | SR-100a | Один стартовый модуль → один навык (первый кандидат ENG/M01); сервер проверяет доступность, энергия/CD legacy сохранены | TODO | — / — | world; ws; shipcatalog | Нет модуля → отказ без списания; legacy | — / — |
+| SR-100b | P0 | SR-100a | Один стартовый модуль → один навык (ENG/M01); сервер проверяет доступность, энергия/CD legacy сохранены | IN_PROGRESS | 2026-11-09 / — | world; ws; shipcatalog | Нет модуля → отказ без списания; legacy | — / — |
 | SR-100c | P0 | SR-100b | Сохранение/повторный вход, смена только в доке вне боя, ангар/HUD и причины недоступности | TODO | — / — | db; ws; client | Тестовая БД, rollback, reconnect, Godot | — / — |
 | SR-100d | P0 | SR-100a…c | Игровая приёмка первого сценария, release APK при клиентских изменениях, отдельный серверный выпуск | TODO | — / — | tests; release docs | Сквозной клиент+сервер, прежняя подпись APK, signed manifest; prod по разрешению | — / — |
 
@@ -64,3 +64,11 @@ SR-100a DONE означает код и локальные сквозные те
 - Релизная воспроизводимость ae16a86: тот же публичный PEM в git, updater33/0, живой signed manifest проверен.
 - Открыт ERROR-SR-007: прежние runtime ошибки render-тестов при зелёном CI; baseline подтверждён, исследовать в SR-100d/SR-070.
 - Production/APK не выпущены, модульная доступность/сохранение ещё TODO. Следующий шаг SR-100b.
+
+## SR-100b: этапы стартового двигателя
+| ID | Приоритет | Зависимости | Критерии DONE | Статус | Даты | Файлы | Проверки | SHA / ERROR |
+|---|---|---|---|---|---|---|---|---|
+| SR-100b1 | P0 | SR-100a | Привязанный starter instance ENG, M01/boost единый ресурсный путь, запрет без ownership/equipment/rank, прочие hulls без миграции | DONE | 2026-11-09 / 2026-11-09 | world/starter_engine*.go; combat/ship/world; ws; passport_data_test | race world/shipcatalog; live WS alias, negative atomicity | текущий server commit / — |
+| SR-100b2 | P0 | SR-100b1 | Client gateway/HUD/ангар показывают starter и availability, вызывают M01; старый payload совместим | IN_PROGRESS | 2026-11-09 / — | client gateway/hud/hangar/tests | Godot hangar/HUD, real client cast | — / — |
+
+Фиксированный starter entitlement штатного двигателя не является свободным инвентарём. В SR-100b нет RPC снятия/установки: сохранённая изменяемая экипировка и условия дока/боя — SR-100c. Отрицательные тесты отсутствия модуля проверяют серверную целостность/доступность, не кнопку, которой ещё нет.

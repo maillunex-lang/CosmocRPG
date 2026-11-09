@@ -60,21 +60,23 @@ type Player struct {
 	Autopilot bool
 
 	// корабль и бой (Этап «Стриж»): все значения принадлежат серверу
-	ShipType     string
-	Skin         string
-	Spec         string
-	Hull, Shield float64
-	Energy       float64
-	Attacking    bool
-	noRetaliate  bool // автоответ на атаку выключен игроком (по умолчанию включён)
-	boostUntil   float64
-	cooldowns    map[string]float64 // способность -> игровое время окончания перезарядки
-	attackAt     float64
-	lastHit      float64
-	deadUntil    float64
-	revealed     map[string]float64 // скрытый объект -> игровое время окончания видимости
-	spec         ShipSpec
-	shipLevel    int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
+	ShipType      string
+	Skin          string
+	Spec          string
+	Hull, Shield  float64
+	Energy        float64
+	Attacking     bool
+	noRetaliate   bool // автоответ на атаку выключен игроком (по умолчанию включён)
+	boostUntil    float64
+	cooldowns     map[string]float64 // способность -> игровое время окончания перезарядки
+	attackAt      float64
+	lastHit       float64
+	deadUntil     float64
+	revealed      map[string]float64 // скрытый объект -> игровое время окончания видимости
+	spec          ShipSpec
+	starterEngine *starterEngineItem
+	boostRank     int
+	shipLevel     int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
 
 	gender    string
 	pilotSpec string
@@ -164,6 +166,7 @@ type Ship struct {
 	Boosting   bool          `json:"boosting"`
 	Dead       bool          `json:"dead"`
 	Abilities  []AbilityInfo `json:"abilities"`
+	Modules    []ModuleInfo  `json:"modules,omitempty"`
 	Level      int           `json:"level"` // уровень корабля (RPG-2)
 
 	Hold      map[string]float64 `json:"hold"`
@@ -476,7 +479,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
 			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
-			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
+			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Modules: me.moduleList(), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
 			CanMine: me.spec.Abilities["mine"].Range > 0, MineRange: me.spec.Abilities["mine"].Range, InSafe: w.inSafe(me.Pos)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,

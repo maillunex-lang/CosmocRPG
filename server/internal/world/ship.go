@@ -174,13 +174,18 @@ func (c Catalog) Spec(id string) (ShipSpec, bool) { s, ok := c.Ships[id]; return
 
 // AbilityInfo — способность в снимке состояния.
 type AbilityInfo struct {
-	ID           string  `json:"id"`
-	Name         string  `json:"name"`
-	Energy       float64 `json:"energy_cost"`
-	Cooldown     float64 `json:"cooldown"`
-	CooldownLeft float64 `json:"cooldown_left"`
-	NeedsTarget  bool    `json:"needs_target"`
-	Active       bool    `json:"active"`
+	CatalogID         string  `json:"catalog_id,omitempty"`
+	ModuleID          string  `json:"module_id,omitempty"`
+	Rank              int     `json:"rank,omitempty"`
+	Enabled           bool    `json:"enabled"`
+	UnavailableReason string  `json:"unavailable_reason,omitempty"`
+	ID                string  `json:"id"`
+	Name              string  `json:"name"`
+	Energy            float64 `json:"energy_cost"`
+	Cooldown          float64 `json:"cooldown"`
+	CooldownLeft      float64 `json:"cooldown_left"`
+	NeedsTarget       bool    `json:"needs_target"`
+	Active            bool    `json:"active"`
 }
 
 // Event — боевое или визуальное событие для клиентов (сервер решает, клиент только показывает).

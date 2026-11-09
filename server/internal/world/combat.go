@@ -44,6 +44,7 @@ func (w *World) initShip(p *Player, shipType, skin, spec string) {
 	p.shipLevel = 1 // уровень экземпляра выставляет SetShipLevel (хаб читает его из хранилища)
 	p.cooldowns = map[string]float64{}
 	p.revealed = map[string]float64{}
+	p.initStarterEngine()
 }
 
 func (w *World) emit(e Event) { w.events = append(w.events, e) }
@@ -132,6 +133,11 @@ func (w *World) available(p *Player, ab string) (AbilityCfg, error) {
 	default:
 		return AbilityCfg{}, ErrUnknown
 	}
+	if ab == "boost" {
+		if err := p.boostAccess(); err != nil {
+			return AbilityCfg{}, err
+		}
+	}
 	cfg, ok := p.spec.Abilities[ab]
 	if !ok {
 		return cfg, ErrUnknown
@@ -158,6 +164,12 @@ func (w *World) UseAbility(id, ab string) error {
 	p, ok := w.players[id]
 	if !ok {
 		return ErrNoPlayer
+	}
+	if ab == StrizhBoostAbility {
+		if p.ShipType != DefaultShip {
+			return ErrUnknown
+		}
+		ab = "boost" // One cooldown/resource path for both protocol names.
 	}
 	cfg, err := w.available(p, ab)
 	if err != nil {
@@ -356,8 +368,19 @@ func (w *World) abilityList(p *Player) []AbilityInfo {
 		if !ok || (cfg.Spec != "" && cfg.Spec != p.Spec) {
 			continue
 		}
-		out = append(out, AbilityInfo{ID: id, Name: cfg.Name, Energy: cfg.Energy, Cooldown: cfg.Cooldown,
-			CooldownLeft: w.cooldownLeft(p, id), NeedsTarget: id == "intercept", Active: id == "boost" && p.boostUntil > w.t})
+		info := AbilityInfo{ID: id, Name: cfg.Name, Energy: cfg.Energy, Cooldown: cfg.Cooldown, CooldownLeft: w.cooldownLeft(p, id), NeedsTarget: id == "intercept", Active: id == "boost" && p.boostUntil > w.t, Enabled: true}
+		if id == "boost" && p.ShipType == DefaultShip {
+			info.CatalogID = StrizhBoostAbility
+			info.Rank = p.boostRank
+			if p.starterEngine != nil {
+				info.ModuleID = p.starterEngine.InstanceID
+			}
+			if err := p.boostAccess(); err != nil {
+				info.Enabled = false
+				info.UnavailableReason = err.Error()
+			}
+		}
+		out = append(out, info)
 	}
 	return out
 }

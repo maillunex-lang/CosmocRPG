@@ -159,3 +159,27 @@ func TestStarterPowerBudgetIsIndependentOfCombatEnergy(t *testing.T) {
 		t.Fatal("mass overdraw accepted")
 	}
 }
+
+func TestStrizhStarterBlueprintMatchesBoundRuntimeContract(t *testing.T) {
+	c, err := DefaultPassportCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, ship := range c.Ships {
+		if ship.ID != world.DefaultShip {
+			continue
+		}
+		for _, module := range ship.StarterKit {
+			if module.ID == world.StrizhEnginePrototype {
+				found = true
+				if module.SlotID != world.StrizhEngineSlot || module.Category != "engine" || module.Family != "ENG" || !containsCategory(module.AbilityIDs, world.StrizhBoostAbility) {
+					t.Fatalf("draft starter and bound runtime contract diverged: %+v", module)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("runtime starter prototype has no validated passport blueprint")
+	}
+}

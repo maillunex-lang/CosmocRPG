@@ -470,6 +470,10 @@ func abilityText(code string) string {
 		return "цель слишком далеко"
 	case "wrong_spec":
 		return "способность другой специализации"
+	case "module_unavailable":
+		return "для форсажа нужен установленный двигатель"
+	case "ability_not_learned":
+		return "навык не изучен"
 	case "dead":
 		return "корабль уничтожен"
 	case "unknown_ability":

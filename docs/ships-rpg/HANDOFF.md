@@ -1,3 +1,8 @@
+# Текущая работа SR-100b (2026-11-09)
+SR-100b1 DONE: server-bound starter ENG/M01, shared legacy boost CD/parameters, отрицательные ownership/equipment/rank/atomicity tests. SR-100b2 IN_PROGRESS: client presentation/cast и полный прогон. ADR006 обязателен: пока фиксированный неотчуждаемый штатный starter, без RPC смены и без mutable inventory; SQL/док/сохранение — SR-100c. Детали новых тестов в REGRESSION_TESTS. База main a19f7c0 имеет CI42608041551 success. Предыдущая передача ниже — история SR-100a; актуальная будет переписана после полного завершения SR-100b.
+
+---
+
 # HANDOFF — Ships RPG / R-63
 Дата: 2026-11-09. Локальная ветка `codex/ships-rpg-foundation`. Пользователь разрешил публиковать проверенную работу/планы в **remote main**. Production-деплой — только с отдельного разрешения.
 

@@ -124,3 +124,43 @@ func TestPassportGodotClient(t *testing.T) {
 	}
 	t.Log("Godot -> real local WebSocket -> hangar: PASS")
 }
+
+func TestM01OverWebSocketUsesBoundEngineAndLegacyCooldown(t *testing.T) {
+	_, _, url := gameServer(t)
+	cl := connect(t, url)
+	cl.join(strings.Repeat("m", 24))
+	var initial struct {
+		Ship world.Ship `json:"ship"`
+	}
+	if err := json.Unmarshal(cl.next("state").Payload, &initial); err != nil {
+		t.Fatal(err)
+	}
+	if len(initial.Ship.Modules) != 1 || !initial.Ship.Modules[0].Owned || !initial.Ship.Modules[0].Equipped {
+		t.Fatal("bound starter missing in state")
+	}
+	ab := initial.Ship.Abilities[0]
+	if ab.ID != "boost" || ab.CatalogID != "M01" || !ab.Enabled || ab.ModuleID != initial.Ship.Modules[0].InstanceID {
+		t.Fatalf("incorrect compatibility binding: %+v", ab)
+	}
+	cl.send("ability", map[string]any{"id": "M01"})
+	boosted := false
+	for i := 0; i < 20; i++ {
+		var state struct {
+			Ship world.Ship `json:"ship"`
+		}
+		if err := json.Unmarshal(cl.next("state").Payload, &state); err != nil {
+			t.Fatal(err)
+		}
+		if state.Ship.Boosting {
+			boosted = true
+			break
+		}
+	}
+	if !boosted {
+		t.Fatal("M01 did not execute through the server")
+	}
+	cl.send("ability", map[string]any{"id": "boost"})
+	if code := errCode(t, cl.next("error")); code != "cooldown" {
+		t.Fatalf("legacy cooldown bypass: %s", code)
+	}
+}

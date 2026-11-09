@@ -33,3 +33,5 @@ Store не подключён к runtime, world.Join, WS/RPC или UI. Снят
 
 ## C-RT-02a checkpoint
 C-RT-01 commit01bc109. Server setter/reconcile+tests готовы, client changes остаются в worktree и будут отдельным коммитом. Targeted realPG/race PASS; документы API и ADR005 описывают exact gates и latency limitation. Новые тесты equipment_godot_test.go требуют COSMOC_TEST_GODOT и отдельную DB. Следом client commit, затем latest main merge/full checks.
+
+C-RT-03 underway: corp fixture fixed/tested separately (CST-ERROR-004 Resolved), accounts recheck PASS(CST-ERROR-005 Workaround). Latest origin/main72689d0 only QUESTJOB docs since base; no migration0020 collision. Next merge origin/main into feature preserving all commits, global docs, full sequential Go+PG and live Godot, then non-force push main per user1→2→3 authorization. Root main checkout remains untouched.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/testdb"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
 func TestPGStoreCorporationFlow(t *testing.T) {
@@ -20,7 +21,8 @@ func TestPGStoreCorporationFlow(t *testing.T) {
 
 	mustPlayer := func(id, name string) {
 		t.Helper()
-		if _, err := pool.Exec(ctx, `INSERT INTO players (public_id, token_hash, name, character_created) VALUES ($1, $1, $2, true) ON CONFLICT (public_id) DO NOTHING`, id, name); err != nil {
+		hash := world.TokenHash(id)
+		if _, err := pool.Exec(ctx, `INSERT INTO players (public_id, token_hash, name, character_created) VALUES ($1, $2, $3, true) ON CONFLICT (public_id) DO NOTHING`, id, hash[:], name); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -25,3 +25,9 @@ Schema исправления CST-ERROR-001/003 зафиксированы38385f
 
 ## CST-ERROR-005
 Дата2026-11-09; Investigating; тестовый harness WS, Medium. Во время параллельного broad race/PG прогона TestAccountProtocolErrors получил context deadline exceeded, game_test.go:571, около5.94s. Причина не установлена; CPU-нагрузка лишь гипотеза. Новый targeted equipment WS suite PASS. Повторить account тест в последовательном финальном прогоне, не увеличивать deadline без доказательства и не считать весь suite зелёным.
+
+### CST-ERROR-004 Resolved (C-RT-03)
+Причина уточнена: public_id TEXT и token_hash BYTEA использовали один параметр, а token_hash обязан иметь32 байта. Fixture теперь передаёт отдельный SHA-256 через world.TokenHash(id), id и name отдельными параметрами. Production corp SQL/поведение не менялись. `go test -race -count=1 ./internal/corp` с настоящим PG PASS1.523s; весь corporation flow дошёл до final Leave assertions. Исправление отдельным test-only commit.
+
+### CST-ERROR-005 Workaround / повторная проверка
+Повтор двух существующих account WS тестов отдельно: `go test -race -count=1 ./internal/ws -run '^TestAccountSurvivesReinstall$|^TestAccountProtocolErrors$'` PASS14.597s. Ранее падали оба теста с five-second client context timeout. Production код/криптография/deadline не менялись. Причина первого сбоя не установлена; выбран последовательный общий suite `-p 1`, чтобы исключить конкуренцию с другими тяжёлыми пакетами, но это не доказательство первопричины. Итог общего прогона фиксируется отдельно.

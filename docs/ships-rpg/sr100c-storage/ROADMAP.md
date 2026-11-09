@@ -17,7 +17,7 @@ Kimi занимается ERROR-SR-007 в main. Не менять клиент, 
 |---|---|---|---|---|---|---|
 | C-RT-01 | P0 | C-ST-01…03 | Загрузка до Join; reconnect/hull/jump сохраняют снятый двигатель; fail closed | DONE | 2026-11-09 / 2026-11-09 | world/ws/main; real PG + WS |
 | C-RT-02 | P0 | C-RT-01 | Session-owned CAS команда только у станции вне боя; rollback/reconcile; UI/reasons | DONE | 2026-11-09 / 2026-11-09 | world/ws/client; PG/WS/Godot |
-| C-RT-03 | P0 | C-RT-02 | Сверка актуального main/Kimi, миграций, тестов, объединение и общие журналы | TODO | — / — | main + roadmap/HANDOFF; CI |
+| C-RT-03 | P0 | C-RT-02 | Сверка актуального main/Kimi, миграций, тестов, объединение и общие журналы | IN_PROGRESS | 2026-11-09 / — | main + roadmap/HANDOFF; CI |
 Пользователь разрешил последовательность и последующее объединение. Работа ведётся в feature branch; production не разрешён. ERROR-SR-007 остаётся за Kimi.
 
 C-RT-02a server DONE: `equipment_set/get`, current session ownership, strict payload, actual station radius, motion/active boost/combat grace, bounded commit/reconcile. C-RT-02b client — проверен локально, фиксируется следующим отдельным коммитом.

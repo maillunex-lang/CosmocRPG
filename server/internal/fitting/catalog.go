@@ -248,3 +248,5 @@ func clone[T any](v T) T {
 func (c *Catalog) Hull(id string) (Hull, bool)     { h, ok := c.hulls[id]; return clone(h), ok }
 func (c *Catalog) Module(id string) (Module, bool) { m, ok := c.modules[id]; return clone(m), ok }
 func (c *Catalog) Document() Document              { return clone(c.doc) }
+
+func (c *Catalog) HasHull(id string) bool { _, ok := c.hulls[id]; return ok }

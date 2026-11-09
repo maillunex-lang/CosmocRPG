@@ -8,11 +8,13 @@ import (
 )
 
 type Item struct {
-	ID          string `json:"id"`
-	Owner       string `json:"owner"`
-	Hull        string `json:"hull"`
-	Prototype   string `json:"prototype"`
-	Engineering int    `json:"engineering"`
+	ID           string `json:"id"`
+	Owner        string `json:"owner"`
+	Hull         string `json:"hull"`
+	Prototype    string `json:"prototype"`
+	Engineering  int    `json:"engineering"`
+	EquippedHull string `json:"equipped_hull,omitempty"`
+	EquippedSlot string `json:"equipped_slot,omitempty"`
 }
 type Violation struct {
 	Code  string `json:"code"`
@@ -68,6 +70,9 @@ func (c *Catalog) Validate(owner, hullID string, pilotLevel, shipLevel int, item
 		}
 		if item.Hull != "" && item.Hull != hullID {
 			return Result{}, invalid("module_bound_ship", id)
+		}
+		if item.EquippedHull != "" && item.EquippedHull != hullID {
+			return Result{}, invalid("item_in_use", id)
 		}
 		if used[id] {
 			return Result{}, invalid("duplicate_item", id)

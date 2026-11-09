@@ -281,14 +281,23 @@ func TestShipLevelRestoredOnSwapAndXPFromSell(t *testing.T) {
 	hull5 := s.Ship.HullMax
 	// продажа даёт опыт и пилоту, и кораблю
 	cl.send("sell", nil)
-	m := cl.next("xp")
 	var x struct {
 		Gained int64
+		Source string
 		Ship   shipxp.State
 		Pilot  pilot.State
 	}
-	_ = json.Unmarshal(m.Payload, &x)
-	if x.Gained <= 0 || x.Ship.Ship != "TMP-MINE" || x.Ship.XP <= rpgShipXP(5) || x.Pilot.XP != x.Gained {
+	// На станции параллельно приходит XP за first_flight: ждём именно продажу.
+	for i := 0; i < 10; i++ {
+		m := cl.next("xp")
+		if err := json.Unmarshal(m.Payload, &x); err != nil {
+			t.Fatal(err)
+		}
+		if x.Source == "sell" {
+			break
+		}
+	}
+	if x.Source != "sell" || x.Gained <= 0 || x.Ship.Ship != "TMP-MINE" || x.Ship.XP <= rpgShipXP(5) || x.Pilot.XP < x.Gained {
 		t.Fatalf("опыт за продажу: %+v", x)
 	}
 	// смена корабля: у нового свой уровень 1, у прежнего сохраняется

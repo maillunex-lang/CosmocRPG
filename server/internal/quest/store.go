@@ -241,3 +241,34 @@ func (m *MemStore) Complete(_ context.Context, pid string, d Def) (bool, int64, 
 	m.credits[pid] += d.Reward.Credits
 	return true, m.credits[pid], nil
 }
+
+// Advance не позволяет переполнить progress и не меняет уже завершённые задания.
+func (s *PGStore) Advance(ctx context.Context, pid string, d Def, n int) (int, error) {
+	if n <= 0 {
+		return 0, nil
+	}
+	var progress int
+	err := s.pool.QueryRow(ctx, `UPDATE player_quest_progress
+ SET progress = progress + LEAST($4::bigint, (goal - progress)::bigint)
+ WHERE player_id=$1 AND quest_id=$2 AND quest_version=$3 AND state='active'
+ RETURNING progress`, pid, d.ID, d.Version, n).Scan(&progress)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	return progress, err
+}
+
+func (m *MemStore) Advance(_ context.Context, pid string, d Def, n int) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p := m.quests[pid][d.ID]
+	if p == nil || p.State != "active" || p.Version != d.Version || n <= 0 {
+		return 0, nil
+	}
+	if n >= p.Goal-p.Progress {
+		p.Progress = p.Goal
+	} else {
+		p.Progress += n
+	}
+	return p.Progress, nil
+}

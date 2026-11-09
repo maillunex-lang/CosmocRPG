@@ -78,6 +78,8 @@ type Store interface {
 	Load(ctx context.Context, pid string) (PlayerData, error)
 	// Assign выдаёт контракт, если у игрока его ещё не было. true: выдан сейчас.
 	Assign(ctx context.Context, pid string, d Def) (bool, error)
+	// Advance атомарно сохраняет прирост активного задания с ограничением по goal.
+	Advance(ctx context.Context, pid string, d Def, n int) (int, error)
 	// Complete отмечает контракт выполненным и начисляет награду одной транзакцией.
 	// granted=false, если контракт уже был выполнен (повтор): ничего не меняется.
 	Complete(ctx context.Context, pid string, d Def) (granted bool, credits int64, err error)
@@ -285,22 +287,38 @@ func (s *Service) Event(ctx context.Context, pid, kind, ref string, n int) []Com
 		s.mu.Unlock()
 		return nil
 	}
-	var bumped []Def
-	for i := range ps.data.Quests {
-		q := &ps.data.Quests[i]
+	var matching []Def
+	for _, q := range ps.data.Quests {
 		if q.State != "active" {
 			continue
 		}
-		d, dok := s.def(q.QuestID, q.Version)
-		if !dok || d.Kind != kind || (d.Target != "" && d.Target != ref) {
-			continue
-		}
-		q.Progress += n
-		if q.Progress >= q.Goal {
-			bumped = append(bumped, d)
+		d, ok := s.def(q.QuestID, q.Version)
+		if ok && d.Kind == kind && (d.Target == "" || d.Target == ref) {
+			matching = append(matching, d)
 		}
 	}
 	s.mu.Unlock()
+	var bumped []Def
+	for _, d := range matching {
+		progress, err := s.store.Advance(ctx, pid, d, n)
+		if err != nil {
+			s.log.Error("сохранение прогресса задания", "player", pid, "quest", d.ID, "err", err)
+			continue
+		}
+		s.mu.Lock()
+		if current := s.players[pid]; current != nil {
+			for i := range current.data.Quests {
+				q := &current.data.Quests[i]
+				if q.QuestID == d.ID && q.Version == d.Version && q.Progress < progress {
+					q.Progress = progress
+				}
+			}
+		}
+		s.mu.Unlock()
+		if progress >= d.Goal {
+			bumped = append(bumped, d)
+		}
+	}
 	var out []Completion
 	for _, d := range bumped {
 		c, done := s.completeOne(ctx, pid, d)

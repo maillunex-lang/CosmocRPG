@@ -578,6 +578,49 @@
     "apk": "NOT_RELEASED"
    },
    "owner": "владелец"
+  },
+  {
+   "id": "EB-FOUNDATION",
+   "title": "Оснащение: каталог, инвентарь и атомарные операции",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "DONE",
+   "description": "EB-000…020: серверная основа; ещё без подключения общего fitting к runtime/ангару. Не означает завершение пунктов4/5.",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "IN_MAIN",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "branch": "codex/equipment-builds-progression",
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "commits": [
+    "903522e",
+    "f624748",
+    "f4e9608"
+   ],
+   "tests": [
+    "equipment/fitting/db real PostgreSQL race PASS; подробности docs/ships-rpg/REGRESSION_TESTS.md"
+   ]
+  },
+  {
+   "id": "EB-INTEGRATION",
+   "title": "Общее оснащение в игре, билды и прогрессия",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "EB-030…070: runtime/WS/ангар, три билда/четыре слота, таланты/специализации/ульты и приёмка. Не считать handlers72 skills готовыми по каталогу ID.",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "branch": "codex/equipment-builds-progression",
+   "depends_on": [
+    "EB-FOUNDATION"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
   }
  ]
 }

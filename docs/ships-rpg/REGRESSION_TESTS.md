@@ -25,3 +25,7 @@
 `go test -race -count=1 -json ./internal/rpg ./internal/pilot ./internal/shipxp ./internal/world ./internal/ws` — PASS (exit 0), все 5 пакетов.
 TestExtendedCurvesPreserveLegacyXP проверяет все прежние пороги 1–60/1–30 и XPForNext ниже старого cap, продолжение после прежнего cap, новые caps. Существующие service-тесты проверяют идемпотентность начислений, отдельный XP каждого корабля, world clamp — 50.
 Интеграционные PostgreSQL cases пропущены через testdb; миграции не менялись и не выполнялись. Клиент не менялся: max_level приходит с сервера; fallback 60 в profile_screen для старых/неполных данных оставлен совместимым. Godot/Android/production не проверялись.
+
+Итог SR-014a: 120 test/subtest PASS, 11 SKIP, 0 FAIL; пакеты rpg/pilot/shipxp/world/ws — PASS. `go vet ./...` и `go build -o /workspace/scratch/cosmoc-server ./cmd/server` — PASS (exit 0); бинарник не запускался. `git diff --check` — PASS.
+
+Коммиты проверки: SR-000 8c7b620, SR-010 8ce0106, SR-015 0e7cbb3, SR-014a 788d951.

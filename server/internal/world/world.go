@@ -71,6 +71,7 @@ type Player struct {
 	cooldowns           map[string]float64 // способность -> игровое время окончания перезарядки
 	attackAt            float64
 	lastHit             float64
+	combatUntil         float64 // recent incoming/outgoing combat; prevents refitting after attack is stopped
 	deadUntil           float64
 	revealed            map[string]float64 // скрытый объект -> игровое время окончания видимости
 	spec                ShipSpec
@@ -113,6 +114,7 @@ type Record struct {
 
 	Hold map[string]float64 // груз (ресурс -> количество)
 
+	CombatRemaining     float64         `json:"-"` // only world-to-world combat lock transport
 	PersistentEquipment bool            `json:"-"` // require authoritative loadout for migrated hulls
 	StarterLoadout      *StarterLoadout `json:"-"` // runtime transport only; equipment has its own store
 
@@ -152,27 +154,28 @@ type Object struct {
 
 // Ship — собственный корабль в снимке.
 type Ship struct {
-	Name       string        `json:"name"`
-	Pos        [2]float64    `json:"pos"`
-	Dir        [2]float64    `json:"dir"`
-	Speed      float64       `json:"speed"`
-	Type       string        `json:"type"`
-	Skin       string        `json:"skin"`
-	Spec       string        `json:"spec"`
-	Hull       float64       `json:"hull"`
-	HullMax    float64       `json:"hull_max"`
-	Shield     float64       `json:"shield"`
-	ShieldMax  float64       `json:"shield_max"`
-	Energy     float64       `json:"energy"`
-	EnergyMax  float64       `json:"energy_max"`
-	Armor      float64       `json:"armor"`
-	Cargo      float64       `json:"cargo"`
-	PulseRange float64       `json:"pulse_range"`
-	Boosting   bool          `json:"boosting"`
-	Dead       bool          `json:"dead"`
-	Abilities  []AbilityInfo `json:"abilities"`
-	Modules    []ModuleInfo  `json:"modules,omitempty"`
-	Level      int           `json:"level"` // уровень корабля (RPG-2)
+	Name       string           `json:"name"`
+	Pos        [2]float64       `json:"pos"`
+	Dir        [2]float64       `json:"dir"`
+	Speed      float64          `json:"speed"`
+	Type       string           `json:"type"`
+	Skin       string           `json:"skin"`
+	Spec       string           `json:"spec"`
+	Hull       float64          `json:"hull"`
+	HullMax    float64          `json:"hull_max"`
+	Shield     float64          `json:"shield"`
+	ShieldMax  float64          `json:"shield_max"`
+	Energy     float64          `json:"energy"`
+	EnergyMax  float64          `json:"energy_max"`
+	Armor      float64          `json:"armor"`
+	Cargo      float64          `json:"cargo"`
+	PulseRange float64          `json:"pulse_range"`
+	Boosting   bool             `json:"boosting"`
+	Dead       bool             `json:"dead"`
+	Abilities  []AbilityInfo    `json:"abilities"`
+	Modules    []ModuleInfo     `json:"modules,omitempty"`
+	Equipment  *EquipmentStatus `json:"equipment,omitempty"`
+	Level      int              `json:"level"` // уровень корабля (RPG-2)
 
 	Hold      map[string]float64 `json:"hold"`
 	CargoUsed float64            `json:"cargo_used"`
@@ -284,6 +287,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 	p.gender, p.pilotSpec = r.Gender, r.PilotSpec
 	p.starterLoadout = copyStarter(r.StarterLoadout)
 	p.persistentEquipment = r.PersistentEquipment
+	p.combatUntil = w.t + math.Min(equipmentCombatGrace, math.Max(0, r.CombatRemaining))
 	w.initShip(p, r.ShipType, r.Skin, r.Spec)
 	p.hold = sanitizeHold(r.Hold, p.spec.Cargo)
 	p.discovered = map[string]bool{}
@@ -302,6 +306,7 @@ func (w *World) Remove(id string) (Record, bool) {
 	}
 	rec := p.record()
 	rec.System = w.System().ID
+	rec.CombatRemaining = math.Max(0, p.combatUntil-w.t)
 	delete(w.players, id)
 	return rec, true
 }
@@ -496,7 +501,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
 			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
-			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Modules: me.moduleList(), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
+			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Modules: me.moduleList(), Equipment: w.equipmentStatus(me), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
 			CanMine: me.spec.Abilities["mine"].Range > 0, MineRange: me.spec.Abilities["mine"].Range, InSafe: w.inSafe(me.Pos)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,

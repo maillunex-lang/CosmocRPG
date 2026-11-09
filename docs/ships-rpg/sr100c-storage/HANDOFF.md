@@ -25,3 +25,6 @@ Store не подключён к runtime, world.Join, WS/RPC или UI. Снят
 
 ## Повторение проверок
 Нужен настоящий PostgreSQL и COSMOC_TEST_DATABASE_URL на отдельную тестовую БД (testdb создаёт/удаляет отдельные схемы). В server: `go test -race -count=1 ./internal/equipment ./internal/db`, затем `go vet ./...` и `go build ./cmd/server`. В текущем окружении Go находится в /workspace/scratch/toolchain/go/bin (системный /usr/bin/go не toolchain). Полные локальные JSON logs находятся в /workspace/scratch/equipment-storage-final-targeted.jsonl и equipment-storage-all-go-pg.jsonl; они ephemeral, итог сохранён в git.
+
+## C-RT-02a checkpoint
+C-RT-01 commit01bc109. Server setter/reconcile+tests готовы, client changes остаются в worktree и будут отдельным коммитом. Targeted realPG/race PASS; документы API и ADR005 описывают exact gates и latency limitation. Новые тесты equipment_godot_test.go требуют COSMOC_TEST_GODOT и отдельную DB. Следом client commit, затем latest main merge/full checks.

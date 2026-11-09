@@ -187,6 +187,7 @@ func (s *MemStore) Resolve(_ context.Context, token, name string) (Record, error
 }
 
 func (s *MemStore) Save(_ context.Context, r Record) error {
+	r.CombatRemaining = 0
 	r.PersistentEquipment = false
 	r.StarterLoadout = nil // equipment is stored independently, never by autosave
 	s.mu.Lock()

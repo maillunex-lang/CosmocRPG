@@ -219,6 +219,9 @@ func (w *World) UseAbility(id, ab string) error {
 }
 
 func (w *World) hitNPC(p *Player, n *npc, dmg float64) {
+	if dmg > 0 {
+		p.combatUntil = w.t + equipmentCombatGrace
+	}
 	toS, toH := applyDamage(&n.Shield, &n.Hull, 0, dmg)
 	if toS > 0 {
 		w.emit(Event{Type: "hit_shield", From: p.ID, To: n.ID, Amount: toS})
@@ -251,6 +254,9 @@ func (w *World) damagePlayerLocked(id string, dmg float64, attacker string) {
 	p, ok := w.players[id]
 	if !ok || p.deadUntil > w.t {
 		return
+	}
+	if dmg > 0 {
+		p.combatUntil = w.t + equipmentCombatGrace
 	}
 	toS, toH := applyDamage(&p.Shield, &p.Hull, p.spec.Armor, dmg)
 	p.lastHit = w.t

@@ -50,6 +50,9 @@ func (p *Player) initStarterEngine() {
 	if s := p.starterLoadout; s != nil {
 		p.starterEngine.Equipped = s.Equipped
 	}
+	if !p.starterEngine.Equipped {
+		p.boostUntil = 0
+	}
 	p.boostRank = 1
 }
 

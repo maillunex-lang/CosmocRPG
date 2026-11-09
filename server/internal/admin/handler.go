@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
@@ -34,6 +35,7 @@ type Options struct {
 	StartedAt     time.Time
 	WSSessions    func() int64         // число активных игровых сессий
 	AI            *aistudio.Service    // AI Civilization Training Studio (nil: раздел выключен)
+	Agent         *aiagent.Manager     // ИИ-игроки в мире: статус, настройки, капитаны (nil: раздел выключен)
 	Ships         *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
 	World         *worldcfg.Service    // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
 	Chat          *chat.Service        // чат: журнал, мьюты, настройки (nil: раздел выключен)
@@ -77,6 +79,9 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("GET /api/audit", h.auth(h.audit))
 	if h.opts.AI != nil {
 		h.aiRoutes(mux)
+		if h.opts.Agent != nil {
+			h.aiPlayersRoutes(mux)
+		}
 	}
 	if h.opts.Ships != nil {
 		h.shipRoutes(mux)

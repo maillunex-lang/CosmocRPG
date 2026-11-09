@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -51,6 +52,7 @@ type Manager struct {
 	profiles      []Profile
 	profilesAt    time.Time
 	online        map[string]onlineAI // идентификатор -> сведения
+	profileByID   map[string]Profile
 	leftAt        map[string]time.Time
 	emptySince    time.Time
 	lastTick      time.Time
@@ -121,6 +123,10 @@ func (m *Manager) refresh(ctx context.Context) {
 		} else {
 			sort.Slice(ps, func(i, j int) bool { return ps[i].ID < ps[j].ID })
 			m.profiles = ps
+			m.profileByID = map[string]Profile{}
+			for _, p := range ps {
+				m.profileByID[p.ID] = p
+			}
 		}
 	}
 }
@@ -234,9 +240,10 @@ func (m *Manager) spawnOne(s Settings, now time.Time) bool {
 		return false
 	}
 	behavior := m.pickBehavior(s, len(m.online))
+	disabled := s.DisabledSet()
 	var fresh, cooled []Profile
 	for _, p := range m.profiles {
-		if _, on := m.online[p.ID]; on || BehaviorFor(p.Profession) != behavior {
+		if _, on := m.online[p.ID]; on || disabled[p.ID] || BehaviorFor(p.Profession) != behavior {
 			continue
 		}
 		if t, ok := m.leftAt[p.ID]; ok && now.Sub(t) < reuseCooldown {
@@ -249,9 +256,9 @@ func (m *Manager) spawnOne(s Settings, now time.Time) bool {
 	if len(pool) == 0 {
 		pool = cooled
 	}
-	if len(pool) == 0 { // профилей этого поведения нет: берём любое свободное
+	if len(pool) == 0 { // профилей этого поведения нет: берём любое свободное и не отключённое
 		for _, p := range m.profiles {
-			if _, on := m.online[p.ID]; !on {
+			if _, on := m.online[p.ID]; !on && !disabled[p.ID] {
 				pool = append(pool, p)
 			}
 		}
@@ -291,6 +298,79 @@ func (m *Manager) Status() Status {
 	defer m.mu.Unlock()
 	return Status{Enabled: m.settings.Enabled, Paused: m.settings.Paused, Players: m.w.PlayerCount(), Online: len(m.online), Target: m.lastTarget,
 		Profiles: len(m.profiles), ByBehavior: m.countByBehavior()}
+}
+
+// OnlineCaptain — капитан онлайн для админки и диалога.
+type OnlineCaptain struct {
+	ID, Name, Profession, Behavior string
+	Since                          time.Time
+}
+
+// IsOnline говорит, что капитан сейчас в мире.
+func (m *Manager) IsOnline(id string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, ok := m.online[id]
+	return ok
+}
+
+// NameOf возвращает имя капитана по идентификатору (пустая строка, если профиль неизвестен).
+func (m *Manager) NameOf(id string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if p, ok := m.profileByID[id]; ok {
+		return p.Name
+	}
+	return id
+}
+
+// RandomOnline выбирает случайного онлайн-капитана, кроме exclude (может быть ""). Нужен диалогу (ИИ-2).
+func (m *Manager) RandomOnline(exclude string, r float64) (string, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	ids := make([]string, 0, len(m.online))
+	for id := range m.online {
+		if id != exclude {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return "", false
+	}
+	sort.Strings(ids)
+	return ids[int(r*float64(len(ids)))%len(ids)], true
+}
+
+// Lookup находит онлайн-капитана по идентификатору или имени (личные сообщения, Directory чата).
+func (m *Manager) Lookup(q string) (OnlineCaptain, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for id, a := range m.online {
+		p, ok := m.profileByID[id]
+		if !ok {
+			continue
+		}
+		if id == q || strings.EqualFold(p.Name, q) {
+			return OnlineCaptain{ID: id, Name: p.Name, Profession: p.Profession, Behavior: a.behavior, Since: a.since}, true
+		}
+	}
+	return OnlineCaptain{}, false
+}
+
+// Captains возвращает все профили студии с состоянием онлайн (для админки ИИ-3 и диалога).
+func (m *Manager) Captains() []OnlineCaptain {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]OnlineCaptain, 0, len(m.profiles))
+	for _, p := range m.profiles {
+		c := OnlineCaptain{ID: p.ID, Name: p.Name, Profession: p.Profession, Behavior: BehaviorFor(p.Profession)}
+		if a, on := m.online[p.ID]; on {
+			c.Since = a.since
+		}
+		out = append(out, c)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
 }
 
 // Run выполняет шаги с заданным интервалом, пока контекст не отменён.

@@ -306,10 +306,23 @@ func run() error {
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
 		World: gameWorld, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
+	var agent *aiagent.Manager
 	if cfg.FeatureAI {
-		agent := aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: aistudio.NewService(aistudio.NewPGStore(pool))}, aiagent.NewPGStore(pool), log)
+		studioSvc := aistudio.NewService(aistudio.NewPGStore(pool))
+		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log)
+		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
+		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
+		wsHandler.SetOnChat(func(m chat.Message) { dlg.Handle(context.Background(), m) })
+		// личные сообщения ИИ-капитанам по имени из мира
+		chatSvc.Directory = func(ctx context.Context, q string) (chat.Person, bool) {
+			c, ok := agent.Lookup(q)
+			if !ok {
+				return chat.Person{}, false
+			}
+			return chat.Person{ID: c.ID, Name: c.Name, AI: true}, true
+		}
 		go agent.Run(ctx, 2*time.Second)
-		log.Info("ИИ-игроки включены (COSMOC_FEATURE_AI)")
+		log.Info("ИИ-игроки включены (COSMOC_FEATURE_AI), реплики в чате (ИИ-2)")
 	}
 	worldDone := make(chan struct{})
 	go func() {
@@ -340,7 +353,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ

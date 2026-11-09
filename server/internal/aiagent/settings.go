@@ -26,12 +26,30 @@ type Settings struct {
 	EmptyGraceSec int            `json:"empty_grace_sec"` // сколько секунд ИИ остаются после ухода последнего игрока
 	ViewRadius    float64        `json:"view_radius"`     // радиус видимости ИИ для игрока
 	Shares        map[string]int `json:"shares"`          // доли поведений (в процентах, сумма не обязана быть 100)
+	// Реплики в чате (ИИ-2) и индивидуальное включение капитанов (ИИ-3).
+	ChatReplyEnabled       bool     `json:"chat_reply_enabled"`        // ИИ отвечают в общем и личном чате
+	ChatReplyChance        int      `json:"chat_reply_chance"`         // вероятность ответа в общем канале, 0–100
+	ChatDelayMinMs         int      `json:"chat_delay_min_ms"`         // задержка ответа: от (естественность)
+	ChatDelayMaxMs         int      `json:"chat_delay_max_ms"`         // задержка ответа: до
+	ChatCaptainCooldownSec int      `json:"chat_captain_cooldown_sec"` // личный кулдаун капитана
+	ChatMaxPerMin          int      `json:"chat_max_per_min"`          // общий потолок ИИ-реплик в минуту
+	DisabledCaptains       []string `json:"disabled_captains"`         // капитаны, которых не ставить в мир и не давать в чат
+}
+
+// DisabledSet возвращает множество отключённых капитанов.
+func (s Settings) DisabledSet() map[string]bool {
+	out := map[string]bool{}
+	for _, id := range s.DisabledCaptains {
+		out[id] = true
+	}
+	return out
 }
 
 // DefaultSettings — решения владельца R-42: 20–50 ИИ при живых игроках, потолок 200.
 func DefaultSettings() Settings {
 	return Settings{Enabled: true, MinOnline: 20, MaxOnline: 50, AbsMax: 200, PlayersForMax: 10, SpawnPerMin: 12, DespawnPerMin: 30,
-		EmptyGraceSec: 30, ViewRadius: 450, Shares: map[string]int{"miner": 30, "trader": 20, "scout": 20, "patrol": 15, "support": 15}}
+		EmptyGraceSec: 30, ViewRadius: 450, Shares: map[string]int{"miner": 30, "trader": 20, "scout": 20, "patrol": 15, "support": 15},
+		ChatReplyEnabled: true, ChatReplyChance: 25, ChatDelayMinMs: 800, ChatDelayMaxMs: 2500, ChatCaptainCooldownSec: 30, ChatMaxPerMin: 30}
 }
 
 // Validate проверяет настройки и возвращает понятную ошибку.
@@ -51,6 +69,21 @@ func (s Settings) Validate() error {
 		return errors.New("задержка снятия — от 0 до 3600 секунд")
 	case s.ViewRadius < 100 || s.ViewRadius > 2000:
 		return errors.New("радиус видимости — от 100 до 2000")
+	}
+	switch {
+	case s.ChatReplyChance < 0 || s.ChatReplyChance > 100:
+		return errors.New("вероятность ответа — от 0 до 100")
+	case s.ChatDelayMinMs < 0 || s.ChatDelayMaxMs < s.ChatDelayMinMs || s.ChatDelayMaxMs > 30000:
+		return errors.New("задержка ответа: 0…30000 мс, минимум не больше максимума")
+	case s.ChatCaptainCooldownSec < 0 || s.ChatCaptainCooldownSec > 3600:
+		return errors.New("кулдаун капитана — от 0 до 3600 секунд")
+	case s.ChatMaxPerMin < 0 || s.ChatMaxPerMin > 120:
+		return errors.New("потолок реплик — от 0 до 120 в минуту")
+	}
+	for _, id := range s.DisabledCaptains {
+		if id == "" || len(id) > 48 {
+			return errors.New("некорректный идентификатор отключённого капитана")
+		}
 	}
 	total := 0
 	for k, v := range s.Shares {

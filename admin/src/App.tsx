@@ -6,8 +6,9 @@ import { Studio } from "./studio/Studio";
 import { ShipsAdmin } from "./ShipsAdmin";
 import { WorldAdmin } from "./WorldAdmin";
 import { ChatAdmin } from "./ChatAdmin";
+import { AiPlayers } from "./AiPlayers";
 
-type View = "server" | "studio" | "ships" | "world" | "chat";
+type View = "server" | "studio" | "ships" | "world" | "chat" | "ai";
 type Session = { state: "loading" } | { state: "out" } | { state: "in"; username: string };
 
 export function App() {
@@ -37,5 +38,8 @@ export function App() {
   if (view === "chat") {
     return <ChatAdmin username={session.username} onBack={() => setView("server")} onLoggedOut={() => void api.logout().finally(onLoggedOut)} />;
   }
-  return <Dashboard username={session.username} onLoggedOut={onLoggedOut} onOpenStudio={() => setView("studio")} onOpenShips={() => setView("ships")} onOpenWorld={() => setView("world")} onOpenChat={() => setView("chat")} />;
+  if (view === "ai") {
+    return <AiPlayers username={session.username} onBack={() => setView("server")} onLoggedOut={() => void api.logout().finally(onLoggedOut)} />;
+  }
+  return <Dashboard username={session.username} onLoggedOut={onLoggedOut} onOpenStudio={() => setView("studio")} onOpenShips={() => setView("ships")} onOpenWorld={() => setView("world")} onOpenChat={() => setView("chat")} onOpenAi={() => setView("ai")} />;
 }

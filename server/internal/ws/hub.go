@@ -1122,6 +1122,9 @@ func chatText(code string) string {
 	return "сообщение не отправлено"
 }
 
+// SetOnChat задаёт наблюдателя отправленных сообщений (ответы ИИ-капитанов, ИИ-2).
+func (h *Handler) SetOnChat(f func(chat.Message)) { h.opts.OnChat = f }
+
 // PushChat доставляет сообщение чата подключённым игрокам: общий и системный канал всем, личное адресату и отправителю.
 func (h *Handler) PushChat(m chat.Message) {
 	out := Message{Type: "chat", Payload: mustJSON(map[string]any{"message": m})}

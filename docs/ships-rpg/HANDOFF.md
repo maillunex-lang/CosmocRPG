@@ -2,7 +2,7 @@
 Дата: 2026-11-09. Ветка: `codex/ships-rpg-foundation`. Исходная контрольная точка этой задачи: `79df286`.
 
 ## Текущая стадия
-**SR-011 DONE**: полный проверяемый каталог 15 моделей / 12 классов / 30 специализаций. SR-011a (контракт/schema/валидатор) — `6a657db`. SR-011b (авторские данные и реальные compatibility/coverage-тесты) — текущий коммит; точный SHA будет добавлен финальной записью после фиксации. Весь этап 1 **IN_PROGRESS**, SR-012/013/014 остаются TODO. Прежние SR-000/010/015/014a DONE; caps 100/50 уже реализованы и подтверждены владельцем, шесть узлов + усиление ульты на 20 согласованы, но деревья ещё не созданы.
+**SR-011 DONE**: полный проверяемый каталог 15 моделей / 12 классов / 30 специализаций. SR-011a (контракт/schema/валидатор) — `6a657db`. SR-011b (авторские данные и реальные compatibility/coverage-тесты) — `699e8b5` (последний SHA реализации). Финальный docs-коммит с этой передачей смотреть через `git log -1 --oneline`. Весь этап 1 **IN_PROGRESS**, SR-012/013/014 остаются TODO. Прежние SR-000/010/015/014a DONE; caps 100/50 уже реализованы и подтверждены владельцем, шесть узлов + усиление ульты на 20 согласованы, но деревья ещё не созданы.
 
 ## Что реализовано
 - `server/internal/shipcatalog/passport.go`: PassportCatalog/ShipPassport, compiler JSON Schema с существующей SchemaJSON для base, семантические проверки ID/спек/слотов/категорий/размеров/бюджетов/старта/геометрии; DefaultPassportCatalog; полное сравнение старых base через CheckLegacyPassportBases.
@@ -14,7 +14,7 @@
 ## Реальные проверки
 - Полный `go test -race -count=1 -json ./...` — exit 0: 20 пакетов PASS, 304 test/subtest PASS, 62 SKIP, 0 FAIL; 3 пакета без тестов.
 - После финального усиления required base schema и добавления отрицательного теста роли: `go test -race -count=1 -json ./internal/shipcatalog` — exit 0, 8.392s, 68 PASS, 1 SKIP.
-- `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-sr011 ./cmd/server`, gofmt, git diff --check — PASS; после усиления schema vet/build повторяются перед финальной фиксацией. Бинарник не запускался.
+- `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-sr011 ./cmd/server`, gofmt, git diff --check — PASS (exit 0), включая повтор после усиления schema. Бинарник не запускался.
 - Тестовая PostgreSQL URL не настроена: DB cases пропущены. Godot/Android/production не проверялись: код БД/клиента не менялся.
 - ERROR-SR-003: документ корректно отклонялся schema uniqueItems, но тест ошибочно ожидал текст Go-проверки. Исправлено в 6a657db. Все ERROR-SR-001/002/003 Resolved, открытых ошибок на этой точке нет. Не стирать исторические неудачные прогоны.
 
@@ -47,3 +47,5 @@ go vet ./...
 Go1.27.3 установлен локально с проверкой официального SHA-256; go.mod/CI не менялись. /usr/bin/go — другая программа, при потере scratch установить официальный toolchain заново, сперва проверив версию/хеш.
 
 Вне Git: toolchain, генератор черновых данных (итоговый JSON — авторитетный артефакт), логи `ships-rpg-passport-contract*.log`, `ships-rpg-passports-data-tests.jsonl`, `ships-rpg-sr011-all-tests.jsonl`, `ships-rpg-passports-final-tests.jsonl` в /workspace/scratch. Они могут исчезнуть при смене окружения; сводка сохранена в REGRESSION_TESTS. Ни серверов, ни контейнеров эта задача не запускала. Коммиты локальные, push/PR/deploy не выполнялись. **Другие проекты VPS не трогать; production-деплой без отдельного разрешения запрещён.**
+
+Рабочее дерево после финального docs-коммита должно быть чистым. Для review: `git diff 79df286..699e8b5 --stat`; сначала читать PASSPORTS.md (сводная таблица и ограничения), затем passport.go/schema и тесты. Документ содержит все поля §5; готовность SR-011 не означает готовность всего этапа 1 или runtime-интеграции.

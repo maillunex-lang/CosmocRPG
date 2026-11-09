@@ -40,7 +40,9 @@ TestExtendedCurvesPreserveLegacyXP проверяет все прежние по
 - `go test -race -count=1 -json ./internal/shipcatalog` — PASS, пакет 7.754s, 67 test/subtest PASS, 1 SKIP (PostgreSQL).
 - `go test -race -count=1 -json ./...` — PASS (exit 0): 20 пакетов с тестами PASS; 304 test/subtest PASS, 62 SKIP, 0 FAIL; ещё 3 пакета без тестов. Примеры времени: shipcatalog 9.941s, world 1.613s, ws 13.300s, aistudio 42.647s. PostgreSQL cases пропущены штатно через testdb; это не доказательство проверки SQL.
 - Затем schema усилена: для полного паспорта обязательны все поля base (включая role, размеры/системы/регенерацию/temporary), хотя старый Ship_Patch_Pack_v1 допускает частичные значения. Добавлен отрицательный тест пустой роли. Повторный `go test -race -count=1 -json ./internal/shipcatalog` — PASS (exit 0), 8.392s, 68 test/subtest PASS, 1 SKIP.
-- `go vet ./...` и `go build -o /workspace/scratch/cosmoc-server-sr011 ./cmd/server` — PASS; после усиления schema повторяются перед финальной фиксацией. `gofmt` и `git diff --check` — PASS. Бинарник не запускался.
+- `go vet ./...` и `go build -o /workspace/scratch/cosmoc-server-sr011 ./cmd/server` — PASS (exit 0), включая повтор после усиления schema. `gofmt` и `git diff --check` — PASS. Бинарник не запускался.
 
 Проверены все 15 моделей / 12 классов / 30 специализаций, полное равенство 12 исходных ShipSpec (включая все abilities), отдельная предварительность 3 новых base, 15 разных силуэтов, крепления под все оружейные слоты/двигатели, все стартовые комплекты, 72 допустимых skill ID хотя бы у одного корпуса, отсутствие неявной публикации (world.New по-прежнему содержит 12 моделей), независимые копии вложенных данных, сериализация без потери полей и границы массы/MW отдельно от боевого energy.
 Новые ошибки SR-011b не обнаружены; ERROR-SR-003 исправлена в 6a657db. Godot, реальная БД и production не менялись/не проверялись. Модульное открытие всех 72 навыков и реализация эффектов ещё не проверяются, это следующие задачи.
+
+SHA текущей задачи: `6a657db` — SR-011a, `699e8b5` — SR-011b/завершение SR-011. Финальный gofmt/vet/build после последней schema — PASS.

@@ -18,6 +18,7 @@ const Hangar := preload("res://ui/ships/hangar.gd")
 const ShopScreen := preload("res://ui/shop_screen.gd")
 const ProfileScreen := preload("res://ui/profile_screen.gd")
 const StarMapScreen := preload("res://ui/star_map_screen.gd")
+const StationScreen := preload("res://ui/station_screen.gd")
 const ChatOverlay := preload("res://ui/chat_overlay.gd")
 const MapScreen := preload("res://ui/map_screen.gd")
 const SettingsScreen := preload("res://ui/settings_screen.gd")
@@ -114,6 +115,7 @@ func _ready() -> void:
 	_hud.settings_requested.connect(open_settings)
 	_hud.profile_requested.connect(open_profile)
 	_hud.star_map_requested.connect(open_star_map)
+	_hud.station_requested.connect(open_station)
 	_hud.chat_requested.connect(func() -> void: open_chat())
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
@@ -410,6 +412,25 @@ func open_shop() -> Control:
 		layer.queue_free())
 	gateway.shop_open()
 	return sh
+
+
+## Экран станции (Э-2): ремонт, покупка ресурсов, улучшение.
+func open_station() -> Control:
+	var existing := get_node_or_null("StationLayer/StationOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var st: Control = StationScreen.new()
+	st.name = "StationOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "StationLayer"
+	add_child(layer)
+	layer.add_child(st)
+	st.theme = theme
+	(st as StationScreen).bind(gateway)
+	st.closed.connect(func() -> void: layer.queue_free())
+	return st
 
 
 ## Звёздная карта (Э-1): системы, фракции, переходы.

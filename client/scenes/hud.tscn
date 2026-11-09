@@ -386,6 +386,12 @@ layout_mode = 2
 text = "Чат"
 script = ExtResource("5")
 
+[node name="StationMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Станция"
+script = ExtResource("5")
+
 [node name="StarMapMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
 unique_name_in_owner = true
 layout_mode = 2

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
@@ -312,3 +313,81 @@ func TestShipLevelRestoredOnSwapAndXPFromSell(t *testing.T) {
 }
 
 func rpgShipXP(level int) int64 { return rpg.DefaultShipCurve.TotalXP(level) }
+
+// TestStationServicesThroughProtocol — Э-2: рынок, ремонт, покупка и улучшение через протокол.
+func TestStationServicesThroughProtocol(t *testing.T) {
+	cfg := worldgen.DefaultConfig()
+	lay := worldgen.Generate(cfg.Systems[0], cfg)
+	w := world.New()
+	if err := w.ApplyLayout(lay, cfg); err != nil {
+		t.Fatal(err)
+	}
+	qs := quest.NewMemStore()
+	svc := quest.NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), qs, w.ObjectPos)
+	store := world.NewMemStore()
+	pid := world.PublicID(world.TokenHash("stationtoken000001"))
+	_ = store.Save(context.Background(), world.Record{ID: pid, Name: "Сервис", Pos: world.Vec{X: lay.Hub[0], Y: lay.Hub[1]}, Dir: world.Vec{X: 1}, Created: true, ShipType: "TMP-MINE", PilotSpec: "miner"})
+	r := world.NewRouter(w)
+	r.Add(w)
+	opts := Options{MaxMessage: 8192, RatePerSec: 200, Version: "t", World: r, Store: store, Quests: svc, Pilot: pilot.NewService(pilot.NewMemStore()), Ships: shipxp.NewService(shipxp.NewMemStore())}
+	srv, h := newServer(t, opts)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { h.Run(ctx); close(done) }()
+	defer func() { cancel(); <-done }()
+
+	cl := connect(t, srv.URL+"/ws")
+	cl.send("join", map[string]any{"token": "stationtoken000001", "protocol": ProtocolVersion})
+	cl.next("welcome")
+
+	cl.send("market", map[string]any{})
+	m := cl.next("market")
+	var md struct {
+		Prices      map[string]float64 `json:"prices"`
+		RepairCost  int64              `json:"repair_cost"`
+		UpgradeCost int64              `json:"upgrade_cost"`
+	}
+	if err := json.Unmarshal(m.Payload, &md); err != nil {
+		t.Fatal(err)
+	}
+	if len(md.Prices) == 0 || md.Prices["iron_ore"] <= 0 {
+		t.Fatalf("цены: %+v", md)
+	}
+
+	// покупка без кредитов — отказ no_credits
+	cl.send("buy", map[string]any{"resource": "iron_ore", "amount": 5})
+	if m := cl.next("error"); !strings.Contains(string(m.Payload), "no_credits") {
+		t.Fatalf("ожидался no_credits: %+v", m)
+	}
+
+	// выдаём кредиты и покупаем
+	if err := svc.Join(context.Background(), pid); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.Grant(context.Background(), pid, "test-grant", 5000); err != nil {
+		t.Fatal(err)
+	}
+	cl.send("buy", map[string]any{"resource": "iron_ore", "amount": 5})
+	ok := cl.next("ok")
+	var od struct {
+		Action  string `json:"action"`
+		Credits int64  `json:"credits"`
+	}
+	if err := json.Unmarshal(ok.Payload, &od); err != nil || od.Action != "buy" || od.Credits <= 0 {
+		t.Fatalf("покупка: %+v %v", od, err)
+	}
+
+	// улучшение корабля
+	cl.send("ship_upgrade", map[string]any{})
+	ok = cl.next("ok")
+	if err := json.Unmarshal(ok.Payload, &od); err != nil || od.Action != "ship_upgrade" {
+		t.Fatalf("улучшение: %+v %v", od, err)
+	}
+
+	// ремонт целого корабля — ок без списания
+	cl.send("repair", map[string]any{})
+	ok = cl.next("ok")
+	if err := json.Unmarshal(ok.Payload, &od); err != nil || od.Action != "repair" {
+		t.Fatalf("ремонт: %+v %v", od, err)
+	}
+}

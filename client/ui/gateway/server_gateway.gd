@@ -156,6 +156,11 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			joined.emit()
 			request_chat_history()
 			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
+		"market":
+			station_market.emit(payload)
+		"ok":
+			if payload.get("action", "") != "":
+				station_done.emit(payload)
 		"system_changed":
 			system = payload.get("system", {}) if payload.get("system") is Dictionary else {}
 			if payload.get("layout") is Dictionary:
@@ -442,6 +447,18 @@ func jump_gates() -> Array:
 
 func jump(to: String) -> void:
 	_client.send_message("jump", {"to": to})
+
+func request_market() -> void:
+	_client.send_message("market", {})
+
+func repair() -> void:
+	_client.send_message("repair", {})
+
+func buy(resource: String, amount: float) -> void:
+	_client.send_message("buy", {"resource": resource, "amount": amount})
+
+func ship_upgrade() -> void:
+	_client.send_message("ship_upgrade", {})
 
 func has_chat() -> bool:
 	return true

@@ -67,6 +67,8 @@ signal shop_failed(text: String)
 ## Пилот: опыт, уровень и очки характеристик (серверный режим): словарь состояния пилота.
 signal pilot_updated(pilot: Dictionary)
 signal system_changed(info: Dictionary)   # Э-1: гиперпереход завершён {system, layout, spawn...}
+signal station_market(data: Dictionary)   # Э-2: цены станции {prices, repair_cost, upgrade_cost}
+signal station_done(data: Dictionary)     # Э-2: операция станции выполнена {action, credits, spent...}
 
 
 ## Игровая настройка (например, автоответ на атаку). В демо без сервера ничего не делает.
@@ -82,6 +84,19 @@ func jump_gates() -> Array:
 	return []
 
 func jump(_to: String) -> void:
+	pass
+
+## Станция (Э-2): цены, ремонт, покупка, улучшение.
+func request_market() -> void:
+	pass
+
+func repair() -> void:
+	pass
+
+func buy(_resource: String, _amount: float) -> void:
+	pass
+
+func ship_upgrade() -> void:
 	pass
 
 func has_chat() -> bool:

@@ -114,31 +114,6 @@ func TestEquipmentCombatGraceSurvivesTransfer(t *testing.T) {
 	}
 }
 
-func TestEquipmentCommitSerializesMovement(t *testing.T) {
-	w, p := dockedEngine(t)
-	entered, release, moved := make(chan struct{}), make(chan struct{}), make(chan struct{})
-	done := make(chan error, 1)
-	go func() {
-		done <- w.ChangeStarter(p.ID, 0, false, func() (StarterLoadout, error) { close(entered); <-release; return savedStarter(p.ID, false, 1), nil })
-	}()
-	<-entered
-	go func() { w.SetMove(p.ID, Vec{1, 0}); close(moved) }()
-	select {
-	case <-moved:
-		t.Fatal("move entered before commit")
-	default:
-	}
-	close(release)
-	if err := <-done; err != nil {
-		t.Fatal(err)
-	}
-	<-moved
-	st, _ := w.Snapshot(p.ID)
-	if st.Ship.Modules[0].Equipped || st.Ship.Equipment.CanChange {
-		t.Fatal("commit/movement ordering lost")
-	}
-}
-
 func TestEquipmentDoesNotRewriteLearnedRankOrCombatResources(t *testing.T) {
 	for _, rank := range []int{0, 4} {
 		w, p := dockedEngine(t)

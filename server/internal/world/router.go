@@ -124,12 +124,14 @@ func (r *Router) Join(rec Record) (*Player, bool) {
 
 // Leave убирает игрока из мира (без возврата записи).
 func (r *Router) Leave(pid string) {
-	if w := r.For(pid); w != nil {
-		w.Remove(pid)
-	}
 	r.mu.Lock()
+	defer r.mu.Unlock()
+	if w := r.byPlayer[pid]; w != nil {
+		if _, err := w.removePlayer(pid, nil); err == ErrEquipmentBusy {
+			return
+		}
+	}
 	delete(r.byPlayer, pid)
-	r.mu.Unlock()
 }
 
 // Jump переносит игрока в другую систему через точку прыжка.
@@ -157,14 +159,6 @@ func (r *Router) Jump(pid, to string) (Record, Vec, error) {
 	if target == nil {
 		return Record{}, Vec{}, ErrNoSystem
 	}
-	// игрок должен быть у точки прыжка своей системы
-	pos, ok := from.ObjectPos(pid)
-	if !ok {
-		return Record{}, Vec{}, ErrNoSystem
-	}
-	if pos.Distance(gate.Pos) > GateRadius {
-		return Record{}, Vec{}, ErrNoGate
-	}
 	// зеркальная точка в целевой системе (переход обратно)
 	spawn := Vec{X: 0, Y: -float64(gate.Pos.Y)}
 	for _, g := range r.gates[to] {
@@ -173,9 +167,12 @@ func (r *Router) Jump(pid, to string) (Record, Vec, error) {
 			break
 		}
 	}
-	rec, ok := from.Remove(pid)
-	if !ok {
-		return Record{}, Vec{}, ErrNoSystem
+	rec, err := from.removePlayer(pid, &gate.Pos)
+	if err != nil {
+		if err == ErrNoPlayer {
+			err = ErrNoSystem
+		}
+		return Record{}, Vec{}, err
 	}
 	rec.System = to
 	rec.Pos = spawn

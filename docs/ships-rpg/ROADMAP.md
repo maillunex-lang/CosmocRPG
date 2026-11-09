@@ -92,3 +92,11 @@ CI c9a3391 для полного gameplay шага — success. Дополнит
 Точный [task journal](sr100c-storage/ROADMAP.md), [ошибки](sr100c-storage/ERROR_LOG.md), [тесты](sr100c-storage/REGRESSION_TESTS.md), [решения](sr100c-storage/DECISIONS.md). Не объявлять SR-030/весь master prompt DONE: arbitrary modules/билды/budgets и72/30/36 ещё впереди. SR-100d — Android/graphical/release приёмка; production не развёрнут. В main должен попасть код и документы, не секреты/новый release key.
 
 Публикация подтверждена: main85abfdd→d9669c9, без force. Первая попытка non-FF была корректно отклонена из-за чужого FinalQuest commit85abfdd; обычный merge сохранил его. Последние remote merges затрагивали только QUESTJOB: сохранено и чужое удаление NEW_STORY_CAMPAIGN.md(26300aa), файл не восстанавливался самовольно. Код не менялся после final affected157 PASS/vet/build. CI code head: [42650859949](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42650859949), pending на момент проверки; финальный docs push/чужие docs могут отменить этот run — проверять последний [main CI](https://github.com/maillunex-lang/CosmocRPG/actions?query=branch%3Amain). DONE относится к проверенной реализации/интеграции; remote CI не объявлен success, SR-100d остаётся TODO.
+
+## SR-100c-4: неблокирующее сохранение (ветка codex/sr100c-coordinator)
+Пользователь подтвердил этот следующий этап. Базаb945efb, отдельный worktree, Kimi ERROR-SR-007 не менять. Проверенный этап будет опубликован с обновлёнными журналами; production не разрешён.
+| ID | P | Зависимости | Критерии DONE | Статус | Даты | Проверки / SHA |
+|---|---|---|---|---|---|---|
+| SR-100c-4a | P0 | SR-100c | Per-player reservation, callback вне world mutex; tick/snapshot/другие игроки продолжают работу; actor actions guarded; no invulnerability | DONE | 2026-11-09 / 2026-11-09 | blocked-store red→green; полный world race PASS1.787s / этот core commit |
+| SR-100c-4b | P0 | SR-100c-4a | Per-owner session gate вместо global Handler mutex на IO; reconnect/leave/CAS/recovery безопасны | IN_PROGRESS | 2026-11-09 / — | WS two players/replacement/cancellation/PG / — |
+| SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | TODO | — / — | actual tests/CI/diff / — |

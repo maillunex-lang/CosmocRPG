@@ -77,6 +77,7 @@ type Player struct {
 	spec                ShipSpec
 	starterEngine       *starterEngineItem
 	starterLoadout      *StarterLoadout
+	equipmentLease      *equipmentLease
 	persistentEquipment bool
 	boostRank           int
 	shipLevel           int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
@@ -260,6 +261,9 @@ func (w *World) Join(r Record) (*Player, bool) {
 		return nil, false
 	}
 	if p, ok := w.players[r.ID]; ok {
+		if p.equipmentLease != nil {
+			return nil, false
+		}
 		if !p.restoreStarter(r.StarterLoadout) {
 			return nil, false
 		}
@@ -298,17 +302,30 @@ func (w *World) Join(r Record) (*Player, bool) {
 // Disconnect помечает связь потерянной; корабль исчезнет через Grace.
 // Remove безвозвратно убирает игрока из мира и возвращает его запись (гиперпереход, Э-1).
 func (w *World) Remove(id string) (Record, bool) {
+	r, err := w.removePlayer(id, nil)
+	return r, err == nil
+}
+
+// removePlayer checks reservation and optional gate distance in one critical
+// section. A transfer cannot slip between reservation and an earlier check.
+func (w *World) removePlayer(id string, gate *Vec) (Record, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	p, ok := w.players[id]
-	if !ok {
-		return Record{}, false
+	p := w.players[id]
+	if p == nil {
+		return Record{}, ErrNoPlayer
+	}
+	if p.equipmentLease != nil {
+		return Record{}, ErrEquipmentBusy
+	}
+	if gate != nil && p.Pos.Distance(*gate) > GateRadius {
+		return Record{}, ErrNoGate
 	}
 	rec := p.record()
 	rec.System = w.System().ID
 	rec.CombatRemaining = math.Max(0, p.combatUntil-w.t)
 	delete(w.players, id)
-	return rec, true
+	return rec, nil
 }
 
 func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
@@ -352,6 +369,9 @@ func (w *World) SetMove(id string, v Vec) bool {
 	if !ok {
 		return false
 	}
+	if p.equipmentLease != nil {
+		return false
+	}
 	p.Move = v.limit(1)
 	if p.Move.length() > 0.05 {
 		p.Autopilot = false
@@ -388,6 +408,9 @@ func (w *World) SetAutopilot(id string, on bool) bool {
 	defer w.mu.Unlock()
 	p, ok := w.players[id]
 	if !ok {
+		return false
+	}
+	if on && p.equipmentLease != nil {
 		return false
 	}
 	if on {
@@ -432,7 +455,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 	w.t += dt
 	var removed []Record
 	for id, p := range w.players {
-		if !p.connected && now.Sub(p.lostAt) >= Grace {
+		if !p.connected && p.equipmentLease == nil && now.Sub(p.lostAt) >= Grace {
 			removed = append(removed, p.record())
 			delete(w.players, id)
 			continue
@@ -441,6 +464,10 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		if p.deadUntil > w.t {
 			p.Speed, p.Move = 0, Vec{}
 			continue
+		}
+		if p.equipmentLease != nil {
+			p.Speed = 0
+			continue // keep only this actor docked; damage/combat above still run
 		}
 		move := p.Move
 		if p.Autopilot {

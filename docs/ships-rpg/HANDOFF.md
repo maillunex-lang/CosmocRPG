@@ -1,3 +1,13 @@
+# SR-100c-4a checkpoint
+Core reservation готов, world race PASS1.787s, ERROR-SR-011 world red→green. callback больше не держит world.mu; pending actor не покидает dock, damage/другие actors/ticks продолжаются. SR-100c-4a DONE;4b IN_PROGRESS: Handler.mu всё ещё удерживается в equipmentMsg, дальше per-owner cancellable gate для game/finishJoin/leave. Не публиковать частичный code в main до WS интеграции/тестов. Working branch codex/sr100c-coordinator, main не переключать; production не затронут.
+
+---
+
+# В работе: SR-100c-4 coordinator
+2026-11-09, ветка codex/sr100c-coordinator, worktree /workspace/worktrees/cosmoc-sr100c-coordinator, базаb945efb. Пользователь подтвердил устранение DB latency вне общего world/Handler mutex, затем проверки/обновление журналов/безопасная интеграция. SR-100c-4a IN_PROGRESS,4b/4c TODO. Kimi ERROR-SR-007 остаётся отдельно. Начальный аудит: world.ChangeStarter держит world.mu на callback; ws.equipmentMsg держит Handler.mu на IO. Выбран SR-ADR009: actor reservation + per-owner gate, входящий урон и другие игроки не приостанавливаются. Следом deterministic red test → core → WS concurrency → realPG/Godot/full validation. Production не трогать. Предыдущий подробный HANDOFF ниже сохраняется как история завершённого SR-100c.
+
+---
+
 # Актуальный HANDOFF — SR-100c, 2026-11-09
 
 ## Состояние и координация

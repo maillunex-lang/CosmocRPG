@@ -317,6 +317,9 @@ func (w *World) StartMining(id, depID string) error {
 	if !ok {
 		return ErrNoPlayer
 	}
+	if p.equipmentLease != nil {
+		return ErrEquipmentBusy
+	}
 	if p.deadUntil > w.t {
 		return ErrDead
 	}

@@ -83,6 +83,9 @@ func (w *World) SetSpec(id, spec string) (Record, error) {
 	if !ok {
 		return Record{}, ErrNoPlayer
 	}
+	if p.equipmentLease != nil {
+		return Record{}, ErrEquipmentBusy
+	}
 	for _, s := range p.spec.Specs {
 		if s == spec {
 			p.Spec = spec
@@ -99,6 +102,9 @@ func (w *World) SetAttack(id string, on bool) error {
 	p, ok := w.players[id]
 	if !ok {
 		return ErrNoPlayer
+	}
+	if p.equipmentLease != nil {
+		return ErrEquipmentBusy
 	}
 	if on {
 		if p.Target == "" {
@@ -164,6 +170,9 @@ func (w *World) UseAbility(id, ab string) error {
 	p, ok := w.players[id]
 	if !ok {
 		return ErrNoPlayer
+	}
+	if p.equipmentLease != nil {
+		return ErrEquipmentBusy
 	}
 	if ab == StrizhBoostAbility {
 		if p.ShipType != DefaultShip {

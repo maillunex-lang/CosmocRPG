@@ -1,6 +1,9 @@
 package world
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 var (
 	ErrEquipmentUnavailable = errors.New("equipment_unavailable")
@@ -18,9 +21,13 @@ type EquipmentStatus struct {
 	Revision  *int64 `json:"revision,omitempty"`
 	CanChange bool   `json:"can_change"`
 	Reason    string `json:"reason,omitempty"`
+	Pending   bool   `json:"pending,omitempty"`
 }
 
 func (w *World) equipmentCheck(p *Player) error {
+	if p.equipmentLease != nil {
+		return ErrEquipmentBusy
+	}
 	if p.ShipType != DefaultShip {
 		return ErrEquipmentHull
 	}
@@ -46,7 +53,7 @@ func (w *World) equipmentStatus(p *Player) *EquipmentStatus {
 	if !p.persistentEquipment {
 		return nil
 	}
-	s := &EquipmentStatus{}
+	s := &EquipmentStatus{Pending: p.equipmentLease != nil}
 	if p.starterLoadout != nil && p.ShipType == DefaultShip {
 		rev := p.starterLoadout.Revision
 		s.Revision = &rev
@@ -59,46 +66,79 @@ func (w *World) equipmentStatus(p *Player) *EquipmentStatus {
 	return s
 }
 
-// ChangeStarter serializes dock/combat checks, the bounded storage callback and
-// application under the simulation lock. No movement/damage/jump/hull change
-// can slip between validation and commit. The callback must NOT call World or
-// Router methods; the WS coordinator supplies its own short DB deadlines.
-// On storage failure it returns an authoritative reload, if available. If the
-// outcome cannot be established we disable boost until an explicit reload.
+// equipmentLease reserves only this actor. Storage never holds the world lock.
+type equipmentLease struct {
+	player           *Player
+	expectedRevision int64
+	equipped         bool
+}
+
+// ChangeStarter accepts a dock-only operation before dispatching storage. Hits
+// after acceptance still apply immediately; the accepted change precedes them.
+// Its actor cannot move/transfer/cast while pending. Other actors and simulation
+// continue normally. commit must obey its IO deadlines and must not recurse into
+// ChangeStarter for the same actor.
 func (w *World) ChangeStarter(id string, revision int64, equipped bool, commit func() (StarterLoadout, error)) error {
 	w.mu.Lock()
-	defer w.mu.Unlock()
 	p := w.players[id]
 	if p == nil {
+		w.mu.Unlock()
 		return ErrNoPlayer
 	}
 	if err := w.equipmentCheck(p); err != nil {
+		w.mu.Unlock()
 		return err
 	}
 	if revision < 0 || revision != p.starterLoadout.Revision {
+		w.mu.Unlock()
 		return ErrEquipmentConflict
 	}
 	if commit == nil {
+		w.mu.Unlock()
 		return ErrEquipmentUnavailable
 	}
-	expectedRevision := revision
+	expected := revision
 	if equipped != p.starterLoadout.Equipped {
-		expectedRevision++
+		if revision == math.MaxInt64 {
+			w.mu.Unlock()
+			return ErrEquipmentConflict
+		}
+		expected++
 	}
+	lease := &equipmentLease{player: p, expectedRevision: expected, equipped: equipped}
+	p.equipmentLease = lease
+	w.mu.Unlock()
+	// Also release/fail closed if an unexpected callback panic unwinds the caller.
+	defer w.abandonEquipment(lease)
 	state, err := commit()
-	if err == nil && (state.Revision != expectedRevision || state.Equipped != equipped) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.players[id] != p || p.equipmentLease != lease {
+		return ErrEquipmentUnavailable
+	}
+	p.equipmentLease = nil
+	if err == nil && (state.Revision != lease.expectedRevision || state.Equipped != lease.equipped) {
 		state = StarterLoadout{}
 	}
 	if state.Valid(id) && p.restoreStarter(&state) {
 		p.refreshStarterEngine()
-		if !state.Equipped {
-			p.boostUntil = 0
-		}
 		return err
 	}
-	// Never report success or retain an enabled ability with unknown DB outcome.
 	p.starterLoadout = nil
 	p.refreshStarterEngine()
 	p.boostUntil = 0
 	return ErrEquipmentUnavailable
+}
+
+func (w *World) abandonEquipment(lease *equipmentLease) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p := lease.player
+	if w.players[p.ID] != p || p.equipmentLease != lease {
+		return
+	}
+	p.equipmentLease = nil
+	p.starterLoadout = nil
+	p.refreshStarterEngine()
+	p.boostUntil = 0
 }

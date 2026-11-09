@@ -25,15 +25,7 @@ var (
 
 // StarterState is a server-owned storage snapshot, never authorization supplied
 // by a client. Equipped=false retains ownership; Ensure must never re-equip it.
-type StarterState struct {
-	OwnerID     string
-	ShipType    string
-	InstanceID  string
-	PrototypeID string
-	SlotID      string
-	Equipped    bool
-	Revision    int64
-}
+type StarterState = world.StarterLoadout
 
 // StarterStore is deliberately narrow: there is no arbitrary item grant,
 // transfer, sale or caller-selected prototype/instance/slot operation.

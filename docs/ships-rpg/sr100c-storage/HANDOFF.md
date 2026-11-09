@@ -1,3 +1,8 @@
+# Продолжение C-RT-01 (2026-11-09)
+Пользователь разрешил1→2→3: bootstrap, dock-only setter/UI, затем сверка и merge main. C-RT-01 DONE: runtime/main подключены к PG store; tests PG world/equipment/db PASS и targeted WS PASS. Полный параллельный suite имеет timeout account harness(CST-ERROR-005), нужна повторная проверка. Сейчас C-RT-02 TODO. Ветка прежняя, main не менялся. Собственный контейнер cosmoc-sr100c-runtime-20261109 временно нужен для следующих тестов, удалить в конце сессии. Не публиковать production/APK без ключей/разрешения. Подробности новых решений и фактических запусков в DECISIONS/REGRESSION_TESTS.
+
+---
+
 # HANDOFF — SR-100c storage, 2026-11-09
 
 Ветка `codex/sr100c-storage`, worktree `/workspace/worktrees/cosmoc-sr100c-storage`, база0b77fea. Main checkout `/workspace/CosmocRPG` не переключать: Kimi занимается ERROR-SR-007. В main не объединяли, production не развёртывали. Общие журналы, клиент, HUD, CI не меняли. При объединении обязательно перенести ссылку на этот task journal в главную ROADMAP/HANDOFF/ERROR_LOG/REGRESSION_TESTS.

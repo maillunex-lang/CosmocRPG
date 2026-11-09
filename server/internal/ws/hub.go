@@ -21,6 +21,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/equipment"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/rpg"
@@ -52,6 +53,7 @@ type Options struct {
 	RatePerSec    int   // допустимое число сообщений в секунду на сессию
 	Version       string
 	World         *world.Router                // миры систем и маршрутизация игроков (Э-1); nil: игровые сообщения отключены
+	Equipment     equipment.StarterStore       // persistent starter; nil preserves legacy fixed equipment
 	Store         world.Store                  // хранилище игроков; nil: позиции не сохраняются
 	Quests        *quest.Service               // контракты и награды; nil: функция выключена
 	Accounts      *account.Service             // аккаунты (логин и пароль); nil: функция выключена
@@ -545,6 +547,13 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		if json.Unmarshal(m.Payload, &p) != nil || p.Ship == "" || len(p.Ship) > 24 {
 			reply(errMsg(m.ID, "bad_message", "некорректный корабль"))
 			return
+		}
+		if p.Ship == world.DefaultShip && h.opts.Equipment != nil {
+			rec := world.Record{ID: ss.pid, ShipType: p.Ship}
+			if err := h.loadStarter(sctx, &rec); err != nil || !w.RestoreStarter(ss.pid, *rec.StarterLoadout) {
+				reply(errMsg(m.ID, "equipment_unavailable", "не удалось загрузить оснащение"))
+				return
+			}
 		}
 		rec, err := w.SetShip(ss.pid, p.Ship)
 		if err != nil {
@@ -1046,6 +1055,11 @@ func (h *Handler) accountMsg(ctx context.Context, c *websocket.Conn, ss *session
 func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger, m Message, rec world.Record) bool {
 	w := h.opts.World
 	reply := func(msg Message) { _ = writeJSON(ctx, ss.conn, msg) }
+	if err := h.loadStarter(ctx, &rec); err != nil {
+		log.Error("ws: load equipment", "player", rec.ID, "err", err)
+		reply(errMsg(m.ID, "equipment_unavailable", "не удалось загрузить оснащение; повторите вход"))
+		return false
+	}
 	// тот же игрок с другого устройства: старая сессия закрывается
 	h.mu.Lock()
 	old := h.active[rec.ID]

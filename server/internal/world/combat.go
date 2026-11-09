@@ -427,6 +427,7 @@ func (w *World) SetCatalog(c Catalog) {
 		if !ok {
 			sp, _ = c.Spec(DefaultShip)
 			p.ShipType = sp.ID
+			p.initStarterEngine()
 		}
 		p.spec = sp
 		p.Hull, p.Shield, p.Energy = math.Min(p.Hull, sp.Hull), math.Min(p.Shield, sp.Shield), math.Min(p.Energy, sp.Energy)

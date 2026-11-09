@@ -18,8 +18,7 @@ var (
 )
 
 // starterEngineItem represents the existing, bound native starter system. There
-// is exactly one per Strizh owner; it cannot be transferred, sold or unequipped
-// via RPC until persistent equipment is implemented in SR-100c.
+// is exactly one per Strizh owner; it cannot be transferred or sold.
 type starterEngineItem struct {
 	InstanceID, OwnerID, PrototypeID, SlotID string
 	Equipped                                 bool
@@ -47,7 +46,10 @@ func (p *Player) initStarterEngine() {
 	if p.ShipType != DefaultShip {
 		return
 	}
-	p.starterEngine = &starterEngineItem{InstanceID: starterEngineID(p.ID), OwnerID: p.ID, PrototypeID: StrizhEnginePrototype, SlotID: StrizhEngineSlot, Equipped: true}
+	p.starterEngine = &starterEngineItem{InstanceID: starterEngineID(p.ID), OwnerID: p.ID, PrototypeID: StrizhEnginePrototype, SlotID: StrizhEngineSlot, Equipped: !p.persistentEquipment}
+	if s := p.starterLoadout; s != nil {
+		p.starterEngine.Equipped = s.Equipped
+	}
 	p.boostRank = 1
 }
 

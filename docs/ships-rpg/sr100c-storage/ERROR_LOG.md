@@ -22,3 +22,6 @@
 ## CST-ERROR-004
 Дата2026-11-09. Компонент существующий corp/pgstore_test.go:27. Статус OPEN, вне области equipment. Общий Go+PG прогон: TestPGStoreCorporationFlow падает с SQLSTATE42P08 inconsistent types deduced for parameter$1. Fixture использует один$1 для public_id и token_hash разных SQL типов. Подтверждено на чистом git archive0b77fea без equipment изменений: `go test -count=1 -run '^TestPGStoreCorporationFlow$' ./internal/corp` с тем же отдельным PostgreSQL также FAIL. Чужой corp-код не изменялся. Следующему ответственному разделить параметры fixture и проверить дальнейшие assertions. Не относится к ERROR-SR-007 Kimi.
 Schema исправления CST-ERROR-001/003 зафиксированы38385f2; исправленная fixture CST-ERROR-002 входит в следующий equipment store commit.
+
+## CST-ERROR-005
+Дата2026-11-09; Investigating; тестовый harness WS, Medium. Во время параллельного broad race/PG прогона TestAccountProtocolErrors получил context deadline exceeded, game_test.go:571, около5.94s. Причина не установлена; CPU-нагрузка лишь гипотеза. Новый targeted equipment WS suite PASS. Повторить account тест в последовательном финальном прогоне, не увеличивать deadline без доказательства и не считать весь suite зелёным.

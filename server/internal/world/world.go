@@ -60,23 +60,25 @@ type Player struct {
 	Autopilot bool
 
 	// корабль и бой (Этап «Стриж»): все значения принадлежат серверу
-	ShipType      string
-	Skin          string
-	Spec          string
-	Hull, Shield  float64
-	Energy        float64
-	Attacking     bool
-	noRetaliate   bool // автоответ на атаку выключен игроком (по умолчанию включён)
-	boostUntil    float64
-	cooldowns     map[string]float64 // способность -> игровое время окончания перезарядки
-	attackAt      float64
-	lastHit       float64
-	deadUntil     float64
-	revealed      map[string]float64 // скрытый объект -> игровое время окончания видимости
-	spec          ShipSpec
-	starterEngine *starterEngineItem
-	boostRank     int
-	shipLevel     int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
+	ShipType            string
+	Skin                string
+	Spec                string
+	Hull, Shield        float64
+	Energy              float64
+	Attacking           bool
+	noRetaliate         bool // автоответ на атаку выключен игроком (по умолчанию включён)
+	boostUntil          float64
+	cooldowns           map[string]float64 // способность -> игровое время окончания перезарядки
+	attackAt            float64
+	lastHit             float64
+	deadUntil           float64
+	revealed            map[string]float64 // скрытый объект -> игровое время окончания видимости
+	spec                ShipSpec
+	starterEngine       *starterEngineItem
+	starterLoadout      *StarterLoadout
+	persistentEquipment bool
+	boostRank           int
+	shipLevel           int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
 
 	gender    string
 	pilotSpec string
@@ -110,6 +112,9 @@ type Record struct {
 	ShipType  string // тип корабля ("" — по умолчанию)
 
 	Hold map[string]float64 // груз (ресурс -> количество)
+
+	PersistentEquipment bool            `json:"-"` // require authoritative loadout for migrated hulls
+	StarterLoadout      *StarterLoadout `json:"-"` // runtime transport only; equipment has its own store
 
 	System string // текущая звёздная система (Э-1); "" — главная (aurora)
 }
@@ -248,7 +253,17 @@ func (w *World) Count() int {
 func (w *World) Join(r Record) (*Player, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if r.StarterLoadout != nil && !r.StarterLoadout.Valid(r.ID) {
+		return nil, false
+	}
 	if p, ok := w.players[r.ID]; ok {
+		if !p.restoreStarter(r.StarterLoadout) {
+			return nil, false
+		}
+		p.persistentEquipment = p.persistentEquipment || r.PersistentEquipment
+		if r.StarterLoadout != nil || p.persistentEquipment {
+			p.initStarterEngine()
+		}
 		p.connected = true
 		p.Name = r.Name
 		p.Move = Vec{}
@@ -267,6 +282,8 @@ func (w *World) Join(r Record) (*Player, bool) {
 	}
 	p := &Player{ID: r.ID, Name: r.Name, Pos: pos, Dir: dir, connected: true}
 	p.gender, p.pilotSpec = r.Gender, r.PilotSpec
+	p.starterLoadout = copyStarter(r.StarterLoadout)
+	p.persistentEquipment = r.PersistentEquipment
 	w.initShip(p, r.ShipType, r.Skin, r.Spec)
 	p.hold = sanitizeHold(r.Hold, p.spec.Cargo)
 	p.discovered = map[string]bool{}
@@ -305,7 +322,7 @@ func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 
 func (p *Player) record() Record {
 	return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
-		Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType, Hold: copyHold(p.hold)}
+		PersistentEquipment: p.persistentEquipment, StarterLoadout: copyStarter(p.starterLoadout), Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType, Hold: copyHold(p.hold)}
 }
 
 // Records возвращает состояние всех кораблей (для периодического сохранения).

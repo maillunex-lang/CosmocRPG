@@ -17,9 +17,11 @@ Kimi занимается ERROR-SR-007 в main. Не менять клиент, 
 |---|---|---|---|---|---|---|
 | C-RT-01 | P0 | C-ST-01…03 | Загрузка до Join; reconnect/hull/jump сохраняют снятый двигатель; fail closed | DONE | 2026-11-09 / 2026-11-09 | world/ws/main; real PG + WS |
 | C-RT-02 | P0 | C-RT-01 | Session-owned CAS команда только у станции вне боя; rollback/reconcile; UI/reasons | DONE | 2026-11-09 / 2026-11-09 | world/ws/client; PG/WS/Godot |
-| C-RT-03 | P0 | C-RT-02 | Сверка актуального main/Kimi, миграций, тестов, объединение и общие журналы | IN_PROGRESS | 2026-11-09 / — | main + roadmap/HANDOFF; CI |
+| C-RT-03 | P0 | C-RT-02 | Сверка актуального main/Kimi, миграций, тестов, объединение и общие журналы | DONE | 2026-11-09 / 2026-11-09 | main + roadmap/HANDOFF; CI |
 Пользователь разрешил последовательность и последующее объединение. Работа ведётся в feature branch; production не разрешён. ERROR-SR-007 остаётся за Kimi.
 
 C-RT-02a server DONE: `equipment_set/get`, current session ownership, strict payload, actual station radius, motion/active boost/combat grace, bounded commit/reconcile. C-RT-02b client — проверен локально, фиксируется следующим отдельным коммитом.
 
 C-RT-02b client DONE: ангар показывает состояние, кнопку и server reason; старый сервер/демо не предлагают неподдерживаемую команду. Открытый ангар обновляется со state, local optimistic mutation отсутствует. Headless hangar39/0, HUD161/0; реальный Godot→WS→PG unequip/reconnect/refit/M01 PASS. Android/графическая приёмка — SR-100d, не DONE.
+
+C-RT-03 DONE: main d9669c9 опубликован non-force после merge85abfdd, чужие изменения сохранены. Full suite431 tests/22 packages PASS до final rank fix, затем affected157/3 packages PASS0 skip, vet/build PASS. ERROR-SR-009/010 Resolved; CST005 Workaround (полный последовательный suite прошёл, причина первоначального timeout не установлена). Remote CI42650859949 pending, не success; новый docs head может иметь другой run. Root main checkout untouched, свой PG контейнер остановлен и удалён. APK/production не выпущены.

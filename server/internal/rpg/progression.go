@@ -9,9 +9,9 @@ type Curve struct {
 	Growth   float64 `json:"growth"`
 }
 
-// Стартовые кривые (ориентиры, не утверждённый баланс): пилот 1–100, корабль 1–50 (Ships RPG v2.1, подтверждено владельцем 2026-11-09).
+// PP-XP-CURVE-150: кривая пилота утверждена до 150; прежние пороги сохранены.
 var (
-	DefaultPilotCurve = Curve{MaxLevel: 100, Base: 100, Growth: 1.08}
+	DefaultPilotCurve = Curve{MaxLevel: 150, Base: 100, Growth: 1.08}
 	DefaultShipCurve  = Curve{MaxLevel: 50, Base: 150, Growth: 1.12}
 )
 
@@ -63,10 +63,14 @@ func AttributePoints(level int) int {
 	return (level - 1) * 2
 }
 
-// TalentPoints — суммарно очков талантов на уровне level (по 1 за уровень выше первого).
+// TalentPoints — базовый бюджет: очко на чётном уровне до 120.
+// Уникальные награды достижений (до 10) сюда не входят.
 func TalentPoints(level int) int {
 	if level <= 1 {
 		return 0
 	}
-	return level - 1
+	if level >= 120 {
+		return 60
+	}
+	return level / 2
 }

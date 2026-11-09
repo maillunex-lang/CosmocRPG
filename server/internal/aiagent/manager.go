@@ -405,3 +405,6 @@ func maxi(a, b int) int {
 	}
 	return b
 }
+
+// PlayersOnline — сколько живых игроков сейчас в мире (для самостоятельных реплик ИИ: без читателей писать не нужно).
+func (m *Manager) PlayersOnline() int { return m.w.PlayerCount() }

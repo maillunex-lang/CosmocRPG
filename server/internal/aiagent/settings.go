@@ -33,6 +33,8 @@ type Settings struct {
 	ChatDelayMaxMs         int      `json:"chat_delay_max_ms"`         // задержка ответа: до
 	ChatCaptainCooldownSec int      `json:"chat_captain_cooldown_sec"` // личный кулдаун капитана
 	ChatMaxPerMin          int      `json:"chat_max_per_min"`          // общий потолок ИИ-реплик в минуту
+	ChatAmbientEverySec    int      `json:"chat_ambient_every_sec"`    // ИИ пишут в общий чат сами раз в столько секунд (0 — не пишут сами)
+	ChatFollowChance       int      `json:"chat_follow_chance"`        // вероятность, что другой ИИ ответит на реплику ИИ, 0–100
 	DisabledCaptains       []string `json:"disabled_captains"`         // капитаны, которых не ставить в мир и не давать в чат
 }
 
@@ -49,7 +51,7 @@ func (s Settings) DisabledSet() map[string]bool {
 func DefaultSettings() Settings {
 	return Settings{Enabled: true, MinOnline: 20, MaxOnline: 50, AbsMax: 200, PlayersForMax: 10, SpawnPerMin: 12, DespawnPerMin: 30,
 		EmptyGraceSec: 30, ViewRadius: 450, Shares: map[string]int{"miner": 30, "trader": 20, "scout": 20, "patrol": 15, "support": 15},
-		ChatReplyEnabled: true, ChatReplyChance: 25, ChatDelayMinMs: 800, ChatDelayMaxMs: 2500, ChatCaptainCooldownSec: 30, ChatMaxPerMin: 30}
+		ChatReplyEnabled: true, ChatReplyChance: 25, ChatDelayMinMs: 800, ChatDelayMaxMs: 2500, ChatCaptainCooldownSec: 30, ChatMaxPerMin: 30, ChatAmbientEverySec: 45, ChatFollowChance: 40}
 }
 
 // Validate проверяет настройки и возвращает понятную ошибку.
@@ -79,6 +81,10 @@ func (s Settings) Validate() error {
 		return errors.New("кулдаун капитана — от 0 до 3600 секунд")
 	case s.ChatMaxPerMin < 0 || s.ChatMaxPerMin > 120:
 		return errors.New("потолок реплик — от 0 до 120 в минуту")
+	case s.ChatAmbientEverySec != 0 && (s.ChatAmbientEverySec < 10 || s.ChatAmbientEverySec > 3600):
+		return errors.New("самостоятельные реплики: 0 (выключено) или от 10 до 3600 секунд")
+	case s.ChatFollowChance < 0 || s.ChatFollowChance > 100:
+		return errors.New("вероятность ответа ИИ на ИИ — от 0 до 100")
 	}
 	for _, id := range s.DisabledCaptains {
 		if id == "" || len(id) > 48 {

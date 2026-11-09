@@ -277,3 +277,138 @@ func TestHandleDoesNotBlockSender(t *testing.T) {
 		t.Fatal("Handle заблокировал отправителя сообщения")
 	}
 }
+
+// Регрессия R-60: реплика ИИ должна не только сохраняться, но и доходить до подключённых клиентов (Push).
+func TestDialogueReplyIsPushedToClients(t *testing.T) {
+	r := newDialogueRig(t, 5)
+	smallSettings(r.rig.m)
+	r.rig.join("p1")
+	r.rig.tick(30)
+	pushed := make(chan chat.Message, 4)
+	r.dlg.Push = func(m chat.Message) { pushed <- m }
+	ai := r.rig.w.AIIDs()
+	if len(ai) == 0 {
+		t.Fatal("нужен ИИ онлайн")
+	}
+	name := r.rig.m.NameOf(ai[0])
+	if _, err := r.chat.Send(context.Background(), chat.Sender{ID: "p1", Name: "Пилот"}, chat.DM, name, "Привет! Как дела?"); err != nil {
+		t.Fatal(err)
+	}
+	r.dlg.Handle(context.Background(), chat.Message{Channel: chat.DM, FromID: "p1", FromName: "Пилот", ToID: ai[0], ToName: name, Text: "Привет! Как дела?"})
+	select {
+	case m := <-pushed:
+		if !m.FromAI || m.ToID != "p1" || m.Channel != chat.DM || m.Text == "" {
+			t.Fatalf("разослано не то: %+v", m)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("реплика ИИ сохранена, но не разослана клиентам")
+	}
+}
+
+func ambientRig(t *testing.T, every, follow int) (*dialogueRig, chan chat.Message) {
+	t.Helper()
+	r := newDialogueRig(t, 8)
+	st := smallSettings(r.rig.m)
+	st.ChatAmbientEverySec, st.ChatFollowChance = every, follow
+	if err := r.rig.m.SetSettings(context.Background(), st, "test"); err != nil {
+		t.Fatal(err)
+	}
+	r.rig.join("p1")
+	r.rig.tick(30)
+	if r.rig.w.AICount() < 2 {
+		t.Fatal("для проверки нужно не меньше двух ИИ онлайн")
+	}
+	pushed := make(chan chat.Message, 8)
+	r.dlg.Push = func(m chat.Message) { pushed <- m }
+	r.dlg.followDelay = func(float64) time.Duration { return 10 * time.Millisecond }
+	return r, pushed
+}
+
+func TestAmbientChatterWritesToGeneral(t *testing.T) {
+	r, pushed := ambientRig(t, 10, 0)
+	var last time.Time
+	r.dlg.ambientTick(context.Background(), &last)
+	select {
+	case m := <-pushed:
+		if !m.FromAI || m.Channel != chat.General || m.Text == "" {
+			t.Fatalf("самостоятельная реплика: %+v", m)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("ИИ не написал в общий чат сам")
+	}
+	// слишком скоро: второй раз не пишет
+	r.dlg.ambientTick(context.Background(), &last)
+	select {
+	case m := <-pushed:
+		t.Fatalf("реплика раньше срока: %+v", m)
+	case <-time.After(150 * time.Millisecond):
+	}
+}
+
+func TestAmbientFollowFromAnotherCaptain(t *testing.T) {
+	r, pushed := ambientRig(t, 10, 100)
+	var last time.Time
+	r.dlg.ambientTick(context.Background(), &last)
+	var first, second chat.Message
+	select {
+	case first = <-pushed:
+	case <-time.After(3 * time.Second):
+		t.Fatal("нет первой реплики")
+	}
+	// ответ другого капитана приходит отдельной репликой (если движок смог ответить на сказанное)
+	select {
+	case second = <-pushed:
+		if second.FromID == first.FromID || !second.FromAI {
+			t.Fatalf("ответить должен другой ИИ: %+v / %+v", first, second)
+		}
+	case <-time.After(2 * time.Second):
+		t.Skip("движок не дал ответной реплики на этот повод (допустимо)")
+	}
+}
+
+func TestAmbientOffWithoutPlayersOrWhenDisabled(t *testing.T) {
+	r, pushed := ambientRig(t, 10, 0)
+	st := r.rig.m.Settings()
+	st.ChatAmbientEverySec = 0
+	_ = r.rig.m.SetSettings(context.Background(), st, "test")
+	var last time.Time
+	r.dlg.ambientTick(context.Background(), &last)
+	select {
+	case m := <-pushed:
+		t.Fatalf("при выключенных самостоятельных репликах ИИ молчит: %+v", m)
+	case <-time.After(150 * time.Millisecond):
+	}
+	st.ChatAmbientEverySec = 10
+	_ = r.rig.m.SetSettings(context.Background(), st, "test")
+	r.rig.w.Disconnect("p1", r.rig.now)
+	r.dlg.ambientTick(context.Background(), &last)
+	select {
+	case m := <-pushed:
+		t.Fatalf("без живых игроков ИИ не пишет сам: %+v", m)
+	case <-time.After(150 * time.Millisecond):
+	}
+}
+
+func TestAmbientSettingsValidation(t *testing.T) {
+	s := DefaultSettings()
+	if s.ChatAmbientEverySec != 45 || s.ChatFollowChance != 40 {
+		t.Fatalf("значения по умолчанию: %+v", s)
+	}
+	for _, v := range []int{0, 10, 3600} {
+		s.ChatAmbientEverySec = v
+		if err := s.Validate(); err != nil {
+			t.Errorf("%d: %v", v, err)
+		}
+	}
+	for _, v := range []int{1, 9, 3601, -5} {
+		s.ChatAmbientEverySec = v
+		if s.Validate() == nil {
+			t.Errorf("%d должно отклоняться", v)
+		}
+	}
+	s.ChatAmbientEverySec = 45
+	s.ChatFollowChance = 101
+	if s.Validate() == nil {
+		t.Error("вероятность 101 должна отклоняться")
+	}
+}

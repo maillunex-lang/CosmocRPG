@@ -184,6 +184,8 @@ function SettingsForm({ settings, onSave }: { settings: AiSettings; onSave: (s: 
       <div className="row wrap">
         <label>Кулдаун капитана, с <input type="number" value={s.chat_captain_cooldown_sec} onChange={num("chat_captain_cooldown_sec", 0, 3600)} /></label>
         <label>Потолок реплик/мин <input type="number" value={s.chat_max_per_min} onChange={num("chat_max_per_min", 0, 120)} /></label>
+        <label>Сами пишут раз в, с (0 — не пишут) <input type="number" value={s.chat_ambient_every_sec} onChange={num("chat_ambient_every_sec", 0, 3600)} /></label>
+        <label>ИИ отвечает на ИИ, % <input type="number" value={s.chat_follow_chance} onChange={num("chat_follow_chance", 0, 100)} /></label>
       </div>
       <button className="primary" onClick={() => onSave(s)}>Сохранить настройки</button>
     </section>

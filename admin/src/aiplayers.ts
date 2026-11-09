@@ -30,6 +30,8 @@ export interface AiSettings {
   chat_delay_max_ms: number;
   chat_captain_cooldown_sec: number;
   chat_max_per_min: number;
+  chat_ambient_every_sec: number;
+  chat_follow_chance: number;
   disabled_captains: string[];
 }
 

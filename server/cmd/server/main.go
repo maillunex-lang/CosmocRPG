@@ -312,7 +312,9 @@ func run() error {
 		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log)
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
+		dlg.Push = wsHandler.PushChat // реплики ИИ должны доходить до живых клиентов, а не только попадать в историю
 		wsHandler.SetOnChat(func(m chat.Message) { dlg.Handle(context.Background(), m) })
+		go dlg.RunAmbient(ctx) // ИИ пишут в общий чат сами, пока в мире есть живые игроки
 		// личные сообщения ИИ-капитанам по имени из мира
 		chatSvc.Directory = func(ctx context.Context, q string) (chat.Person, bool) {
 			c, ok := agent.Lookup(q)

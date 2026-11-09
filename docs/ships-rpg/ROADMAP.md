@@ -102,3 +102,5 @@ CI c9a3391 для полного gameplay шага — success. Дополнит
 | SR-100c-4c | P0 | SR-100c-4b | PG/Godot/server checks, журналы/HANDOFF, безопасная интеграция | IN_PROGRESS | 2026-11-09 / — | actual tests/CI/diff / — |
 
 SR-100c-4c UI substep DONE локально: pending-label + hangar40/0, веточный commit. Server code commitsbc0aed9/aa7f950, vet/build PASS. Сам4c остаётся IN_PROGRESS до полного прогона/интеграции. Нет нового APK/production публикации.
+
+SR-100c-4 validation завершена: полный Go+PG+Godot race suite441 test/subtest PASS/22 пакета,1 старый ambient skip,0 FAIL; hangar40/0; vet/build PASS.4c IN_PROGRESS до подтверждения публикации. Source a5bfd2e, main проверена до9b02d69 (только QUESTJOB/FinalQuest.md). Новых миграций нет; прежняя0020 не менялась.

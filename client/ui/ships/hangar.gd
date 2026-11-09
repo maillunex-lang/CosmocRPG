@@ -18,6 +18,7 @@ var spec := "interceptor"
 
 var _visual: Node3D
 var _turntable: Node3D
+var _module_info: Label
 var _passport_info: Label
 var _passport: Dictionary = {}
 var _max_level := 0
@@ -107,6 +108,11 @@ func _ready() -> void:
 	_stats = Label.new()
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_stats)
+	_module_info = Label.new()
+	_module_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_module_info.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	box.add_child(_module_info)
+
 	_passport_info = Label.new()
 	_passport_info.name = "PassportInfo"
 	_passport_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -235,6 +241,12 @@ func _refresh() -> void:
 			int(_data.get("hull_max", 0)), int(_data.get("shield_max", 0)), int(_data.get("armor", 0)), int(_data.get("energy_max", 0)), int(_data.get("cargo", 0))]
 	else:
 		_stats.text = "Характеристики недоступны: сервер их не прислал."
+	_module_info.text = ""
+	for module in _data.get("modules", []):
+		if module is Dictionary and str(module.get("prototype_id", "")) == "ENG-S-START":
+			var installed := bool(module.get("owned", false)) and bool(module.get("equipped", false))
+			_module_info.text = "Штатный двигатель: %s\nОткрывает M01 · Форсаж" % ("установлен" if installed else "не установлен")
+	_module_info.visible = _module_info.text != ""
 	_passport_info.visible = not _passport.is_empty()
 	if not _passport.is_empty():
 		var groups := {"weapon": 0, "defensive": 0, "technical": 0, "special": 0}

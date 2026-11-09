@@ -1,40 +1,30 @@
-# Текущая работа SR-100b (2026-11-09)
-SR-100b1 DONE: server-bound starter ENG/M01, shared legacy boost CD/parameters, отрицательные ownership/equipment/rank/atomicity tests. SR-100b2 IN_PROGRESS: client presentation/cast и полный прогон. ADR006 обязателен: пока фиксированный неотчуждаемый штатный starter, без RPC смены и без mutable inventory; SQL/док/сохранение — SR-100c. Детали новых тестов в REGRESSION_TESTS. База main a19f7c0 имеет CI42608041551 success. Предыдущая передача ниже — история SR-100a; актуальная будет переписана после полного завершения SR-100b.
+# HANDOFF — Ships RPG / SR-100b
+Дата2026-11-09. Ветка codex/ships-rpg-foundation; изменения публикуются в remote main по разрешению владельца. База этой работы a19f7c0, CI42608041551 success. Production только по отдельному разрешению; APK signing окружение пока не подключено.
 
----
+## Текущая стадия
+SR-100b1 DONE, server commit **21aaa0b**. SR-100b2 DONE локально, клиентский commit фиксируется следующим; SHA будет добавлен финальным docs-checkpoint. SR-100b в целом DONE по его узким критериям; **SR-100c TODO** (mutable equipment/persistence/dock/combat/atomic save), SR-100d TODO (полная игровая/графическая/Android/release приёмка). Остальные требования72/30/36, 4 slots+ульта, прогрессия/билды не отменены и не объявлены готовыми.
 
-# HANDOFF — Ships RPG / R-63
-Дата: 2026-11-09. Локальная ветка `codex/ships-rpg-foundation`. Пользователь разрешил публиковать проверенную работу/планы в **remote main**. Production-деплой — только с отдельного разрешения.
+## Что сделано
+- `world/starter_engine.go`: текущая штатная система Стрижа представлена ровно одним starterEngineItem: server OwnerID, детерминированный instance ID от owner, Prototype ENG-S-START, Slot tech-1, Equipped=true, starter learned rank1. Нельзя продавать/передавать/переставлять через RPC: их ещё нет. Это фиксированное native entitlement старого корабля, не преобразование draft JSON в произвольную выдачу вещей. После rejoin/hull roundtrip тот же ID, один экземпляр; общая inventory/SQL материализация — SR-100c.
+- `world/combat.go`: M01 только FTR-001, нормализуется к boost до единого available/switch/cooldown path. Старый boost у Стрижа проверяет те же owner/instance/prototype/slot/equipped/rank; пустой/чужой/поддельный/отключённый модуль даёт module_unavailable, ранг0/6 ability_not_learned. Отказ не тратит энергию/CD/события/позицию. Active AbilityCfg админки сохраняется, pulse отдельно; другие hulls без M01, legacy boost прежний.
+- Snapshot: abilities id остаётся boost, новые catalog_id M01/module_id/rank/enabled/unavailable_reason; ship.modules — server-owned view фиксированного двигателя. Не принимать эти данные обратно от клиента как права. Привязка prototype/slot/M01 сверена тестом с паспортным starter blueprint.
+- Gateway выбирает CatalogID при наличии, иначе старый ID. Передаёт enabled/reason/modules; default old payload enabled:true. HUD блокирует disabled навык и показывает причину, учитывает старые energy/CD/target правила. Ангар показывает действующий двигатель/M01 отдельно от preliminary mass/power/slots.
+- Expanded real-client scenario: реальный memory-backed localhost Go WS→Godot gateway→ангар→starter→M01→state boosting. Новый WS-only test проверяет, что следующий legacy boost получает cooldown.
 
-## Сделано и опубликовано
-- Прежний фундамент SR-000/010/011/015/014a в main:15 draft паспортов, schema, identities15/12/30, отказ неизвестных runtime abilities, caps100/50. В runtime всё ещё12 игровых моделей.
-- `75931d4`: R-63 и переход к сквозной интеграции на Стриже, изучен механизм APK Claude. SR-090 DONE.
-- `88a060c`: test-only исправление старого PG ожидания после первого квеста; теперь first_blood/Progress0/Credits500 и без повторной награды. Runtime quest/SQL не менялся. SR-091 DONE, проверен PG CI.
-- `cb34353`: SR-100a DONE — настоящий серверный паспорт текущего Стрижа в игровом ангаре. **Все4 jobs CI run42606462785 success** (Go с PostgreSQL, Godot4.7.2, admin, Docker). Новый live-сценарий Go WS→Godot gateway→hangar PASS0.769s в Godot CI.
-- `ae16a86`: SR-093 DONE — тот же PUBLIC update PEM сохранён в git с точечным исключением .gitignore; обязательный presence/equality test. Локально updater33/0; production signed manifest Verified OK. Эта фиксация и финальная документация публикуются следующим push; новый CI отделять от завершённого CI для cb34353.
-- Точный SHA финальной передачи: `git log -1 --oneline` после её docs-коммита. Перед началом сверить origin/main: другие ИИ теперь видят работу и могут менять код. Не force push.
+## Проверки
+Локальный Go1.27.3: `COSMOC_TEST_GODOT=godot go test -race -count=1 -json ./...` PASS20 пакетов,322 test/subtest PASS,62 SKIP(PG),0 FAIL;3 пакета без тестов. Конкретные unit: world1.664s, shipcatalog11.267s. Live WS+Godot targeted4.660s.
+Godot4.6.3: hangar33/0, HUD161/0. В старом payload fallback boost/enabled:true, disabled/reason проходит через gateway/HUD, active starter виден отдельно от draft паспорта. vet/build/gofmt/diff-check PASS; бинарник /workspace/scratch/cosmoc-server-m01 не запускался. Никаких SQL миграций/production/APK в этой работе. Remote CI нового main проверяется отдельно после push.
+Новых ERROR-ID не было, отрицательные тесты ownership/learned — ожидаемые отказы. ERROR-SR-007 Open: прежние Vulkan init/freed-lambda в CI render tests при зелёном job; не скрывать/не менять Mobile renderer ради лога, графическая/Android приёмка остаётся SR-100d/SR-070. Прежние ERROR001…006 Resolved.
 
-## Что делает SR-100a
-`server/cmd/server/main.go` загружает проверенный PassportCatalog и передаёт optional provider в ws.Options. Существующий ships response получает optional passport/ship_max_level; новые команды/версия протокола не требуются. Метаданные выдаются только текущему FTR-001; passport.base берётся из World.SpecInfo игрока, включая активные админские правки и масштабирование уровня. SetCatalog не вызывается, новые draft корабли/статы не публикуются. Provider nil отключает расширение в альтернативной конфигурации.
-`client/ui/gateway/server_gateway.gd` передаёт optional passport по старому ships_updated; чужой hull/старый ответ не получают секцию. `client/ui/ships/hangar.gd` показывает серверное описание/base и предварительный план mass/MW/module budget/slots отдельно от живых статов. Sidebar прокручивается, cap приходит с сервера вместо30; старый сервер показывает уровень без выдуманного max.
-**Старые навыки ещё не зависят от новых модулей.** Никакие starter blueprints пока не являются принадлежащими игроку предметами, новых бонусов к base нет.
-
-## Тесты и ошибки
-Локально Go1.27.3: `COSMOC_TEST_GODOT=godot go test -race -count=1 -json ./...` PASS20 пакетов,308 test/subtest PASS,62 SKIP(PG),0 FAIL; 3 без тестов. Standalone live Godot test PASS3.591s, включён в tools/test_client.sh для CI. Локально Godot4.6.3: import PASS, hangar28/0, fleet_shop53/0, updater33/0 после public PEM, apk_installer9/0. Реальный private-key branch updater SKIP; подпись живого манифеста проверена публичным ключом отдельно. vet/build/gofmt/diff-check PASS. Автоматические изменения4.6 в glb.import просмотрены/восстановлены, не коммитились.
-CI cb34353(run42606462785):4 jobs success, в том числе PostgreSQL и Godot4.7.2. ERROR-SR-001…006 Resolved.
-**ERROR-SR-007 Open**: существующие camera/background render-тесты при зелёном job логируют VK_KHR_surface missing/ERR_CANT_OPEN; camera ещё3 freed lambda captures. Они возвращают44/0 и12/0, поэтому success job не доказывает чистый runtime render. Baseline run42604786797/client job129117865136 имеет те же2 Vulkan/3 lambda сообщения до нашего игрового изменения. Не скрывать ошибки и не менять Mobile renderer ради зелёного лога; исследовать стенд и lambda lifecycle при SR-100d/SR-070. Android/чистая визуальная приёмка не выполнена.
-Поздний gh CLI отвечает401 Bad credentials (причина не установлена); GitHub connector fetch_workflow_run_jobs/fetch_workflow_job_logs работает. Не печатать/менять токены, использовать connector. Лог running job недоступен до завершения.
-
-## APK / выпуск
-Изучены записи Claude/Kimi, updater.gd, apk_installer.gd, publish_release.sh; подробности RELEASE_PROCESS.md. Прежние app release и RSA manifest keys обязательны. **Новый APK и production не выпущены.** В cloud есть Java/Godot4.6.3, но не настроены SDK/AAR и release credentials. Не создавать другой signing key — обновление установленной игры не примется. project.godot/export_presets остаются0.3.11/code14: не занимать номер до готового кандидата и сверки main/опубликованного manifest.
-READ-ONLY проверка живого канала: latest0.3.11/code14, size39268009, published2026-11-09T07:54:07Z; openssl Verified OK тем же публичным ключом. Godot Updater.evaluate: installed13→available,14→up_to_date. Это уже опубликованная версия, **не** APK нового ангара. Публичный PEM теперь в git; private *.pem остаются исключены.
+## Ограничение starter entitlement
+Нет public метода снять/поставить модуль в этой версии. Поэтому перезаход не теряет доступную пользователю настройку: весь starter пока неизменяемый. Негативные tests намеренно повреждают server-side entitlement для проверки отказа. **Не открывать toggle в следующем UI до сохранения/atomic server setter.** Ранг1 — единственный стартовый изученный ранг; полноценные ranks1…5/развилки/skill data — SR-012. Никаких новых stat modifiers от двигателя поверх legacy base нет.
 
 ## Следующие три шага
-1. SR-100b: IN_PROGRESS → один стартовый ENG→M01 на Стриже, серверная проверка доступности/энергии/CD; без модуля отказ без списания. Сохранить per-ship boost и отдельную pulse автоатаку. Не превращать draft blueprint в owned item без модели владения.
-2. SR-100c: безопасная добавочная схема оборудования, тестовая БД, сохранение/повторный вход, смена только в доке вне боя, атомарность/откат; ангар и HUD с причинами недоступности. Пока TODO.
-3. SR-100d: полная игровая/графическая приёмка, ERROR-SR-007, release-кандидат через прежнее Android signing окружение; потом отдельное разрешение на production. Остальные SR-012…070 сохраняют все требования и заполняются по мере расширения сквозных шагов.
+1. Проверить remote main/CI client и Go с PostgreSQL после публикации SR-100b. Обновить карты/журналы конкретным SHA/status. GitHub connector workflow runs GET может читать push runs (fetch_commit_workflow_runs wrapper фильтрует PR, не использовать для проверки push).
+2. SR-100c: безопасная модель сохранённого оборудования/владения и атомарный setter до открытия UI, сохраняющий starter identity; добавить тестовую БД, reconnect/hull/system roundtrip, duplicate/idempotency, stale autosave/CAS, rollback при ошибке. Смена только в реальном доке и вне боя (не заменять dock проверкой всей safe-zone).
+3. Добавить управление модулем в ангар/HUD с reasons после готового сохранения, затем сквозная приёмка/ERROR007/Android release. Нужны прежние SDK/AAR и app/manifest keys; не генерировать другой release key. Production по отдельному разрешению.
 
-## Команды и файлы
+## Возобновление
 ```bash
 cd /workspace/CosmocRPG
 git status --short --branch
@@ -43,8 +33,9 @@ git log -8 --oneline
 cat docs/ships-rpg/ROADMAP.md docs/ships-rpg/ERROR_LOG.md docs/ships-rpg/HANDOFF.md
 export PATH=/workspace/scratch/toolchain/go/bin:$PATH
 cd server
-COSMOC_TEST_GODOT=godot go test -race -count=1 ./internal/ws -run 'TestShipsPassport|TestShipsWithoutPassport|TestPassportGodotClient'
+COSMOC_TEST_GODOT=godot go test -race -count=1 ./internal/ws -run 'TestM01OverWebSocket|TestPassportGodotClient'
+go test -race -count=1 ./internal/world -run 'TestStrizhStarter|TestM01|TestStarterEngine'
 go vet ./...
 ```
-Файлы игрового шага: server/cmd/server/main.go, internal/ws/{hub,passport_test}.go; client/ui/{gateway/server_gateway,ships/hangar}.gd; client/tests/{hangar_test,passport_online_test}.gd; tools/test_client.sh. Релизный фикс: .gitignore, client/assets/update_public.pem, client/tests/updater_test.gd. Test-only CI fix: server/internal/quest/quest_test.go. Документы: API, главные ROADMAP/HANDOFF, ships-rpg ROADMAP/ERROR_LOG/REGRESSION_TESTS/HANDOFF/DECISIONS/RELEASE_PROCESS.
-Все временные memory servers закрываются тестами; серверные бинарники в scratch не запускались, VPS/другие проекты не тронуты. Сырые логи /workspace/scratch/ships-rpg-r63-all-tests.jsonl и другие могут исчезнуть; сводка в REGRESSION_TESTS и CI-ссылка сохраняются. После финального push проверить remote SHA, рабочее дерево оставить чистым.
+Файлы: world/starter_engine{,_test}.go, world/{world,ship,combat}.go, ws/{hub,passport_test}.go, shipcatalog/passport_data_test.go; client gateway/server_gateway.gd, ships/hangar.gd, scripts/ui/hud.gd, tests/{hangar_test,passport_online_test}.gd; API и главные/профильные ROADMAP/HANDOFF/DECISIONS/ERROR_LOG/REGRESSION_TESTS.
+Перед push сверить remote и чужие изменения, не force. gh CLI ранее401; пользоваться GitHub connector, секреты не печатать. Runtime cloud status ready, secrets/SDK signing bindings не настроены. Другая VPS/production не тронуты. Все ephemeral серверы закрыты тестами; scratch логи могут исчезнуть, сводка сохранена. После финальной фиксации оставить clean tree и проверить origin/main SHA.

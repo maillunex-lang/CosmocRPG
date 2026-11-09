@@ -242,7 +242,7 @@ func _on_error(payload: Dictionary) -> void:
 			else:
 				join_failed.emit(text)
 		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec", \
-				"no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big":
+				"module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big":
 			command_failed.emit("space", text)
 		_:
 			command_failed.emit("server", text)
@@ -263,6 +263,8 @@ func _ship_dict(ship: Dictionary) -> Dictionary:
 	d["in_safe"] = bool(ship.get("in_safe", false))
 	if ship.has("level"):
 		d["level"] = int(ship["level"])
+	if ship.get("modules") is Array:
+		d["modules"] = ship["modules"]
 	d["cosmetics"] = ship.get("cosmetics", {}) if ship.get("cosmetics") is Dictionary else {}
 	return d
 
@@ -335,9 +337,11 @@ func _apply_state(p: Dictionary) -> void:
 	_ability_ids.clear()
 	for i in abilities.size():
 		var ab: Dictionary = abilities[i]
-		_ability_ids.append(str(ab.get("id", "")))
+		var catalog_id := str(ab.get("catalog_id", ""))
+		_ability_ids.append(catalog_id if catalog_id != "" else str(ab.get("id", "")))
 		skills.append({"slot": i, "name": str(ab.get("name", "")), "energy_cost": float(ab.get("energy_cost", 0)), "cooldown": float(ab.get("cooldown", 0)),
-			"cooldown_left": float(ab.get("cooldown_left", 0)), "needs_target": bool(ab.get("needs_target", false))})
+			"cooldown_left": float(ab.get("cooldown_left", 0)), "needs_target": bool(ab.get("needs_target", false)),
+			"enabled": bool(ab.get("enabled", true)), "unavailable_reason": str(ab.get("unavailable_reason", ""))})
 	var has_combat := ship.has("hull")
 	var tpos: Variant = null
 	for o in objects:

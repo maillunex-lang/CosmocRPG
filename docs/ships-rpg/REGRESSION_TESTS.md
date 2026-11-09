@@ -78,3 +78,11 @@ Run42606462785: **все4 jobs success** (сервер Go/PostgreSQL, Godot4.7.2
 - `go test -race -count=1 ./internal/world ./internal/shipcatalog` с новыми negative/compatibility tests: PASS, world1.664s/shipcatalog11.267s.
 - Проверено: starter ID стабилен/единственный и привязан к owner; M01 совпадает с текущим изменённым админом boost по Energy/CD/Duration/SpeedMul/VFX; два alias используют только cooldown key boost и не обходят CD в обе стороны. Отсутствующий/чужой/поддельный instance/prototype/slot/unequipped engine и ранг0/6 отвергаются без списания/событий/движения. Death/no_energy и прежний boost других hulls сохранены, M01 другим hulls не открыт. Prototype/slot/M01 сверены с валидированным паспортным blueprint.
 - `COSMOC_TEST_GODOT=godot go test -race -count=1 -v ./internal/ws -run 'TestM01OverWebSocket|TestPassportGodotClient'`: PASS4.660s; live WS M01 вызван, legacy boost получает shared cooldown. Сквозной Godot client→ангар→starter→M01 тоже PASS; клиентская часть фиксируется SR-100b2.
+
+## 2026-11-09 — SR-100b2, клиент/полная проверка
+- `COSMOC_TEST_GODOT=godot go test -race -count=1 -json ./...` — exit0,20 пакетов PASS,322 test/subtest PASS,62 SKIP (локальная PostgreSQL не настроена),0 FAIL;3 пакета без тестов. Real Godot case исполнялся, не SKIP.
+- Godot4.6.3 `--headless --path client --script res://tests/hangar_test.gd` —33/0: engine shown отдельно от draft plan, CatalogID M01/disabled reason через gateway, HUD unavailable без энергии/CD как причины, old server fallback boost/enabled:true.
+- `--script res://tests/hud_test.gd` —161/0 (существующие layout/бой/управление/состояния).
+- Расширенный live `TestPassportGodotClient`: настоящий local ephemeral WS→gateway→ангар показывает owned/equipped engine; gateway выбирает M01 и отправляет команду, state подтверждает boosting. SQL/production не используется, child закрывается тестом.
+- `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-m01 ./cmd/server`, gofmt/diff-check PASS. Бинарник не запускался. APK не собирался, Mobile/Android визуальная приёмка не заявляется.
+Core server commit21aaa0b; клиентский SHA записывается после фиксации. Remote CI нового main будет проверен отдельно; прежняя база a19f7c0 уже имеет CI42608041551 success.

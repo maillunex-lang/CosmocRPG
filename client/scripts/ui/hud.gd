@@ -555,11 +555,14 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 			fill.anchor_right = clampf(cd / maxf(float(s["cooldown"]), 0.001), 0.0, 1.0) if cd > 0.0 else 0.0
 			fill.offset_right = 0.0
 		b.text = ("%s\n%d с" % [s["name"], int(ceil(cd))]) if cd > 0.0 else ("%s\n%d" % [s["name"], int(s["energy_cost"])])
-		var blocked: bool = cd > 0.0 or float(ship.get("energy", 0.0)) < float(s["energy_cost"])
+		var blocked: bool = not bool(s.get("enabled", true)) or bool(ship.get("dead", false)) or cd > 0.0 or float(ship.get("energy", 0.0)) < float(s["energy_cost"])
 		if s["needs_target"]:
 			blocked = blocked or not has_target or friendly or not state.get("target_in_range", false)
 		b.disabled = blocked
 		b.tooltip_text = "Энергия: %d, перезарядка: %d с" % [int(s["energy_cost"]), int(s["cooldown"])]
+		if not bool(s.get("enabled", true)):
+			b.tooltip_text = "Навык не изучен" if str(s.get("unavailable_reason", "")) == "ability_not_learned" else "Требуется установленный модуль"
+
 
 	_apply_cargo(state, target, ship)
 	_autopilot.disabled = not has_target and not state.get("autopilot", false)

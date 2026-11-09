@@ -76,6 +76,24 @@ func _run() -> void:
 	_c(not received[1][0].has("rpg_passport"), "шлюз не прикрепляет чужой паспорт")
 	server_gateway._on_message("ships", {"ships": [{"id": "FTR-001"}]}, "")
 	_c(not received[2][0].has("rpg_passport") and not received[2][0].has("max_level"), "шлюз совместим со старым сервером")
+	var wire_ship := {"type": "FTR-001", "hull": 1200, "hull_max": 1200, "energy": 100, "energy_max": 100,
+		"abilities": [{"id": "boost", "catalog_id": "M01", "name": "Форсаж", "energy_cost": 20, "cooldown": 12,
+			"cooldown_left": 0, "enabled": false, "unavailable_reason": "module_unavailable"}],
+		"modules": [{"prototype_id": "ENG-S-START", "owned": true, "equipped": true}]}
+	server_gateway._on_message("state", {"ship": wire_ship}, "")
+	var unavailable: Dictionary = server_gateway.snapshot()
+	_c(server_gateway._ability_ids[0] == "M01" and not unavailable["skills"][0]["enabled"], "шлюз сохраняет M01 и серверный запрет")
+	var hud: Control = screen.get_node("%Hud")
+	hud._apply_buttons(unavailable, {}, unavailable["ship"])
+	_c(hud._skill_buttons[0].disabled and hud._skill_buttons[0].tooltip_text.contains("модуль"), "HUD блокирует навык без модуля и объясняет причину")
+	h.set_data(unavailable["ship"])
+	_c(h._module_info.visible and h._module_info.text.contains("M01") and h._module_info.text.contains("установлен"), "ангар показывает действующий двигатель отдельно от плана")
+	wire_ship["abilities"] = [{"id": "boost", "name": "Форсаж", "energy_cost": 20, "cooldown": 12}]
+	server_gateway._on_message("state", {"ship": wire_ship}, "")
+	var old_state: Dictionary = server_gateway.snapshot()
+	_c(server_gateway._ability_ids[0] == "boost" and old_state["skills"][0]["enabled"], "старый сервер без новых полей сохраняет прежний навык")
+	hud._apply_buttons(old_state, {}, old_state["ship"])
+	_c(not hud._skill_buttons[0].disabled, "HUD не блокирует старый совместимый навык")
 	server_gateway.free()
 	h.closed.emit()
 	await process_frame

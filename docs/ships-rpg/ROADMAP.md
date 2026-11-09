@@ -57,4 +57,10 @@ SR-014a не закрывает SR-014: данные/ранги/таланты �
 
 SR-100a DONE означает код и локальные сквозные тесты; CI следующего push проверяется отдельно. Production сервер/APK не выпущены. Для нового клиента потребуется прежнее Android release-окружение: SDK/AAR и ключи подписи; это ограничение выпуска, не готовый APK. SR-100b/c остаются TODO, старые навыки ещё не зависят от новых blueprints.
 
-| SR-093 | P0 | SR-090 | Восстановить тот же public update key в fresh clone и сделать его обязательным тестом | DONE | 2026-11-09 / 2026-11-09 | .gitignore; assets/update_public.pem; updater_test.gd | updater33/0; public manifest Verified OK | текущий SR-093 / ERROR-SR-006 |
+| SR-093 | P0 | SR-090 | Восстановить тот же public update key в fresh clone и сделать его обязательным тестом | DONE | 2026-11-09 / 2026-11-09 | .gitignore; assets/update_public.pem; updater_test.gd | updater33/0; public manifest Verified OK | ae16a86 / ERROR-SR-006 |
+
+### Контрольная точка main (после SR-100a)
+- Игровой код cb34353: весь CI run42606462785 success, включая PostgreSQL и новый live Godot scenario.
+- Релизная воспроизводимость ae16a86: тот же публичный PEM в git, updater33/0, живой signed manifest проверен.
+- Открыт ERROR-SR-007: прежние runtime ошибки render-тестов при зелёном CI; baseline подтверждён, исследовать в SR-100d/SR-070.
+- Production/APK не выпущены, модульная доступность/сохранение ещё TODO. Следующий шаг SR-100b.

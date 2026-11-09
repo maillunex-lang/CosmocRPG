@@ -134,7 +134,9 @@ func _run() -> void:
 	a.notification.connect(func(t: String) -> void: notes_live.append(t))
 	await _wait(a, func() -> bool: return int(a.snapshot().get("credits", 0)) == 500, 30.0)
 	_check(int(a.snapshot().get("credits", 0)) == 500 and a.snapshot()["quests"].is_empty(), "награда 500 кредитов получена, контракт закрыт")
-	_check(notes_live.size() == 1, "уведомление о выполнении пришло один раз")
+	await _wait(a, func() -> bool: return notes_live.any(func(t: String) -> bool: return t.contains("опыта") or t.contains("Новый уровень")), 5.0)   # опыт за контракт приходит отдельным сообщением (RPG-1); 100 опыта — это уже уровень 2
+	_check(notes_live.filter(func(t: String) -> bool: return t.contains("Задание выполнено")).size() == 1, "уведомление о выполнении задания пришло один раз")
+	_check(notes_live.any(func(t: String) -> bool: return t.contains("опыта") or t.contains("Новый уровень")) and a.has_pilot(), "за контракт начислен опыт пилота (RPG-1)")
 
 	# второй клиент
 	PlayerIdentity.set_override("testb" + tag.pad_zeros(16))

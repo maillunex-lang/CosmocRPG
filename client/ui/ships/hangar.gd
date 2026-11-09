@@ -18,6 +18,9 @@ var spec := "interceptor"
 
 var _visual: Node3D
 var _turntable: Node3D
+var _passport_info: Label
+var _passport: Dictionary = {}
+var _max_level := 0
 var _stats: Label
 var _skin_buttons: Dictionary = {}
 var _spec_buttons: Dictionary = {}
@@ -85,7 +88,11 @@ func _ready() -> void:
 	row.add_child(side)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
-	side.add_child(box)
+	var side_scroll := ScrollContainer.new()
+	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side.add_child(side_scroll)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side_scroll.add_child(box)
 	var def := ShipDef.get_def(ship_id)
 	var title := Label.new()
 	title.text = "%s — %s" % [def.get("name", ""), def.get("class", "")]
@@ -100,6 +107,11 @@ func _ready() -> void:
 	_stats = Label.new()
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_stats)
+	_passport_info = Label.new()
+	_passport_info.name = "PassportInfo"
+	_passport_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_passport_info.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	box.add_child(_passport_info)
 	box.add_child(_caption("Корабль (смена у станции)"))
 	var fleet_scroll := ScrollContainer.new()
 	fleet_scroll.custom_minimum_size = Vector2(0, 112)
@@ -165,12 +177,18 @@ func set_data(ship: Dictionary) -> void:
 
 ## Список кораблей каталога от сервера (сообщение ships); текущий корабль выделен.
 func set_fleet(ships: Array) -> void:
+	_passport = {}
+	_max_level = 0
 	for c in _fleet_box.get_children():
 		c.queue_free()
 	_fleet_buttons.clear()
 	for sh in ships:
 		if not (sh is Dictionary):
 			continue
+		if str(sh.get("id", "")) == ship_id:
+			_max_level = int(sh.get("max_level", 0))
+			if sh.get("rpg_passport") is Dictionary and str(sh["rpg_passport"].get("id", "")) == ship_id:
+				_passport = sh["rpg_passport"]
 		var b := ActionButton.new()
 		b.toggle_mode = true
 		var lvl := (" · ур. %d" % int(sh["level"])) if sh.has("level") else ""   # уровень корабля — от сервера
@@ -183,6 +201,7 @@ func set_fleet(ships: Array) -> void:
 		_fleet_box.add_child(b)
 		_fleet_buttons[str(sh.get("id", ""))] = b
 
+	_refresh()
 
 func _pick_ship(id: String) -> void:
 	for k in _fleet_buttons:
@@ -207,14 +226,24 @@ func _pick_spec(k: String) -> void:
 
 func _refresh() -> void:
 	var def := ShipDef.get_def(ship_id)
-	var d: Array = def.get("dimensions_m", [0, 0, 0])
-	_info.text = "Экипаж %d · двигателей %d · %s\nГабариты %s × %s × %s м" % [int(def.get("crew", 1)), int(def.get("engines", 2)), str(def.get("weapons", "")),
+	var base: Dictionary = _passport.get("base", {}) if _passport.get("base") is Dictionary else def
+	var d: Array = base.get("dimensions_m", [0, 0, 0])
+	_info.text = "Экипаж %d · двигателей %d · %s\nГабариты %s × %s × %s м" % [int(base.get("crew", 1)), int(base.get("engines", 2)), str(base.get("weapons", "")),
 		str(d[0]), str(d[1]), str(d[2])]
 	if _data.has("hull_max"):
-		_stats.text = ("Уровень корабля %d из 30\n" % int(_data["level"]) if _data.has("level") else "") + "Корпус %d · щит %d · броня %d\nЭнергия %d · груз %d\nХарактеристики определяет сервер, значения балансируются." % [
+		_stats.text = (("Уровень корабля %d" % int(_data["level"]) + (" из %d" % _max_level if _max_level > 0 else "") + "\n") if _data.has("level") else "") + "Корпус %d · щит %d · броня %d\nЭнергия %d · груз %d\nХарактеристики определяет сервер, значения балансируются." % [
 			int(_data.get("hull_max", 0)), int(_data.get("shield_max", 0)), int(_data.get("armor", 0)), int(_data.get("energy_max", 0)), int(_data.get("cargo", 0))]
 	else:
 		_stats.text = "Характеристики недоступны: сервер их не прислал."
+	_passport_info.visible = not _passport.is_empty()
+	if not _passport.is_empty():
+		var groups := {"weapon": 0, "defensive": 0, "technical": 0, "special": 0}
+		for slot in _passport.get("slots", []):
+			if slot is Dictionary and groups.has(str(slot.get("group", ""))):
+				groups[str(slot["group"])] += 1
+		_passport_info.text = "%s\nПлан оснащения (предварительно)\nМасса корпуса %s т · реактор %s МВт\nБюджет оборудования %s т\nСлоты: оружие %d · защита %d · техника %d · спец. %d" % [
+			str(_passport.get("description", "")), str(_passport.get("mass_tons", "")), str(_passport.get("reactor_power_mw", "")),
+			str(_passport.get("module_mass_budget_tons", "")), groups["weapon"], groups["defensive"], groups["technical"], groups["special"]]
 	for k in _skin_buttons:
 		(_skin_buttons[k] as Button).set_pressed_no_signal(k == skin)
 	for k in _spec_buttons:

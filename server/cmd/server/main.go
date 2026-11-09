@@ -300,6 +300,12 @@ func run() error {
 	if err := ships.Init(ctx); err != nil {
 		return err
 	}
+	// First RPG integration is metadata for the current Strizh only. Active
+	// catalog values remain authoritative; no draft models are published.
+	passports, err := shipcatalog.DefaultPassportCatalog()
+	if err != nil {
+		return fmt.Errorf("паспорта RPG: %w", err)
+	}
 	chatSvc := chat.NewService(chat.NewPGStore(pool))
 	if err := chatSvc.Load(ctx); err != nil {
 		return err
@@ -342,7 +348,7 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: universe, Store: playerStore, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
+		World: universe, Store: playerStore, ShipPassports: &passports, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
 	if cfg.FeatureAI {

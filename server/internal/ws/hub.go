@@ -21,6 +21,8 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/rpg"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipxp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
@@ -44,18 +46,19 @@ type Message struct {
 
 // Options — настройки обработчика.
 type Options struct {
-	MaxMessage int64 // максимальный размер входящего сообщения, байт
-	RatePerSec int   // допустимое число сообщений в секунду на сессию
-	Version    string
-	World      *world.Router      // миры систем и маршрутизация игроков (Э-1); nil: игровые сообщения отключены
-	Store      world.Store        // хранилище игроков; nil: позиции не сохраняются
-	Quests     *quest.Service     // контракты и награды; nil: функция выключена
-	Accounts   *account.Service   // аккаунты (логин и пароль); nil: функция выключена
-	Shop       *shop.Service      // VIP и магазин косметики; nil: функция выключена
-	Chat       *chat.Service      // чат (общий и личные сообщения); nil: функция выключена
-	Pilot      *pilot.Service     // опыт, уровень и характеристики пилота; nil: функция выключена
-	Ships      *shipxp.Service    // опыт и уровни экземпляров кораблей; nil: функция выключена
-	OnChat     func(chat.Message) // наблюдатель отправленных сообщений (ответы ИИ-капитанов); может быть nil
+	MaxMessage    int64 // максимальный размер входящего сообщения, байт
+	RatePerSec    int   // допустимое число сообщений в секунду на сессию
+	Version       string
+	World         *world.Router                // миры систем и маршрутизация игроков (Э-1); nil: игровые сообщения отключены
+	Store         world.Store                  // хранилище игроков; nil: позиции не сохраняются
+	Quests        *quest.Service               // контракты и награды; nil: функция выключена
+	Accounts      *account.Service             // аккаунты (логин и пароль); nil: функция выключена
+	Shop          *shop.Service                // VIP и магазин косметики; nil: функция выключена
+	Chat          *chat.Service                // чат (общий и личные сообщения); nil: функция выключена
+	Pilot         *pilot.Service               // опыт, уровень и характеристики пилота; nil: функция выключена
+	Ships         *shipxp.Service              // опыт и уровни экземпляров кораблей; nil: функция выключена
+	ShipPassports *shipcatalog.PassportCatalog // optional read-only RPG metadata; first integration is FTR-001 only
+	OnChat        func(chat.Message)           // наблюдатель отправленных сообщений (ответы ИИ-капитанов); может быть nil
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
 	RequireCharacter bool
 }
@@ -399,7 +402,10 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			fail(err)
 		}
 	case "ships":
-		out := map[string]any{"ships": w.Fleet()}
+		out := map[string]any{"ships": w.Fleet(), "ship_max_level": rpg.DefaultShipCurve.MaxLevel}
+		if passport, ok := h.currentShipPassport(w, ss.pid); ok {
+			out["passport"] = passport
+		}
 		if h.opts.Ships != nil {
 			sctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			if lv, err := h.opts.Ships.All(sctx, ss.pid); err == nil {
@@ -1278,4 +1284,23 @@ func (h *Handler) chatMsg(ctx context.Context, c *websocket.Conn, ss *session, m
 			h.opts.OnChat(msg)
 		}
 	}
+}
+
+// currentShipPassport overlays the current authoritative (including level-scaled)
+// base on draft metadata. It never calls SetCatalog or publishes draft ships.
+func (h *Handler) currentShipPassport(w *world.World, pid string) (shipcatalog.ShipPassport, bool) {
+	if h.opts.ShipPassports == nil {
+		return shipcatalog.ShipPassport{}, false
+	}
+	active, ok := w.SpecInfo(pid)
+	if !ok || active.ID != "FTR-001" {
+		return shipcatalog.ShipPassport{}, false
+	}
+	for _, passport := range h.opts.ShipPassports.Ships {
+		if passport.ID == active.ID {
+			passport.Base = active
+			return passport, true
+		}
+	}
+	return shipcatalog.ShipPassport{}, false
 }

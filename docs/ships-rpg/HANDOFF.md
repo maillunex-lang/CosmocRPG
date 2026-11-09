@@ -1,58 +1,44 @@
-# Текущая передача R-63 (2026-11-09)
-Работа переходит от полной библиотеки перед включением к сквозным шагам в игре. Прочитать docs/ROADMAP.md, ships-rpg/ROADMAP.md (раздел R-63) и RELEASE_PROCESS.md. SR-090 IN_PROGRESS: публикация накопленных проверенных коммитов и нового плана в main. SR-100a следующий: серверный паспорт Стрижа в ангаре, без замены активных статов. SR-100b/c/d: модуль/навык/сохранение/док/HUD/релиз ещё TODO. Предыдущие задачи и тесты ниже — история завершённого SR-011.
+# Передача R-63: поэтапная игровая интеграция
+Дата: 2026-11-09. Ветка локально codex/ships-rpg-foundation; публикация в remote main разрешена пользователем.
 
-Пользователь разрешил main-публикацию и сборку APK при необходимости. Production-деплой остаётся по отдельному разрешению. В cloud нет проверенного Android SDK/AAR и release credentials; не объявлять APK выпущенным.
+## Текущая контрольная точка
+SR-090 DONE: все прежние проверенные Ships RPG коммиты и новый план опубликованы в main fast-forward до75931d4. SR-100a DONE локально: настоящий сервер → клиентский шлюз → игровой ангар Стрижа. Текущий коммит SR-100a публикуется после тестов; его SHA и результат CI будут добавлены в финальной передаче. SR-091: 88a060c — исправлено только устаревшее ожидание PG-теста quest, remote PostgreSQL CI ещё требуется.
 
----
+SR-100b/c/d — TODO. **Модуль не управляет доступностью навыка, сохранение оборудования/билды/док/ульта ещё не реализованы. Production/APK не выпущены.** Каталог по-прежнему12 игровых hulls, новые три — только draft данные.
 
-# Передача Ships RPG v2.1
-Дата: 2026-11-09. Ветка: `codex/ships-rpg-foundation`. Исходная контрольная точка этой задачи: `79df286`.
-
-## Текущая стадия
-**SR-011 DONE**: полный проверяемый каталог 15 моделей / 12 классов / 30 специализаций. SR-011a (контракт/schema/валидатор) — `6a657db`. SR-011b (авторские данные и реальные compatibility/coverage-тесты) — `699e8b5` (последний SHA реализации). Финальный docs-коммит с этой передачей смотреть через `git log -1 --oneline`. Весь этап 1 **IN_PROGRESS**, SR-012/013/014 остаются TODO. Прежние SR-000/010/015/014a DONE; caps 100/50 уже реализованы и подтверждены владельцем, шесть узлов + усиление ульты на 20 согласованы, но деревья ещё не созданы.
-
-## Что реализовано
-- `server/internal/shipcatalog/passport.go`: PassportCatalog/ShipPassport, compiler JSON Schema с существующей SchemaJSON для base, семантические проверки ID/спек/слотов/категорий/размеров/бюджетов/старта/геометрии; DefaultPassportCatalog; полное сравнение старых base через CheckLegacyPassportBases.
-- `data/rpg_passports.schema.json`: все поля полного паспорта обязательны; unknown fields отклоняются; диапазоны 72 skill ID, размеры S/M/L/XL, группы слотов, предварительность новых групп полей и новых base. Регистрирует внешний `ship-patch-v1.json` из SchemaJSON(), поэтому базовые диапазоны не дублируются.
-- `data/rpg_passports.json`: все 15 паспортов. base 12 старых — полный неизменённый снимок ShipSpec, новые три base — предварительные. Всё новое явно помечено preliminary_fields.
-- `passport_test.go`: synthetic negative/schema/roundtrip/concurrent tests; `passport_data_test.go`: реальные 15/12/30, полное legacy equality, 15 разных силуэтов, все weapon/engine mounts, hull permissions для всех 72 ID, нет неявной публикации, нет shared mutable state, точные бюджеты и их независимость от combat energy.
-- `docs/ships-rpg/PASSPORTS.md`: человекочитаемая таблица, единицы, предварительность, расчёты/ограничения; SR-ADR-003 описывает архитектуру. Обновлены главные ROADMAP/HANDOFF и профильные AUDIT/ROADMAP/DECISIONS/ERROR_LOG/REGRESSION_TESTS/HANDOFF.
+## Изменения SR-100a
+- server/cmd/server/main.go: валидированный PassportCatalog при старте, без SetCatalog/публикации моделей.
+- server/internal/ws/hub.go: optional provider и passport/ship_max_level в существующем ships response, только для текущего FTR-001. base берётся из текущего World.SpecInfo: активные правки админа и level scaling сохраняются. Нет новых команд/версии протокола/миграций.
+- client/ui/gateway/server_gateway.gd: optional расширение передаётся по ships_updated в текущую строку hull; старые ответы поддержаны.
+- client/ui/ships/hangar.gd: description/предварительные mass/MW/module budget/slot counts, server base для параметров; cap берётся из ответа, не30. Sidebar прокручивается. Старый ответ/чужой hull очищает секцию.
+- ws/passport_test.go: реальный WS, активные админские поля/уровень/старый decoder/другой hull/provider nil; TestPassportGodotClient запускает настоящий локальный memory-backed httptest server и Godot клиент.
+- client/tests/passport_online_test.gd и расширенный hangar_test.gd; tools/test_client.sh запускает live scenario в Godot CI.
+- docs/API.md, главные и профильные карты/журналы; RELEASE_PROCESS.md описывает механизм Claude.
 
 ## Реальные проверки
-- Полный `go test -race -count=1 -json ./...` — exit 0: 20 пакетов PASS, 304 test/subtest PASS, 62 SKIP, 0 FAIL; 3 пакета без тестов.
-- После финального усиления required base schema и добавления отрицательного теста роли: `go test -race -count=1 -json ./internal/shipcatalog` — exit 0, 8.392s, 68 PASS, 1 SKIP.
-- `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-sr011 ./cmd/server`, gofmt, git diff --check — PASS (exit 0), включая повтор после усиления schema. Бинарник не запускался.
-- Тестовая PostgreSQL URL не настроена: DB cases пропущены. Godot/Android/production не проверялись: код БД/клиента не менялся.
-- ERROR-SR-003: документ корректно отклонялся schema uniqueItems, но тест ошибочно ожидал текст Go-проверки. Исправлено в 6a657db. Все ERROR-SR-001/002/003 Resolved, открытых ошибок на этой точке нет. Не стирать исторические неудачные прогоны.
+Локально Go1.27.3: полный `COSMOC_TEST_GODOT=godot go test -race -count=1 -json ./...` PASS:20 пакетов,308 PASS,62 SKIP (PostgreSQL),0 FAIL; 3 пакета без тестов. Standalone live Godot test PASS3.591s. Godot4.6.3: import PASS, hangar28/0, fleet_shop53/0, updater31/0, apk_installer9/0. Настоящий ключ подписи для openssl-ветки updater отсутствует — SKIP. vet/build/gofmt/diff-check PASS. Изменённые импортером4.6 glb.import восстановлены, не коммитить их. Визуальный рендер/Android установка не заявляются.
 
-## Границы и важные решения
-Каталог v2 пока не подключён к world/Service/Store/клиенту. Runtime по-прежнему 12 моделей; три новых корабля ещё нельзя выбрать в игре. Не публиковать документ через старую структуру world.Doc: новые поля потеряются. Активные админские версии PostgreSQL могут отличаться от seed; будущая миграция должна сохранить их значения, не заменить встроенным snapshot.
+CI75931d4 run42604786797: admin, Docker и client (Godot4.7.2 с настоящей тестовой БД) PASS; Go FAIL только TestPGRewardOnceAndPersistence. Лог через GitHub connector подтвердил устаревшее ожидание нуля заданий вместо first_blood после restart. Runtime quest не менялся: test-only 88a060c теперь проверяет first_blood Progress0/Credits500 и отсутствие повторной награды. Не объявлять ERROR-SR-005 Resolved до нового PG CI. ERROR-SR-004 (fixture использовала повторный Join вместо SetShip) Resolved. Ошибки003/002/001 ранее Resolved.
 
-base включает прежние local specs, а specializations — новые global IDs: например, Ястреб пока хранит interceptor/scout в base, целевые ветки hunter/assault в новом поле. Это намеренное сохранение совместимости, не уже выполненная миграция. pulse остаётся автоатакой и не становится W01 автоматически. boost/intercept/scan при будущих alias/migration должны сохранить per-ship параметры.
-
-Стартовые модули — self-contained **предлагаемые blueprints**, не предметы игрока и не финальный общий каталог. Семейства — классификация; в SR-013 вынести в общий модульный справочник, добавить полные ограничения/редкости и доказать все unlock-пути. Текущая проверка hull permissions всех 72 ID не доказывает доступность их через модули/изучение. В SR-030 нужны владение, сохранённые билды и атомарные транзакции.
-
-Новые сопротивления и стартовые модули не меняют старые боевые статы; не складывать их повторно с base. MW размещения отдельно от энергии. dimensions_m = [длина,ширина,высота], visual [X,Y,Z] метры, -Z вперёд/+Y вверх, collision box полуразмеры [ширина/2,высота/2,длина/2]. Игровые скорость/ускорение/дальность остаются в world units. Placeholder IDs/силуэты/крепления — данные; сами процедурные meshes относятся к SR-050, GLB Стрижа сохранены.
+## Выпуск и APK
+Изучены Claude/Kimi notes, updater.gd, apk_installer.gd, publish_release.sh. Прежние ключи app release и RSA manifest обязательны для обновления поверх установленной игры. Подписанный manifest → проверка HTTPS/подписи/версии → загрузка/проверка размера+SHA256 → Android installer; резервный путь браузер. Код обновления не переписывать.
+В cloud Java/Godot4.6.3 есть, SDK tools/AAR и прежние release credentials не настроены; исходный version_code14 (0.3.11) не поднимать без готового release-кандидата и сверки main/публичного manifest. Новый APK понадобится для доставки секции пользователям, но APK пока не собран/не опубликован. Не генерировать другой release key: обновление не установится. Production-деплой запрещён без отдельного разрешения; main push не означает деплой.
 
 ## Следующие три шага
-1. SR-012: декомпозировать контракт 72 навыков/30 ульт на малые проверяемые семейства, сначала IN_PROGRESS; ввести строгие типы целей/эффектов, JSON Schema, refs и предварительные формулы. Не объявлять библиотеку готовой по одним ID.
-2. Реализовать первое закончённое семейство данных и тесты с per-rank параметрами/развилками/PvP; сохранить старые pulse/boost/intercept/scan через явные compatibility tests. Runtime effect registry — отдельный SR-020, не исполнение строк JSON.
-3. SR-013: общий каталог модулей/36 пассивов с rpg.Compute, полный граф module → abilities и достижимость всех 72. Затем SR-014: шесть узлов 1/4/7/10/14/18 + усиление ульты 20.
+1. Проверить CI следующего main push, особенно PostgreSQL quest regression и новый Godot live test. Обновить ERROR-SR-005/REGRESSION_TESTS/ROADMAP/HANDOFF фактическим результатом.
+2. SR-100b: стартовый ENG → M01 на Стриже, серверная доступность/отказ без модуля и без списания; сохранить старые boost параметры/автоатаку. Не выдавать draft starter blueprint за принадлежащий игроку предмет.
+3. SR-100c: безопасная добавочная схема оборудования, тестовая БД/сохранение/повторный вход, только док вне боя, atomic rollback, UI причин недоступности/HUD. Затем SR-100d release-кандидат/проверки/APK и отдельное разрешение на production. Остальные SR-012…070 сохраняют требования и идут по мере расширения сценария.
 
-## Возобновление
+## Команды продолжения
 ```bash
 cd /workspace/CosmocRPG
 git status --short --branch
+git fetch origin main
 git log -8 --oneline
 cat docs/ships-rpg/ROADMAP.md docs/ships-rpg/ERROR_LOG.md docs/ships-rpg/HANDOFF.md
 export PATH=/workspace/scratch/toolchain/go/bin:$PATH
 cd server
-go version
-go test -race -count=1 ./internal/shipcatalog
+COSMOC_TEST_GODOT=godot go test -race -count=1 ./internal/ws -run 'TestShipsPassport|TestShipsWithoutPassport|TestPassportGodotClient'
 go vet ./...
 ```
-Go1.27.3 установлен локально с проверкой официального SHA-256; go.mod/CI не менялись. /usr/bin/go — другая программа, при потере scratch установить официальный toolchain заново, сперва проверив версию/хеш.
-
-Вне Git: toolchain, генератор черновых данных (итоговый JSON — авторитетный артефакт), логи `ships-rpg-passport-contract*.log`, `ships-rpg-passports-data-tests.jsonl`, `ships-rpg-sr011-all-tests.jsonl`, `ships-rpg-passports-final-tests.jsonl` в /workspace/scratch. Они могут исчезнуть при смене окружения; сводка сохранена в REGRESSION_TESTS. Ни серверов, ни контейнеров эта задача не запускала. Коммиты локальные, push/PR/deploy не выполнялись. **Другие проекты VPS не трогать; production-деплой без отдельного разрешения запрещён.**
-
-Рабочее дерево после финального docs-коммита должно быть чистым. Для review: `git diff 79df286..699e8b5 --stat`; сначала читать PASSPORTS.md (сводная таблица и ограничения), затем passport.go/schema и тесты. Документ содержит все поля §5; готовность SR-011 не означает готовность всего этапа 1 или runtime-интеграции.
+Перед каждым push сверять remote main и интегрировать чужие изменения; не force push. Никаких чужих VPS проектов/production/секретов. Все временные memory servers завершены тестами, бинарник в /workspace/scratch/cosmoc-server-r63 не запускался. Логи локальных проверок /workspace/scratch/ships-rpg-r63-all-tests.jsonl и ships-rpg-passport-live.log могут исчезнуть, сводка выше сохраняется в репозитории. История завершённых SR-011 и более ранних — основная docs/HANDOFF.md, git show987b7ee:docs/ships-rpg/HANDOFF.md.

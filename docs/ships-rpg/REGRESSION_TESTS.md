@@ -50,3 +50,13 @@ SHA текущей задачи: `6a657db` — SR-011a, `699e8b5` — SR-011b/з
 ## 2026-11-09 — R-63/SR-090/091, публикация и CI
 `git fetch origin main`: remote 3b89741, divergence 0/8; `git push origin HEAD:main` — PASS, main fast-forward до 75931d4 (накопленные тестированные Ships RPG + новый план). Автодеплоя нет. CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42604786797: Go vet/gofmt PASS, PostgreSQL race FAIL на прежнем TestPGRewardOnceAndPersistence (ERROR-SR-005). admin/Docker PASS; client ещё выполнялся на момент проверки. PostgreSQL shipcatalog/shipxp/pilot/world/ws в этом run PASS — это первая фактическая удалённая DB-проверка накопленных изменений. Не объявлять весь CI зелёным.
 Исправление SR-091 затрагивает только тест квестовой цепочки. Следующая push/CI должна подтвердить его с БД.
+
+## 2026-11-09 — SR-100a, реальная интеграция паспорта в ангар
+- `go test -race -count=1 ./internal/ws ./cmd/server`: сначала неверная fixture смены hull дала FAIL (ERROR-SR-004), затем исправление на SetShip — PASS: ws13.910s, cmd/server3.307s.
+- `COSMOC_TEST_GODOT=godot go test -race -count=1 -v ./internal/ws -run '^TestPassportGodotClient$'`: PASS, 3.591s; Godot подключился к настоящему ephemeral httptest WebSocket server, получил state/ships/passport через ServerGateway и показал его в игровом ангаре. Память, localhost, без БД/production. Сценарий добавлен в tools/test_client.sh для CI4.7.2.
+- `COSMOC_TEST_GODOT=godot go test -race -count=1 -json ./...`: PASS, 20 пакетов, 308 test/subtest PASS, 62 SKIP (БД), 0 FAIL; 3 пакета без тестов. Live Godot case также PASS в этом полном запуске.
+- Godot4.6.3 `--headless --path client --import`: PASS, SCRIPT ERROR/ERROR отсутствуют. Импортер удалил 4.7-поля в двух glb.import; эти сгенерированные изменения просмотрены и восстановлены, в коммит не входят.
+- `--script res://tests/hangar_test.gd`: 28/0; `fleet_shop_test.gd`:53/0; `updater_test.gd`:31/0 (настоящий manifest key/openssl branch SKIP); `apk_installer_test.gd`:9/0.
+- `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-r63 ./cmd/server`, gofmt и git diff --check: PASS. Подписанный APK не собирался/не публиковался, Android установка не проверена. Локальный Godot4.6.3 отличается от CI4.7.2; окончательный CI будет записан отдельно.
+
+Совместимость: активные админские HP/energy/armor/boost и масштабирование уровня присутствуют в passport.base и не меняются запросом; world остаётся12 hulls; старый decoder читает прежний fleet; provider nil/другой корпус/старый ответ не показывают секцию; шлюз не прикрепляет паспорт чужому hull; неизвестный cap не подменяется hardcoded30.

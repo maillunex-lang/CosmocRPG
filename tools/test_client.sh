@@ -16,6 +16,9 @@ for t in theme_test safe_area_test layout_test components_test demo_gateway_test
   [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
 done
 
+echo "== Ships RPG: настоящий локальный WebSocket → ангар Стрижа (без БД)"
+(cd "$ROOT/server" && COSMOC_TEST_GODOT=godot go test -count=1 ./internal/ws -run '^TestPassportGodotClient$') || rc=1
+
 echo "== камера: реальная отрисовка обязательных видов (нужен рендеринг)"
 timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" \
   godot --path "$ROOT/client" --resolution 1280x720 --script res://tests/camera_render_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"

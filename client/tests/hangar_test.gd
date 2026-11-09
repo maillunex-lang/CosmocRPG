@@ -50,6 +50,33 @@ func _run() -> void:
 	_c(specs == ["scout"] and h.spec == "scout", "выбрана специализация «Разведчик»")
 	var before_hull: float = h._data.get("hull_max", 0.0)
 	_c(before_hull > 0.0, "характеристики не зависят от выбора (корпус %d)" % int(before_hull))
+	# The server-provided plan is optional; old servers/demo keep the old view.
+	_c(not h._passport_info.visible, "без паспорта новая секция скрыта")
+	h.set_data({"type": "FTR-001", "level": 31, "hull_max": 2000, "shield_max": 700, "energy_max": 150})
+	h.set_fleet([{"id": "FTR-001", "name": "Стриж", "max_level": 50, "rpg_passport": {
+		"id": "FTR-001", "description": "Серверный паспорт", "mass_tons": 18, "reactor_power_mw": 100,
+		"module_mass_budget_tons": 12, "base": {"crew": 3, "engines": 2, "weapons": "Серверное оружие", "dimensions_m": [12, 8, 3]},
+		"slots": [{"group": "weapon"}, {"group": "technical"}]}}])
+	_c(h._passport_info.visible and h._passport_info.text.contains("Серверный паспорт"), "паспорт сервера отображён")
+	_c(h._passport_info.text.contains("предварительно") and h._passport_info.text.contains("100"), "предварительный бюджет обозначен")
+	_c(h._info.text.contains("Экипаж 3") and h._info.text.contains("Серверное оружие"), "паспорт использует серверный base")
+	_c(h._stats.text.contains("31 из 50") and h._stats.text.contains("2000"), "уровень и живые статы определяет сервер")
+	h.set_fleet([{"id": "FTR-001", "rpg_passport": {"id": "TMP-MINE"}}])
+	_c(not h._passport_info.visible and not h._stats.text.contains("из 30"), "чужой паспорт и устаревший cap не показаны")
+	h.set_fleet([{"id": "FTR-001", "name": "Стриж"}])
+	_c(not h._passport_info.visible and h._passport.is_empty(), "старый ответ очищает прежний паспорт")
+	var server_gateway: Node = load("res://ui/gateway/server_gateway.gd").new()
+	var received: Array = []
+	server_gateway.ships_updated.connect(func(fleet: Array) -> void: received.append(fleet))
+	server_gateway._on_message("ships", {"ships": [{"id": "FTR-001"}], "ship_max_level": 50,
+		"levels": {"FTR-001": {"level": 31}}, "passport": {"id": "FTR-001", "description": "Из сети"}}, "")
+	_c(received.size() == 1 and received[0][0].get("max_level", 0) == 50 and received[0][0].get("level", 0) == 31, "шлюз сохраняет серверный cap и уровень")
+	_c(received[0][0].get("rpg_passport", {}).get("description", "") == "Из сети", "паспорт проходит через сетевой шлюз")
+	server_gateway._on_message("ships", {"ships": [{"id": "TMP-MINE"}], "passport": {"id": "FTR-001"}}, "")
+	_c(not received[1][0].has("rpg_passport"), "шлюз не прикрепляет чужой паспорт")
+	server_gateway._on_message("ships", {"ships": [{"id": "FTR-001"}]}, "")
+	_c(not received[2][0].has("rpg_passport") and not received[2][0].has("max_level"), "шлюз совместим со старым сервером")
+	server_gateway.free()
 	h.closed.emit()
 	await process_frame
 	await process_frame

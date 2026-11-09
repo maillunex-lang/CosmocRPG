@@ -202,6 +202,16 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			for sh in fleet:   # уровень экземпляра корабля: нет записи — первый
 				if sh is Dictionary and payload.has("levels"):
 					sh["level"] = int((levels.get(str(sh.get("id", "")), {}) as Dictionary).get("level", 1))
+			var passport: Dictionary = payload.get("passport", {}) if payload.get("passport") is Dictionary else {}
+			for sh in fleet:
+				if not (sh is Dictionary):
+					continue
+				var level_info: Dictionary = levels.get(str(sh.get("id", "")), {})
+				var cap := int(payload.get("ship_max_level", level_info.get("max_level", 0)))
+				if cap > 0:
+					sh["max_level"] = cap
+				if not passport.is_empty() and str(passport.get("id", "")) == str(sh.get("id", "")):
+					sh["rpg_passport"] = passport
 			ships_updated.emit(fleet)
 		"shop":
 			shop_updated.emit(payload)

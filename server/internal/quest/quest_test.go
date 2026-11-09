@@ -322,3 +322,152 @@ func TestSpendCreditsAtomic(t *testing.T) {
 		t.Fatalf("полное списание: %d %v", total, err)
 	}
 }
+
+// Частично добытая руда должна переживать перезапуск сервиса, а не только награда.
+func TestPartialMiningSurvivesRestart(t *testing.T) {
+	for _, backend := range []string{"memory", "postgres"} {
+		t.Run(backend, func(t *testing.T) {
+			ctx := context.Background()
+			var st Store = NewMemStore()
+			pid := "pilot-a"
+			if backend == "postgres" {
+				_, pg, id := pgSetup(t)
+				st, pid = pg, id
+			}
+			s := newSvc(st)
+			if err := s.Join(ctx, pid); err != nil {
+				t.Fatal(err)
+			}
+			s.Evaluate(ctx, pid, station)
+			s.Event(ctx, pid, "kill", "", 1)
+			s.Event(ctx, pid, "mine", "iron_ore", 2)
+			s = newSvc(st)
+			if err := s.Join(ctx, pid); err != nil {
+				t.Fatal(err)
+			}
+			v, _ := s.View(pid)
+			if len(v.Quests) != 1 || v.Quests[0].ID != "first_ore" || v.Quests[0].Progress != 2 {
+				t.Fatalf("lost partial progress: %+v", v)
+			}
+			got := s.Event(ctx, pid, "mine", "iron_ore", 3)
+			if len(got) != 1 || got[0].QuestID != "first_ore" {
+				t.Fatalf("completion after restart: %+v", got)
+			}
+			if again := s.Event(ctx, pid, "mine", "iron_ore", 3); len(again) != 0 {
+				t.Fatal("duplicate reward")
+			}
+		})
+	}
+}
+
+// Два пилота проходят цепочку независимо, включая рестарт посреди добычи.
+// Это серверный сценарий; он не заменяет прохождение двумя Android-клиентами.
+func TestTwoPilotCampaignRestart(t *testing.T) {
+	ctx, st, a := pgSetup(t)
+	token := "beta-second-pilot-0001"
+	rec, err := world.NewPGStore(st.pool).Resolve(ctx, token, "БетаВторой")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := rec.ID
+	s := newSvc(st)
+	for _, pid := range []string{a, b} {
+		if err := s.Join(ctx, pid); err != nil {
+			t.Fatal(err)
+		}
+		if got := s.Evaluate(ctx, pid, station); len(got) != 1 {
+			t.Fatal("first flight", got)
+		}
+		if got := s.Event(ctx, pid, "kill", "", 1); len(got) != 1 {
+			t.Fatal("kill", got)
+		}
+	}
+	s.Event(ctx, a, "mine", "iron_ore", 2)
+	s.Event(ctx, b, "mine", "iron_ore", 4)
+	s = newSvc(st)
+	for _, tc := range []struct {
+		pid       string
+		remaining int
+	}{{a, 3}, {b, 1}} {
+		if err := s.Join(ctx, tc.pid); err != nil {
+			t.Fatal(err)
+		}
+		if got := s.Event(ctx, tc.pid, "mine", "iron_ore", tc.remaining); len(got) != 1 {
+			t.Fatal("mine", got)
+		}
+		if got := s.Event(ctx, tc.pid, "sell", "", 1); len(got) != 1 {
+			t.Fatal("sell", got)
+		}
+		if got := s.Event(ctx, tc.pid, "jump", "aurora", 1); len(got) != 0 {
+			t.Fatal("wrong system completed quest")
+		}
+		if got := s.Event(ctx, tc.pid, "jump", "meridian", 1); len(got) != 1 {
+			t.Fatal("jump", got)
+		}
+	}
+	s = newSvc(st)
+	for _, pid := range []string{a, b} {
+		if err := s.Join(ctx, pid); err != nil {
+			t.Fatal(err)
+		}
+		v, _ := s.View(pid)
+		if len(v.Quests) != 0 || v.Credits != 3600 {
+			t.Fatalf("campaign restore: %+v", v)
+		}
+		s.Evaluate(ctx, pid, station)
+		s.Event(ctx, pid, "kill", "", 1)
+		v, _ = s.View(pid)
+		if v.Credits != 3600 {
+			t.Fatal("duplicate campaign rewards", v)
+		}
+	}
+}
+
+func TestConcurrentProgressBounded(t *testing.T) {
+	ctx, st, pid := pgSetup(t)
+	d := Catalog()[2]
+	if _, err := st.Assign(ctx, pid, d); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := st.Advance(ctx, pid, d, 1); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	data, err := st.Load(ctx, pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data.Quests) != 1 || data.Quests[0].Progress != 5 {
+		t.Fatalf("progress bound: %+v", data)
+	}
+}
+
+type failingProgressStore struct{ Store }
+
+func (s failingProgressStore) Advance(ctx context.Context, pid string, d Def, n int) (int, error) {
+	return 0, context.DeadlineExceeded
+}
+
+func TestProgressWriteFailureDoesNotAdvanceClient(t *testing.T) {
+	ctx := context.Background()
+	st := NewMemStore()
+	s := newSvc(failingProgressStore{st})
+	if err := s.Join(ctx, "a"); err != nil {
+		t.Fatal(err)
+	}
+	s.Evaluate(ctx, "a", station)
+	if got := s.Event(ctx, "a", "kill", "", 1); len(got) != 0 {
+		t.Fatal("reward on failed write")
+	}
+	v, _ := s.View("a")
+	if len(v.Quests) != 1 || v.Quests[0].Progress != 0 || v.Credits != 500 {
+		t.Fatalf("unpersisted progress exposed: %+v", v)
+	}
+}

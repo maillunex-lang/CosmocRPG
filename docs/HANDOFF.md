@@ -497,3 +497,15 @@ SR-100b: run42616666345 для c9a3391 завершён, все4 jobs success (�
 Проверки: go test -race -json ./... exit 0, отдельный PostgreSQL 16 в собственном контейнере cosmoc-pp-integration-20261109 (loopback, tmpfs), COSMOC_TEST_DATABASE_URL. Итоги событий: {('skip', 'package'): 3, ('pass', 'test'): 483, ('pass', 'package'): 23, ('skip', 'test'): 3}. Три test SKIP: TestAmbientFollowFromAnotherCaptain (допустимое отсутствие реплики), TestEquipmentGodotClientPostgres и TestPassportGodotClient (Godot-сценарии не запускались). Серверные PostgreSQL-проверки выполнены. go vet ./..., go build ./..., gofmt, git diff --check, validate_roadmap.py PASS. Клиент/Android и production не проверялись и не развёртывались.
 
 Реализованы только cap пилота 150 и базовые очки до 60. PP-02 IN_PROGRESS: архив/сброс билдов, бонусные достижения и клиентская приёмка остаются. PP-01 DONE — согласование политики, не миграция. Публикация в main разрешена, production-деплой запрещён. CI до интеграции не запускается из-за failed payments/spending limit GitHub; результат нового SHA проверяется после push.
+
+## Первый сеанс и сохранность — подготовка закрытого теста
+
+Владелец выбрал пункты 1/2. BETA-ERR-001 устранён: частичный прогресс сохраняется в имеющейся таблице; новых SQL нет. Два пилота проходят серверную цепочку с рестартом между 2/5 и 5/5; награды однократны. Тест продажи исправлен, чтобы не принимать XP квеста за XP продажи. PROTO-12/PROTO-05B не закрыты, владельцы карточек сохранены.
+
+## Проверки текущего изменения
+
+Ветка beta/first-session-reliability, база bad080d. Полный `go test -race -count=1 -json ./...` с отдельной PostgreSQL 16 exit 0: {('skip', 'package'): 3, ('pass', 'test'): 489, ('pass', 'package'): 23, ('skip', 'test'): 3}. Два Godot live сценария в полном прогоне пропущены (env не задан), затем отдельно выполнены PASS. Финальный весь ws с COSMOC_TEST_GODOT и той же изолированной PostgreSQL: 53 test/subtest PASS, 0 SKIP, exit 0. Go vet/build PASS; gofmt и diff --check PASS; валидатор ROADMAP PASS (43 задачи). Godot import завершён, графический/Android прогон не выполнен.
+
+Первый промежуточный прогон без PostgreSQL дал два account timeout и ошибку теста продажи. Account-тесты прошли изолированно и в финальном ws, их первопричина не установлена. Тест продажи исправлен по источнику XP. Новые регрессии квестов отдельно с реальной PG+race PASS. Никакого изменения production или main в этом этапе.
+
+Продолжение: пройти ручной сценарий docs/beta/FIRST_SESSION.md двумя клиентами; отдельно решить общий атомарный путь записи груза/XP/квестов для защиты от аварий. Не объявлять нулевую потерю при crash на основании тестов пересоздания quest Service.

@@ -7,7 +7,11 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const Icons := preload("res://ui/icons.gd")
 
+const INLINE_LOG_HEIGHT := 96.0   # в карточке журнал компактный (она делит экран с заданиями и профилем); крупно — в окне чата
+
 signal unread_changed(count: int)
+## Игрок просит открыть окно чата поверх игры (R-61).
+signal expand_requested
 
 const MAX_LINES := 100
 const MAX_TEXT := 200
@@ -16,6 +20,8 @@ var gateway: Node
 var tab := "general"
 var unread := 0
 var dm_unread := 0
+var _expand: ActionButton
+var _overlay := false
 var enabled := true
 
 var _general: Array = []
@@ -67,16 +73,24 @@ func _ready() -> void:
 		b.text = pair[1]
 		b.custom_minimum_size = Vector2(0, 40)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+		b.add_theme_font_size_override("font_size", Tokens.FONT_SMALL - 2)
 		b.pressed.connect(_select_tab.bind(str(pair[0])))
 		tabs.add_child(b)
 		_tab_buttons[pair[0]] = b
+	_expand = ActionButton.new()
+	_expand.name = "ExpandButton"
+	_expand.text = ""
+	Icons.apply(_expand, "maximize-2", Color.WHITE, 20)   # значок «развернуть»: подписи «Окно» не помещаются в узкую карточку
+	_expand.custom_minimum_size = Vector2(52, 40)
+	_expand.tooltip_text = "Открыть чат крупно поверх игры"
+	_expand.pressed.connect(func() -> void: expand_requested.emit())
+	tabs.add_child(_expand)
 	add_child(tabs)
 	_log = RichTextLabel.new()
 	_log.bbcode_enabled = true
 	_log.scroll_following = true
 	_log.fit_content = false
-	_log.custom_minimum_size = Vector2(0, 150)
+	_log.custom_minimum_size = Vector2(0, INLINE_LOG_HEIGHT)
 	_log.add_theme_font_size_override("normal_font_size", Tokens.FONT_SMALL)
 	_log.add_theme_font_size_override("bold_font_size", Tokens.FONT_SMALL)
 	_log.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -110,6 +124,18 @@ func _ready() -> void:
 	row.add_child(_send)
 	add_child(row)
 	_select_tab("general")
+
+
+## Режим окна поверх игры: журнал занимает всё свободное место, кнопка «Окно» не нужна.
+func set_overlay(on: bool) -> void:
+	_overlay = on
+	if _log != null:
+		_log.custom_minimum_size.y = 0.0 if on else INLINE_LOG_HEIGHT
+		_log.size_flags_vertical = Control.SIZE_EXPAND_FILL if on else Control.SIZE_FILL
+		_log.add_theme_font_size_override("normal_font_size", Tokens.FONT_BODY if on else Tokens.FONT_SMALL)
+		_log.add_theme_font_size_override("bold_font_size", Tokens.FONT_BODY if on else Tokens.FONT_SMALL)
+	if _expand != null:
+		_expand.visible = not on
 
 
 func bind(gw: Node) -> void:

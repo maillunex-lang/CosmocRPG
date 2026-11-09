@@ -380,6 +380,12 @@ layout_mode = 2
 text = "Магазин"
 script = ExtResource("5")
 
+[node name="ChatMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Чат"
+script = ExtResource("5")
+
 [node name="HangarMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
 unique_name_in_owner = true
 layout_mode = 2

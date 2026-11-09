@@ -23,6 +23,7 @@ signal hangar_requested   # кнопка «Ангар»
 signal shop_requested   # кнопка «Магазин»
 signal map_requested   # кнопка «Карта»
 signal settings_requested   # пункт меню «Настройки»
+signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -218,6 +219,8 @@ func _ready() -> void:
 	%ProfileMenuButton.pressed.connect(func() -> void: _set_menu_open(false); profile_requested.emit())
 	%ShopMenuButton.pressed.connect(func() -> void: _set_menu_open(false); shop_requested.emit())
 	%HangarMenuButton.pressed.connect(func() -> void: _set_menu_open(false); hangar_requested.emit())
+	%ChatMenuButton.pressed.connect(func() -> void: _set_menu_open(false); chat_requested.emit())
+	Icons.apply(%ChatMenuButton, "mail", Tokens.ACCENT, 22)
 	Icons.apply(%ProfileMenuButton, "user", Tokens.ACCENT, 22)
 	Icons.apply(%ShopMenuButton, "store", Tokens.ACCENT, 22)
 	Icons.apply(%HangarMenuButton, "rocket", Tokens.ACCENT, 22)
@@ -249,6 +252,7 @@ func _setup_chat(gw: UiGateway) -> void:
 	chat_panel.visible = gw.has_chat()
 	chat_panel.unread_changed.connect(func(n: int) -> void:
 		_chat_card.title = "Чат" if n <= 0 else "Чат · %d" % n)
+	chat_panel.expand_requested.connect(func() -> void: chat_requested.emit())
 
 
 ## Короткое сообщение игроку (всплывающая плашка).
@@ -287,6 +291,9 @@ func bind(gw: UiGateway) -> void:
 	_demo_bar.visible = gw.is_demo()
 	%DemoLabel.visible = gw.is_demo()
 	_system_button.visible = gw.is_demo()
+	_setup_chat(gw)   # панель чата создаётся при привязке к шлюзу (с 0.3.2 вызов был забыт: в игре оставалась демо-заглушка)
+	if gw.has_chat():
+		gw.request_chat_history()   # история запрашивается при входе, до появления панели: запрашиваем ещё раз уже для неё
 	apply_state(gw.snapshot())
 
 

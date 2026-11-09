@@ -17,6 +17,7 @@ const LoadingOverlay := preload("res://ui/loading_overlay.gd")
 const Hangar := preload("res://ui/ships/hangar.gd")
 const ShopScreen := preload("res://ui/shop_screen.gd")
 const ProfileScreen := preload("res://ui/profile_screen.gd")
+const ChatOverlay := preload("res://ui/chat_overlay.gd")
 const MapScreen := preload("res://ui/map_screen.gd")
 const SettingsScreen := preload("res://ui/settings_screen.gd")
 const Nameplates := preload("res://ui/nameplates.gd")
@@ -111,6 +112,7 @@ func _ready() -> void:
 	_hud.map_requested.connect(open_map)
 	_hud.settings_requested.connect(open_settings)
 	_hud.profile_requested.connect(open_profile)
+	_hud.chat_requested.connect(func() -> void: open_chat())
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -315,6 +317,35 @@ func open_map() -> Control:
 	m.closed.connect(func() -> void: layer.queue_free())
 	m.tree_exiting.connect(func() -> void: gateway.state_updated.disconnect(on_state))
 	return m
+
+
+## Окно чата поверх игры (R-61): полупрозрачное, наполовину или на весь экран; под ним видна игра и работает управление.
+func open_chat(m: int = ChatOverlay.Mode.HALF) -> Control:
+	var existing := get_node_or_null("ChatLayer/ChatOverlay")
+	if existing != null:
+		return existing
+	if _hud == null or _hud.chat_panel == null or not _hud.chat_panel.enabled:
+		_hud.show_toast("Чат доступен только при игре на сервере")
+		return null
+	var layer := CanvasLayer.new()
+	layer.layer = 35
+	layer.name = "ChatLayer"
+	add_child(layer)
+	var ov: Control = ChatOverlay.new()
+	ov.name = "ChatOverlay"
+	layer.add_child(ov)
+	ov.theme = theme
+	ov.open(_hud.chat_panel, m)
+	ov.closed.connect(func() -> void: layer.queue_free())
+	return ov
+
+
+func close_chat() -> bool:
+	var ov := get_node_or_null("ChatLayer/ChatOverlay")
+	if ov == null:
+		return false
+	ov.close_overlay()
+	return true
 
 
 ## Настройки поверх сцены: автоответ на атаку уходит серверу, панель FPS применяется сразу.
@@ -556,7 +587,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				if event.pressed:
 					gestures.wheel(-1, camera_config.wheel_zoom_step)
 	elif event.is_action_pressed("ui_cancel"):
-		_on_exit()
+		if not close_chat():
+			_on_exit()
 
 
 func _input(event: InputEvent) -> void:
@@ -594,7 +626,8 @@ func select_at(pos: Vector2) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:  # кнопка «Назад» на Android
-		_on_exit()
+		if not close_chat():   # открытое окно чата закрывается первым
+			_on_exit()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		if gestures != null:
 			gestures.cancel()  # потеря фокуса завершает активный жест без скачков

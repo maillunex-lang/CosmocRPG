@@ -1,0 +1,659 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "ships"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "ships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "class_id",
+          "description",
+          "base",
+          "preliminary_fields",
+          "mass_tons",
+          "resistances",
+          "acceleration_units_s2",
+          "turn_rate_deg_s",
+          "signature",
+          "sensor_range_units",
+          "reactor_power_mw",
+          "module_mass_budget_tons",
+          "slots",
+          "specializations",
+          "allowed_abilities",
+          "starter_kit",
+          "economy",
+          "npc",
+          "visual"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}-[A-Z0-9]{3,12}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "class_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z_]{0,31}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1200
+          },
+          "base": {
+            "$ref": "ship-patch-v1.json"
+          },
+          "preliminary_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "base",
+                "description",
+                "mass_tons",
+                "resistances",
+                "acceleration_units_s2",
+                "turn_rate_deg_s",
+                "signature",
+                "sensor_range_units",
+                "reactor_power_mw",
+                "module_mass_budget_tons",
+                "slots",
+                "allowed_abilities",
+                "starter_kit",
+                "economy",
+                "npc",
+                "visual"
+              ]
+            },
+            "minItems": 15,
+            "maxItems": 16,
+            "uniqueItems": true
+          },
+          "mass_tons": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000.0
+          },
+          "resistances": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kinetic",
+              "thermal",
+              "energy",
+              "explosive",
+              "electromagnetic"
+            ],
+            "properties": {
+              "kinetic": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.8
+              },
+              "thermal": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.8
+              },
+              "energy": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.8
+              },
+              "explosive": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.8
+              },
+              "electromagnetic": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.8
+              }
+            }
+          },
+          "acceleration_units_s2": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          },
+          "turn_rate_deg_s": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 720
+          },
+          "signature": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100000
+          },
+          "sensor_range_units": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 10000
+          },
+          "reactor_power_mw": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000.0
+          },
+          "module_mass_budget_tons": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000.0
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "group",
+                "max_size",
+                "categories"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_:-]{0,63}$"
+                },
+                "group": {
+                  "type": "string",
+                  "enum": [
+                    "weapon",
+                    "defensive",
+                    "technical",
+                    "special"
+                  ]
+                },
+                "max_size": {
+                  "type": "string",
+                  "enum": [
+                    "S",
+                    "M",
+                    "L",
+                    "XL"
+                  ]
+                },
+                "categories": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "weapon",
+                      "engine",
+                      "shield",
+                      "armor",
+                      "reactor",
+                      "electronics",
+                      "repair",
+                      "support",
+                      "drone",
+                      "industrial",
+                      "cargo"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 6,
+                  "uniqueItems": true
+                }
+              }
+            },
+            "minItems": 4,
+            "maxItems": 64
+          },
+          "specializations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_:-]{0,63}$"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true
+          },
+          "allowed_abilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(W(0[1-9]|1[0-6])|[MDE](0[1-9]|10)|S0[1-8]|[RIC]0[1-6])$"
+            },
+            "minItems": 1,
+            "maxItems": 72,
+            "uniqueItems": true
+          },
+          "starter_kit": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "slot_id",
+                "family",
+                "category",
+                "size",
+                "mass_tons",
+                "power_mw",
+                "ability_ids"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_:-]{0,63}$"
+                },
+                "slot_id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_:-]{0,63}$"
+                },
+                "family": {
+                  "type": "string",
+                  "enum": [
+                    "LAS",
+                    "KIN",
+                    "MSL",
+                    "ENG",
+                    "DEF",
+                    "REA",
+                    "ELE",
+                    "SUP",
+                    "DRN",
+                    "IND",
+                    "CRG"
+                  ]
+                },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "weapon",
+                    "engine",
+                    "shield",
+                    "armor",
+                    "reactor",
+                    "electronics",
+                    "repair",
+                    "support",
+                    "drone",
+                    "industrial",
+                    "cargo"
+                  ]
+                },
+                "size": {
+                  "type": "string",
+                  "enum": [
+                    "S",
+                    "M",
+                    "L",
+                    "XL"
+                  ]
+                },
+                "mass_tons": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 1000000.0
+                },
+                "power_mw": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000.0
+                },
+                "ability_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(W(0[1-9]|1[0-6])|[MDE](0[1-9]|10)|S0[1-8]|[RIC]0[1-6])$"
+                  },
+                  "minItems": 0,
+                  "maxItems": 16,
+                  "uniqueItems": true
+                }
+              }
+            },
+            "minItems": 4,
+            "maxItems": 64
+          },
+          "economy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acquisition",
+              "price_credits",
+              "pilot_level",
+              "repair_credits_per_hull",
+              "insurance_premium_credits",
+              "insurance_payout_fraction"
+            ],
+            "properties": {
+              "acquisition": {
+                "type": "string",
+                "enum": [
+                  "starter",
+                  "station_shipyard",
+                  "faction_shipyard"
+                ]
+              },
+              "price_credits": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "pilot_level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "repair_credits_per_hull": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000.0
+              },
+              "insurance_premium_credits": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "insurance_payout_fraction": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          },
+          "npc": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "threat_tier",
+              "ability_interval_s",
+              "max_drones"
+            ],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "assault",
+                  "siege",
+                  "support",
+                  "scout",
+                  "carrier",
+                  "miner",
+                  "hauler",
+                  "ewar"
+                ]
+              },
+              "threat_tier": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              "ability_interval_s": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 600
+              },
+              "max_drones": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 32
+              }
+            }
+          },
+          "visual": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "placeholder_id",
+              "silhouette",
+              "forward_axis",
+              "up_axis",
+              "collision_half_extents_m",
+              "mounts"
+            ],
+            "properties": {
+              "placeholder_id": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_:-]{0,63}$"
+              },
+              "silhouette": {
+                "type": "string",
+                "enum": [
+                  "dart",
+                  "delta",
+                  "twin_hull",
+                  "needle",
+                  "spine",
+                  "bastion",
+                  "hammer",
+                  "keel",
+                  "wedge",
+                  "hive",
+                  "trident",
+                  "arrow",
+                  "halo",
+                  "barge",
+                  "auger"
+                ]
+              },
+              "forward_axis": {
+                "const": "-Z"
+              },
+              "up_axis": {
+                "const": "+Y"
+              },
+              "collision_half_extents_m": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 250
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "mounts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "kind",
+                    "position_m"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_:-]{0,63}$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "weapon",
+                        "engine",
+                        "vfx"
+                      ]
+                    },
+                    "position_m": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": -500,
+                        "maximum": 500
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  }
+                },
+                "minItems": 3,
+                "maxItems": 32
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "description"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "mass_tons"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "resistances"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "acceleration_units_s2"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "turn_rate_deg_s"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "signature"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "sensor_range_units"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "reactor_power_mw"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "module_mass_budget_tons"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "slots"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "allowed_abilities"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "starter_kit"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "economy"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "npc"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "preliminary_fields": {
+                "contains": {
+                  "const": "visual"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 15,
+      "maxItems": 15
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cosmocrpg.invalid/schemas/rpg-passports-v1.json",
+  "title": "Ships RPG proposed passports v1",
+  "description": "Register ship-patch-v1.json from shipcatalog.SchemaJSON() alongside this schema. All new fields are preliminary; legacy base stats are preserved."
+}

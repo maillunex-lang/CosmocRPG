@@ -29,3 +29,9 @@ TestExtendedCurvesPreserveLegacyXP проверяет все прежние по
 Итог SR-014a: 120 test/subtest PASS, 11 SKIP, 0 FAIL; пакеты rpg/pilot/shipxp/world/ws — PASS. `go vet ./...` и `go build -o /workspace/scratch/cosmoc-server ./cmd/server` — PASS (exit 0); бинарник не запускался. `git diff --check` — PASS.
 
 Коммиты проверки: SR-000 8c7b620, SR-010 8ce0106, SR-015 0e7cbb3, SR-014a 788d951.
+
+## 2026-11-09 — SR-011a, контракт полных паспортов
+- `go test -race -count=1 ./internal/shipcatalog`: первый контракт PASS (6.526s), после усиления проверок один тест FAIL из-за неверного ожидания слоя валидации (ERROR-SR-003).
+- После исправления `go test -race -count=1 ./internal/shipcatalog`: PASS, `ok .../shipcatalog 7.007s`. `go vet ./internal/shipcatalog`: PASS.
+- Проверены schema/типы/roundtrip, 39 отрицательных изменений паспорта, version/count/дубли моделей и visuals, обязательная предварительность нового base, неизвестные поля/JSON, конкурентная загрузка, обнаружение дрейфа старых энергии и CD.
+- Паспорта в этих тестах синтетические. Авторские 15 паспортов, все реальные старые числа и семейства модулей проверяются отдельной SR-011b. Реальная БД, Godot и production не затронуты.

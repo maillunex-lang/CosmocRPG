@@ -65,6 +65,12 @@ func (d *Dialogue) Handle(ctx context.Context, m chat.Message) {
 	if m.FromAI || m.Channel == chat.System || d.chat == nil {
 		return
 	}
+	// хаб вызывает наблюдателя синхронно в цикле отправителя: вся работа идёт в отдельной горутине,
+	// чтобы любая задержка или сбой провайдера не останавливали игрока, который пишет в чат
+	go d.handle(ctx, m)
+}
+
+func (d *Dialogue) handle(ctx context.Context, m chat.Message) {
 	s := d.mgr.Settings()
 	if !s.ChatReplyEnabled {
 		return
@@ -185,6 +191,7 @@ func (d *Dialogue) reply(ctx context.Context, captainID, captainName, channel, r
 		turn = engine.Reply(fresh, input)
 	}
 	if d.repeats(turn.Reply) || turn.Reply == "" || turn.Reply == "…" || turn.Source == "no_captain" {
+		d.mu.Unlock() // ответа нет: обязательно отпустить блокировку (иначе зависнут все следующие сообщения чата)
 		return
 	}
 	d.note(captainID, turn.Reply)

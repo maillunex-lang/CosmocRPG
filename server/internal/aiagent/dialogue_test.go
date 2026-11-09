@@ -236,3 +236,44 @@ func countAI(r *dialogueRig) int {
 	}
 	return n
 }
+
+// Регрессия R-60: если ответа нет (неизвестный капитан, пустая или повторная реплика), reply() не должен оставлять d.mu занятой —
+// иначе все следующие сообщения в чат зависают в reserve() (хаб вызывает обработчик синхронно, застревает цикл игрока).
+func TestReplyWithoutAnswerReleasesLock(t *testing.T) {
+	r := newDialogueRig(t, 5)
+	smallSettings(r.rig.m)
+	r.dlg.reply(context.Background(), "нет-такого-капитана", "Никто", chat.General, "p1", "привет")
+	done := make(chan struct{})
+	go func() {
+		r.dlg.reserve(DefaultSettings(), "cpt-0001")
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("после ответа без реплики блокировка d.mu не отпущена: чат зависнет")
+	}
+}
+
+// Обработчик сообщений не должен блокировать отправителя, даже если провайдер завис.
+func TestHandleDoesNotBlockSender(t *testing.T) {
+	r := newDialogueRig(t, 5)
+	smallSettings(r.rig.m)
+	r.rig.join("p1")
+	r.rig.tick(30) // ИИ должны быть онлайн, иначе Handle вернётся до обращения к провайдеру
+	if r.rig.w.AICount() == 0 {
+		t.Fatal("для проверки нужны ИИ онлайн")
+	}
+	r.dlg.mu.Lock() // имитация зависшего провайдера
+	defer r.dlg.mu.Unlock()
+	done := make(chan struct{})
+	go func() {
+		r.dlg.Handle(context.Background(), chat.Message{Channel: chat.General, FromID: "p1", FromName: "Пилот", Text: "привет"})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Handle заблокировал отправителя сообщения")
+	}
+}

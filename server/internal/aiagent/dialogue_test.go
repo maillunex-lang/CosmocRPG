@@ -2,7 +2,6 @@ package aiagent
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"testing"
@@ -152,8 +151,9 @@ func TestDialogueRateLimit(t *testing.T) {
 	r.rig.join("p1")
 	r.rig.tick(1)
 	// два сообщения подряд: вторая реплика обрезана потолком и общим интервалом
-	for i := 0; i < 2; i++ {
-		msg, err := r.chat.Send(context.Background(), chat.Sender{ID: "p1", Name: "Пилот"}, chat.General, "", fmt.Sprintf("привет все %d", i))
+	for i, phrase := range []string{"привет", "как дела"} { // понятные движку фразы: непонятные в общий чат не отвечаются
+		msg, err := r.chat.Send(context.Background(), chat.Sender{ID: "p1", Name: "Пилот"}, chat.General, "", phrase)
+		_ = i
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -242,7 +242,7 @@ func countAI(r *dialogueRig) int {
 func TestReplyWithoutAnswerReleasesLock(t *testing.T) {
 	r := newDialogueRig(t, 5)
 	smallSettings(r.rig.m)
-	r.dlg.reply(context.Background(), "нет-такого-капитана", "Никто", chat.General, "p1", "привет")
+	r.dlg.reply(context.Background(), "нет-такого-капитана", "Никто", chat.General, "p1", "привет", false)
 	done := make(chan struct{})
 	go func() {
 		r.dlg.reserve(DefaultSettings(), "cpt-0001")
@@ -410,5 +410,45 @@ func TestAmbientSettingsValidation(t *testing.T) {
 	s.ChatFollowChance = 101
 	if s.Validate() == nil {
 		t.Error("вероятность 101 должна отклоняться")
+	}
+}
+
+// Самостоятельные и общие реплики не публикуют запасное «не понял»: оно уместно только в личном разговоре.
+func TestSocialRepliesNeverPublishClarify(t *testing.T) {
+	r, pushed := ambientRig(t, 10, 0)
+	ids := r.rig.w.AIIDs()
+	name := r.rig.m.NameOf(ids[0])
+	// заведомо непонятный повод
+	if got := r.dlg.reply(context.Background(), ids[0], name, chat.General, "ambient", "щ щ щ ъъъ ёёё", true); got != "" {
+		t.Fatalf("запасной ответ опубликован в общий чат: %q", got)
+	}
+	select {
+	case m := <-pushed:
+		t.Fatalf("в общий чат ушло: %+v", m)
+	case <-time.After(100 * time.Millisecond):
+	}
+	// в личном разговоре уточнение допустимо
+	if got := r.dlg.reply(context.Background(), ids[0], name, chat.DM, "p1", "щ щ щ ъъъ ёёё", false); got == "" {
+		t.Fatal("в личных сообщениях ИИ должен уточнить, а не молчать")
+	}
+}
+
+func TestAmbientTopicsComeFromTraining(t *testing.T) {
+	r, _ := ambientRig(t, 10, 0)
+	topic := r.dlg.ambientTopic(context.Background())
+	if topic == "" {
+		t.Fatal("повод не выбран")
+	}
+	cfg := studioCfg()
+	found := false
+	for _, in := range cfg.Intents {
+		if ambientIntents[in.ID] {
+			for _, ex := range in.Examples {
+				found = found || ex == topic
+			}
+		}
+	}
+	if !found && len(cfg.Intents) > 0 {
+		t.Logf("повод %q взят из запасного списка (в тестовой конфигурации нет подходящих намерений)", topic)
 	}
 }

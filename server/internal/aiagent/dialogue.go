@@ -78,6 +78,7 @@ func (d *Dialogue) Handle(ctx context.Context, m chat.Message) {
 }
 
 func (d *Dialogue) handle(ctx context.Context, m chat.Message) {
+	d.log.Info("ИИ-чат: получено сообщение", "канал", m.Channel, "от", m.FromID, "кому", m.ToID)
 	s := d.mgr.Settings()
 	if !s.ChatReplyEnabled {
 		return
@@ -123,7 +124,7 @@ func (d *Dialogue) handle(ctx context.Context, m chat.Message) {
 		}
 		rctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		d.reply(rctx, captainID, captainName, channel, replyTo, input)
+		d.reply(rctx, captainID, captainName, channel, replyTo, input, channel == chat.General)
 	}()
 }
 
@@ -180,7 +181,7 @@ func (d *Dialogue) engine(ctx context.Context) (*aistudio.Engine, error) {
 }
 
 // reply генерирует и отправляет реплику капитана.
-func (d *Dialogue) reply(ctx context.Context, captainID, captainName, channel, replyTo, input string) string {
+func (d *Dialogue) reply(ctx context.Context, captainID, captainName, channel, replyTo, input string, social bool) string {
 	engine, err := d.engine(ctx)
 	if err != nil {
 		d.log.Error("ИИ-чат: конфигурация студии", "err", err)
@@ -199,7 +200,8 @@ func (d *Dialogue) reply(ctx context.Context, captainID, captainName, channel, r
 		fresh := aistudio.NewConversation(captainID)
 		turn = engine.Reply(fresh, input)
 	}
-	if d.repeats(turn.Reply) || turn.Reply == "" || turn.Reply == "…" || turn.Source == "no_captain" {
+	// в общем чате и в самостоятельных репликах запасное «не понял, уточните» не публикуем: оно уместно только в личном разговоре
+	if d.repeats(turn.Reply) || turn.Reply == "" || turn.Reply == "…" || turn.Source == "no_captain" || (social && turn.Clarify) {
 		d.mu.Unlock() // ответа нет: обязательно отпустить блокировку (иначе зависнут все следующие сообщения чата)
 		d.log.Info("ИИ-чат: движок не дал реплики", "captain", captainID, "источник", turn.Source, "реплика", turn.Reply)
 		return ""
@@ -281,7 +283,7 @@ func (d *Dialogue) ambientTick(ctx context.Context, last *time.Time) {
 	}
 	now := d.now()
 	wait := time.Duration(float64(s.ChatAmbientEverySec)*(0.7+0.6*d.rand())) * time.Second // разброс, чтобы не звучало по часам
-	topic := ambientTopics[int(d.rand()*float64(len(ambientTopics)))%len(ambientTopics)]
+	topic := d.ambientTopic(ctx)
 	r1, r2 := d.rand(), d.rand()
 	if !last.IsZero() && now.Sub(*last) < wait {
 		return
@@ -292,7 +294,7 @@ func (d *Dialogue) ambientTick(ctx context.Context, last *time.Time) {
 	}
 	*last = now
 	name := d.mgr.NameOf(id)
-	text := d.reply(ctx, id, name, chat.General, "ambient", topic)
+	text := d.reply(ctx, id, name, chat.General, "ambient", topic, true)
 	if text == "" || s.ChatFollowChance <= 0 || r2*100.0 >= float64(s.ChatFollowChance) {
 		return
 	}
@@ -314,6 +316,29 @@ func (d *Dialogue) ambientTick(ctx context.Context, last *time.Time) {
 		if !d.reserve(d.mgr.Settings(), other) {
 			return
 		}
-		d.reply(ctx, other, d.mgr.NameOf(other), chat.General, "follow:"+id, text)
+		d.reply(ctx, other, d.mgr.NameOf(other), chat.General, "follow:"+id, text, true)
 	}()
+}
+
+// ambientIntents — намерения, подходящие для светской беседы и игровых разговоров: их обучающие примеры движок гарантированно понимает.
+var ambientIntents = map[string]bool{"greeting": true, "how_are_you": true, "ask_job": true, "ask_farm": true, "ask_market": true, "ask_online": true,
+	"ask_goals": true, "ask_money": true, "social_smalltalk": true, "social_checkin": true, "social_hobby": true, "social_music": true,
+	"social_weather": true, "social_humor": true, "social_food": true, "social_books": true, "social_opinion": true, "social_story": true,
+	"social_languages": true, "social_learning": true, "social_invite": true}
+
+// ambientTopic выбирает повод для самостоятельной реплики: пример из обучающих данных подходящего намерения (запасной список — если данных нет).
+func (d *Dialogue) ambientTopic(ctx context.Context) string {
+	cfg, _, err := d.src.Active(ctx)
+	if err == nil {
+		var pool []string
+		for _, in := range cfg.Intents {
+			if ambientIntents[in.ID] {
+				pool = append(pool, in.Examples...)
+			}
+		}
+		if len(pool) > 0 {
+			return pool[int(d.rand()*float64(len(pool)))%len(pool)]
+		}
+	}
+	return ambientTopics[int(d.rand()*float64(len(ambientTopics)))%len(ambientTopics)]
 }

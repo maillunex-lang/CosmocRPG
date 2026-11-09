@@ -19,15 +19,25 @@ done
 echo "== Ships RPG: настоящий локальный WebSocket → ангар Стрижа (без БД)"
 (cd "$ROOT/server" && COSMOC_TEST_GODOT=godot go test -count=1 ./internal/ws -run '^TestPassportGodotClient$') || rc=1
 
-echo "== камера: реальная отрисовка обязательных видов (нужен рендеринг)"
+echo "== камера: реальная отрисовка обязательных видов (Vulkan Mobile, аудио выключено)"
+CAM_LOG="$(mktemp)"
 timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" \
-  godot --path "$ROOT/client" --resolution 1280x720 --script res://tests/camera_render_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"
-[ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+  godot --path "$ROOT/client" --resolution 1280x720 --audio-driver Dummy --script res://tests/camera_render_test.gd >"$CAM_LOG" 2>&1
+CAM_RC=$?
+grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)" "$CAM_LOG" || true
+if [ "$CAM_RC" -ne 0 ]; then rc=1; fi
+if grep -qE "^(ERROR|SCRIPT ERROR)" "$CAM_LOG"; then echo "FAIL  runtime ERROR в логе camera_render_test"; rc=1; fi
+rm -f "$CAM_LOG"
 
-echo "== фон космоса: реальная отрисовка шейдерами (нужен рендеринг)"
+echo "== фон космоса: реальная отрисовка шейдерами (Vulkan Mobile, аудио выключено)"
+BG_LOG="$(mktemp)"
 timeout 280 xvfb-run -a -s "-screen 0 1920x1080x24" \
-  godot --path "$ROOT/client" --resolution 1280x720 --script res://tests/background_render_test.gd 2>&1 | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"
-[ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+  godot --path "$ROOT/client" --resolution 1280x720 --audio-driver Dummy --script res://tests/background_render_test.gd >"$BG_LOG" 2>&1
+BG_RC=$?
+grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)" "$BG_LOG" || true
+if [ "$BG_RC" -ne 0 ]; then rc=1; fi
+if grep -qE "^(ERROR|SCRIPT ERROR)" "$BG_LOG"; then echo "FAIL  runtime ERROR в логе background_render_test"; rc=1; fi
+rm -f "$BG_LOG"
 
 echo "== сетевой слой"
 timeout 120 godot --headless --path "$ROOT/client" --script res://tests/ws_client_test.gd 2>&1 | grep -vE "^Godot Engine|^$|WARNING: WsClient|^\s+(at:|GDScript|\[[0-9]+\])" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1

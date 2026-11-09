@@ -99,3 +99,18 @@ CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 для m
 Это дополнительный локальный lifecycle fix после зелёного CI c9a3391; новый push проверит его отдельно. Новый полный Go run не нужен: production Go/механика модулей не менялись, обновлены3 lifecycle/test файла и документы.
 
 Коммиты SR-100b:21aaa0b server, d465afe client, c9a3391 merged main (remote CI42616666345 success); a1c5c9e дополнительный lifecycle fix (локальная red/green regression PASS). Последующий docs-checkpoint не меняет executable code.
+
+## SR-007 (2026-11-09, Kimi Code) — render-стек CI
+
+Фактические команды и результаты (VPS, после `sudo apt-get install mesa-vulkan-drivers vulkan-tools`):
+- `vulkaninfo --summary` → GPU0 llvmpipe, apiVersion 1.4.318 ✅
+- `xvfb-run -a godot --path client --resolution 1280x720 --audio-driver Dummy --script res://tests/background_render_test.gd` → `RENDERER mobile / vulkan`, Итого 12/0, **0 строк ERROR** ✅
+- `... camera_render_test.gd` → `RENDERER mobile / vulkan`, Итого 44/0, **0 строк ERROR** ✅
+- До установки драйвера воспроизводились `Required Vulkan instance extension VK_KHR_surface not found` + ALSA `ERR_CANT_OPEN`.
+
+Регрессионные крючки:
+- `tools/test_client.sh`: полные логи render-тестов во временные файлы; любой `^ERROR|SCRIPT ERROR` → FAIL даже при exit 0; запуск с `--audio-driver Dummy`.
+- `camera_render_test.gd` / `background_render_test.gd`: `_check_renderer()` — метод `mobile` и не-null `RenderingServer.get_rendering_device()` (Vulkan); иначе FAIL `_failures += 1`.
+- CI: `.github/workflows/ci.yml` клиентский job ставит `mesa-vulkan-drivers libvulkan1 vulkan-tools`.
+
+Граница: проверка desktop/CI; Android-визуальная приёмка — у владельца.

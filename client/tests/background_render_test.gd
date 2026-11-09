@@ -59,7 +59,18 @@ func _setup(profile_id: String) -> void:
 	_bg.set_camera(Vector2.ZERO)
 
 
+
+## SR-007: подтверждаем ожидаемый графический стек (Mobile renderer поверх Vulkan), без ERROR-guard на уровне скрипта.
+func _check_renderer() -> bool:
+	var method := RenderingServer.get_current_rendering_method()
+	var driver := "vulkan" if RenderingServer.get_rendering_device() != null else "opengl3"
+	print("RENDERER %s / %s" % [method, driver])
+	return method == "mobile" and driver == "vulkan"
+
 func _run() -> void:
+	if not _check_renderer():
+		print("FAIL  неожиданный графический стек (ожидался mobile/vulkan)")
+		_failures += 1
 	UiSettings.override("reduce_motion", true)   # без самодвижения: кадры воспроизводимы
 	UiSettings.override("graphics_preset", "high")
 	var size := Vector2i(root.size)

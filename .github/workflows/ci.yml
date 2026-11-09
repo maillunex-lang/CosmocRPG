@@ -105,7 +105,7 @@ jobs:
       - name: Установка Godot и xvfb
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb libgl1 libglx-mesa0 libgl1-mesa-dri libxcursor1 libxinerama1 libxi6 libxrandr2 libfontconfig1
+          sudo apt-get install -y -qq xvfb libgl1 libglx-mesa0 libgl1-mesa-dri libxcursor1 libxinerama1 libxi6 libxrandr2 libfontconfig1 mesa-vulkan-drivers libvulkan1 vulkan-tools
           curl -fsSL --retry 6 --retry-all-errors --retry-delay 10 -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           unzip -q godot.zip
           sudo install -m 0755 "Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot

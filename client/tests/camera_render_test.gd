@@ -90,7 +90,18 @@ func _spawn(preset: String = "high") -> void:
 		await process_frame
 
 
+
+## SR-007: подтверждаем ожидаемый графический стек (Mobile renderer поверх Vulkan), без ERROR-guard на уровне скрипта.
+func _check_renderer() -> bool:
+	var method := RenderingServer.get_current_rendering_method()
+	var driver := "vulkan" if RenderingServer.get_rendering_device() != null else "opengl3"
+	print("RENDERER %s / %s" % [method, driver])
+	return method == "mobile" and driver == "vulkan"
+
 func _run() -> void:
+	if not _check_renderer():
+		print("FAIL  неожиданный графический стек (ожидался mobile/vulkan)")
+		_failures += 1
 	UiSettings.override("reduce_motion", true)
 	UiSettings.override("debug_overlay2", false)
 	await _spawn()

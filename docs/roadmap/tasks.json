@@ -578,6 +578,172 @@
     "apk": "NOT_RELEASED"
    },
    "owner": "владелец"
+  },
+  {
+   "id": "PP-01",
+   "title": "Согласовать миграцию прогрессии пилота на 150 уровней",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Миграционная политика утверждена владельцем; документирование завершено, игровая миграция НЕ реализована.",
+   "updated": "2026-11-09",
+   "spec": "QUESTJOB/PilotProgression.md#rpg-level-001--максимальный-уровень-пилота",
+   "acceptance": "Политика и баланс v1 записаны в QUESTJOB/PilotProgressionBalance.md; пороги 101–150 остаются открытыми.",
+   "components": [
+    "server/internal/rpg/progression.go"
+   ],
+   "tests": [
+    "Ручная сверка политики с ответом владельца 2026-11-09"
+   ]
+  },
+  {
+   "id": "PP-02",
+   "title": "Внедрить уровни и миграцию",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "BLOCKED",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "PP-01"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
+  },
+  {
+   "id": "PP-03",
+   "title": "Внедрить события и множители XP",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "PP-02"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
+  },
+  {
+   "id": "PP-04",
+   "title": "Внедрить граф талантов и клиент",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "PP-02"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
+  },
+  {
+   "id": "PP-05",
+   "title": "Внедрить сохранённые билды",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "PP-04"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
+  },
+  {
+   "id": "PP-06",
+   "title": "Внедрить мастерства и профили",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "PP-03"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
+  },
+  {
+   "id": "PP-07",
+   "title": "Внедрить ранги и инженерную модернизацию",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "SR-100C"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
+  },
+  {
+   "id": "PP-08",
+   "title": "Интегрировать характеристики и проверить баланс",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "updated": "2026-11-09",
+   "depends_on": [
+    "PP-04",
+    "PP-06",
+    "PP-07"
+   ],
+   "spec": "QUESTJOB/PilotProgressionBalance.md",
+   "acceptance": "Реализация, серверные тесты и проверка UI этапа; сохранение прогресса и идемпотентность.",
+   "components": [
+    "server/internal/rpg",
+    "client"
+   ],
+   "tests": [
+    "Тесты этапа из спецификации; интеграция сохранений и релогина"
+   ]
   }
  ]
 }

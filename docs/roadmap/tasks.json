@@ -1,0 +1,583 @@
+{
+ "schema": "roadmap-tasks/v1",
+ "project": "CosmocRPG",
+ "branch": "main",
+ "generated_by": "docs/roadmap-refactor-v2.0 (Kimi Code)",
+ "updated": "2026-11-09",
+ "last_verified_sha": "829c36e",
+ "modules": [
+  "GALAXY",
+  "SHIPS",
+  "COMBAT",
+  "QUESTS",
+  "AI_PLAYERS",
+  "CREW",
+  "ECONOMY",
+  "CORPORATIONS",
+  "UI_UX",
+  "CLIENT",
+  "SERVER",
+  "INFRASTRUCTURE",
+  "RPG"
+ ],
+ "statuses": [
+  "TODO",
+  "IN_PROGRESS",
+  "BLOCKED",
+  "DONE",
+  "FAILED",
+  "DEFERRED"
+ ],
+ "release_channels": [
+  "server",
+  "apk"
+ ],
+ "release_values": [
+  "NOT_RELEASED",
+  "IN_MAIN",
+  "CI_VERIFIED",
+  "STAGING",
+  "PRODUCTION",
+  "APK_RELEASED"
+ ],
+ "tasks": [
+  {
+   "id": "PROTO-01",
+   "title": "Клиент landscape + HUD",
+   "module": "UI_UX",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Godot-клиент 0.3.12, HUD по MMO-принципам (R-33…R-35)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   },
+   "commits": [
+    "e4295ad",
+    "932f2f2"
+   ]
+  },
+  {
+   "id": "PROTO-02",
+   "title": "Аккаунты и сохранение",
+   "module": "SERVER",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "argon2id, перенос прогресса (R-13)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-03",
+   "title": "Три системы и гиперпереходы",
+   "module": "GALAXY",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Аврора/Меридиан/Красный Шторм, Router, jump; live-проверка 2026-11-09",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   },
+   "errors": [
+    "ERROR-SR-010-гейт-токен"
+   ],
+   "commits": [
+    "c9da7a8",
+    "5c6f168"
+   ]
+  },
+  {
+   "id": "PROTO-04",
+   "title": "Полёт 2.5D и управление",
+   "module": "CLIENT",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "тап/автопилот/джойстик; препятствия серверные — частично (Э-4 открыт)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-05",
+   "title": "Серверный бой PvE",
+   "module": "COMBAT",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "враги, автоатака, способности, щит/корпус, награды (R-48, R-49)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-06",
+   "title": "Добыча ресурса",
+   "module": "GALAXY",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "месторождения, груз, серверная проверка",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-07",
+   "title": "Станция: ремонт/покупка/улучшение",
+   "module": "ECONOMY",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Э-2; live market 2026-11-09",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   },
+   "commits": [
+    "a6f48ab",
+    "1137389"
+   ]
+  },
+  {
+   "id": "PROTO-08",
+   "title": "Локальный рынок с защитой балансов",
+   "module": "ECONOMY",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "атомарное списание, идемпотентные начисления",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-09",
+   "title": "Цепочка заданий главы 1 (5 шагов)",
+   "module": "QUESTS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "reach/kill/mine/sell/jump + After; не пройдена живьём end-to-end",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   },
+   "tests": [
+    "quest_test.go",
+    "server_gateway_test.gd"
+   ],
+   "commits": [
+    "5c6f168"
+   ]
+  },
+  {
+   "id": "PROTO-10",
+   "title": "AI-капитаны с ролями",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "ИИ-1 агент мира, ИИ-2 реплики (R-56)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-11",
+   "title": "Админка с правами и журналом",
+   "module": "INFRASTRUCTURE",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Studio, чат, локации, корабли, дизайн, ИИ-игроки",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-12",
+   "title": "Два клиента одновременно",
+   "module": "SERVER",
+   "priority": "P1",
+   "status": "IN_PROGRESS",
+   "description": "тесты+бот ✅; живая двухклиентская приёмка — за владельцем (Э-5)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "владелец",
+   "tests": [
+    "server_gateway_test.go"
+   ]
+  },
+  {
+   "id": "PROTO-13",
+   "title": "Тесты/логи/бэкапы/CI",
+   "module": "INFRASTRUCTURE",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "20+1 пакетов, бэкапы, CI зелёный, SR-007 закрыт",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "PROTO-05B",
+   "title": "Сквозная приёмка прототипа (Э-5)",
+   "module": "INFRASTRUCTURE",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "сценарий Решения №30 двумя живыми клиентами + таблица готово/частично/нет; контрольная точка",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Kimi",
+   "depends_on": [
+    "PROTO-12"
+   ]
+  },
+  {
+   "id": "K-1",
+   "title": "Корпорации: сервер",
+   "module": "CORPORATIONS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "corp_create/join/leave/info, взнос 10k, миграция 0019",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "PRODUCTION",
+    "apk": "APK_RELEASED"
+   },
+   "tests": [
+    "corp_test.go",
+    "TestPGStoreCorporationFlow"
+   ],
+   "commits": [
+    "0bbbd6f"
+   ]
+  },
+  {
+   "id": "K-1B",
+   "title": "Корпорации: клиент",
+   "module": "CORPORATIONS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "экран корпорации в меню ☰: создание, вступление, состав, тег в профиле",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "depends_on": [
+    "K-1"
+   ]
+  },
+  {
+   "id": "K-2",
+   "title": "Квест тип deliver + продолжение цепочки",
+   "module": "QUESTS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "доставка ресурса в станцию другой системы; шаги 6–8 главы 1 в Меридиане",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "depends_on": [
+    "PROTO-03",
+    "K-1B"
+   ]
+  },
+  {
+   "id": "K-3",
+   "title": "Локации: журнал посещений и навигация",
+   "module": "GALAXY",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "«прибыл в локацию», журнал, подсказки на карте",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "SR-100C",
+   "title": "Оснащение: сохранение и смена в доке",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "сохранение/повторный вход, смена только в доке вне боя (Codex)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "branch": "codex/equipment",
+   "depends_on": [
+    "SR-100B"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-100D",
+   "title": "Игровая приёмка оснащения + release",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "сквозной клиент+сервер сценарий, APK при клиентских изменениях",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "depends_on": [
+    "SR-100C"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-012",
+   "title": "Контракты эффектов/умений (72+30)",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "полные §7 формулы, effect registry (SR-020)",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-100D"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-013",
+   "title": "36 пассивов и стартовые модули",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "модификаторы rpg.Compute, достижимость навыков",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-012"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-014",
+   "title": "Деревья специализаций (30)",
+   "module": "SHIPS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "6 узлов на дерево, усиление ульты 20",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-013"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-020",
+   "title": "Effect registry и совместимость",
+   "module": "SHIPS",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "все effect types, атомарность, legacy совместимость",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-012"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "errors": [
+    "ERROR-SR-002"
+   ]
+  },
+  {
+   "id": "SR-030",
+   "title": "Предметы, экипировка, три билда",
+   "module": "SHIPS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "масса/мощность/слоты/владение, транзакции без дюпа",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-020"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-040",
+   "title": "XP, исследования, таланты, БД",
+   "module": "SHIPS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "добавочные миграции, сброс идемпотентен",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-014",
+    "SR-030"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-050",
+   "title": "Ангар/HUD/процедурные силуэты",
+   "module": "SHIPS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "4+ульта+автоатака, причины недоступности",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-030",
+    "SR-040"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-060",
+   "title": "NPC/PvE/PvP/экономика умений",
+   "module": "SHIPS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "общие серверные правила, антифарм, PvP-коэффициенты",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-020",
+    "SR-040"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "SR-070",
+   "title": "Регрессия и нагрузка",
+   "module": "SHIPS",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "каталоги 15/12/30/72/30/36, race/DB/Godot/нагрузка",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "Codex",
+   "depends_on": [
+    "SR-050",
+    "SR-060"
+   ],
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "E-4",
+   "title": "Серверные препятствия (минимум NAV-01)",
+   "module": "GALAXY",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "крупные астероиды/станции непроходимы, автопилот объезжает",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "RADIO",
+   "title": "Радио: плеер, библиотека, прерывания",
+   "module": "CLIENT",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "6 треков готовы (R-43), рекламные вставки позже",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/roadmap/modules/CLIENT.md"
+  },
+  {
+   "id": "QUEST-STAGE0",
+   "title": "Quest Core и NAV-01 (строгий режим)",
+   "module": "QUESTS",
+   "priority": "P1",
+   "status": "DEFERRED",
+   "description": "аудит этапа 0 → план → подтверждение владельца; см. §6 AI_HANDOFF_PROMPT",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "QUESTJOB/FinalQuest.md"
+  },
+  {
+   "id": "FPS-CHECK",
+   "title": "Замер FPS на устройстве",
+   "module": "CLIENT",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "iQOO 15R с живыми локациями и большой картой — владелец",
+   "updated": "2026-11-09",
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": "владелец"
+  }
+ ]
+}

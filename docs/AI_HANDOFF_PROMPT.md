@@ -10,8 +10,11 @@
 рабочая машина — VPS, каталог ~/projects/CosmocRPG). Владелец ведёт работу поэтапно и требует честных отчётов.
 
 СНАЧАЛА: cd ~/projects/CosmocRPG && git pull --rebase origin main && git log --oneline -15 && git status.
-ПЕРВЫМ ДЕЛОМ прочитай: docs/AI_HANDOFF_PROMPT.md (этот документ целиком), docs/ROADMAP.md (единая дорожная карта R-01…R-54),
-docs/HANDOFF.md (журнал последних этапов), docs/DECISIONS.md, docs/DEPLOYMENT.md, docs/SECURITY.md.
+ПЕРВЫМ ДЕЛОМ прочитай: docs/roadmap/AI_START_HERE.md (маршрут чтения за 2 минуты), docs/ROADMAP.md (дашборд),
+docs/roadmap/NOW.md (очередь), docs/roadmap/AGENT_TASKS.md (кто чем занят), затем этот документ целиком.
+Дальше по задаче: docs/roadmap/REQUIREMENTS_INDEX.md (R-реестр), docs/HANDOFF.md (журнал), docs/DECISIONS.md,
+docs/DEPLOYMENT.md, docs/SECURITY.md, профильный docs/roadmap/modules/<MODULE>.md. Перед коммитом документации:
+python3 tools/validate_roadmap.py.
 
 ПРАВИЛА (нарушать нельзя):
 1. Дорожная карта прежде всего: каждое новое требование владельца сначала вносится в docs/ROADMAP.md (новый номер R-NN, статус, этап),

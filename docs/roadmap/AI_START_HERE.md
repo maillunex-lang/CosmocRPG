@@ -1,0 +1,53 @@
+# AI_START_HERE.md — старт для любого ИИ-агента
+
+## Уровень 1. Ориентация за 2 минуты
+
+1. **Проект**: «Звёздные рубежи» — мобильная космическая MMO. Клиент Godot 4.7 (Android), сервер Go (авторитетный), PostgreSQL, админка React/TS, Docker Compose, CI GitHub Actions.
+2. **Ветка работы**: `main` (релизы и координация) или назначенная в `roadmap/AGENT_TASKS.md`.
+3. **Правило №1**: новое требование владельца сначала фиксируется в реестре (`roadmap/REQUIREMENTS_INDEX.md`, R-NN), потом реализация. Противоречие — вопрос владельцу, не решать самому.
+4. **Правило №2**: не заявляй «готово» без проверки. Статус `DONE` ≠ выпущено: смотри поля `release.server` / `release.apk` в `roadmap/tasks.json`.
+
+## Уровень 2. Маршрут чтения под задачу
+
+| Тип задачи | Читать |
+|---|---|
+| Ориентация «что сейчас» | `docs/ROADMAP.md` (дашборд) → `roadmap/NOW.md` → `roadmap/STATUS.md` |
+| Баг | `roadmap/BLOCKERS.md` → `docs/ships-rpg/ERROR_LOG.md` (поиск по симптому) → `docs/AI_HANDOFF_PROMPT.md` §команды |
+| Новая механика | `roadmap/NOW.md` → `roadmap/modules/<MODULE>.md` → профильное ТЗ (`QUESTJOB/`, `docs/design/`, `docs/ships-rpg/`) |
+| UI | `roadmap/modules/UI_UX.md` → `docs/ui/IMPLEMENTATION_PLAN.md`, `UI_CHANGELOG.md` |
+| Сервер/протокол | `docs/API.md` → `roadmap/modules/SERVER.md` → код `server/internal/ws/hub.go` (список известных типов сообщений!) |
+| Квесты | `roadmap/modules/QUESTS.md` → `QUESTJOB/FinalQuest.md`; строгий режим §6 AI_HANDOFF_PROMPT |
+| Релиз/выкатка | `docs/DEPLOYMENT.md` → `docs/ships-rpg/RELEASE_PROCESS.md` → регламент в AI_HANDOFF_PROMPT |
+| История «почему так» | `docs/HANDOFF.md` (журнал), `docs/DECISIONS.md` (15 решений + АР), `roadmap/HISTORY.md` |
+
+Уровень 3 — карточка задачи в `tasks.json` (критерии, компоненты, тесты, коммиты).
+Уровень 4 — архив и полные ТЗ, только если нужно.
+
+## Уровень 2+. Координация
+
+1. Открой `roadmap/AGENT_TASKS.md`: не бери задачу с живым `owner`, не меняй чужие незавершённые задачи.
+2. Занял задачу → запиши себя (`owner`, `branch`, область файлов, дата).
+3. Перед большими правками: `git fetch && git log origin/main -3 && git status` — Markdown не блокировка.
+4. Предупреждение о пересечении: если твои файлы совпадают с чужой активной работой — согласуй порядок.
+
+## Проверки (минимум перед коммитом)
+
+- Сервер: `gofmt -l server/`, `go vet ./...`, `go test ./...` (тесты БД: `COSMOC_TEST_DATABASE_URL`).
+- Клиент: `tools/test_client.sh` (нужен локальный сервер; полный прогон «как в CI»).
+- Админка: `npx tsc --noEmit && npm test`.
+- Документация: `python3 tools/validate_roadmap.py`.
+
+## Фиксация ошибок
+
+Повторяющаяся ошибка → новая запись `ERROR-SR-NNN` в `docs/ships-rpg/ERROR_LOG.md` (симптом, причина, исправление, тест-предохранитель, коммит). Воспроизведи red/green, прежде чем чинить.
+
+## Передача работы
+
+1. Обнови карточку задачи в `tasks.json` (status, release, commits, tests, updated).
+2. Обнови профильный модуль и `NOW.md` (если очередь сдвинулась).
+3. Допиши `docs/HANDOFF.md`: что/проверки/SHA/ограничения/следующие шаги.
+4. Очисти рабочее дерево, удали тестовых игроков.
+
+## Универсальная инструкция (одной строкой)
+
+> Прочитай AI_START_HERE.md, затем NOW.md и профильный документ своей задачи. Проверь AGENT_TASKS.md, актуальную ветку и зависимости. После выполнения обнови статус, результаты тестов, ошибки и HANDOFF. Не изменяй чужие незавершённые задачи.

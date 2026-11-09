@@ -489,3 +489,11 @@ SR-100b: run42616666345 для c9a3391 завершён, все4 jobs success (�
 ## 2026-11-09 — Codex: интеграция основы общего оснащения EB-020
 
 По прямому разрешению пользователя подготовлено объединение codex/equipment-builds-progression (f4e9608) с актуальной main3026811 в отдельном worktree. Код foundation: каталог346 prototypes, общий инвентарь/профили, миграция0021, атомарные серверные операции покупки/исследований/улучшения/установки. В текущую игру общий fitting ещё не подключён: EB030…070 TODO, три билда/прогрессия/ульты не объявлены готовыми. Существующий native engine runtime сохранён. Новая структура дорожной карты и чужие изменения сохранены; конфликт docs/ROADMAP.md решён вручную. tasks.json дополнен EB-FOUNDATION и EB-INTEGRATION. Полные проверки и финальный SHA публикации: docs/ships-rpg/REGRESSION_TESTS.md и HANDOFF.md. Production/APK/живую БД Codex не трогал. Внимание следующему релизному агенту:0021 новая миграция, её применение к production требует отдельного разрешения на деплой.
+
+## 2026-11-09 — интеграция PP с оборудованием из main
+
+База интеграции 0f3ff41, feature e3bf6a4; отдельный worktree CosmocRPG-integration. Ручное объединение tasks.json сохранило все 35 исходных карточек, добавило PP-01…08; конфликт сводок устранён штатной генерацией. Go/SQL оборудования не изменены; 21 уникальный номер миграций, новых SQL нет.
+
+Проверки: go test -race -json ./... exit 0, отдельный PostgreSQL 16 в собственном контейнере cosmoc-pp-integration-20261109 (loopback, tmpfs), COSMOC_TEST_DATABASE_URL. Итоги событий: {('skip', 'package'): 3, ('pass', 'test'): 483, ('pass', 'package'): 23, ('skip', 'test'): 3}. Единственный test SKIP — TestAmbientFollowFromAnotherCaptain: движок не дал ответную реплику, допустимый skip в существующем тесте; DB-тесты не пропущены. go vet ./..., go build ./..., gofmt, git diff --check, validate_roadmap.py PASS. Клиент/Android и production не проверялись и не развёртывались.
+
+Реализованы только cap пилота 150 и базовые очки до 60. PP-02 IN_PROGRESS: архив/сброс билдов, бонусные достижения и клиентская приёмка остаются. PP-01 DONE — согласование политики, не миграция. Публикация в main разрешена, production-деплой запрещён. CI до интеграции не запускается из-за failed payments/spending limit GitHub; результат нового SHA проверяется после push.

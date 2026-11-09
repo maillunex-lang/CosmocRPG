@@ -57,3 +57,7 @@ SR-100c опубликован в main d9669c9 обычным push после с
 Corebc0aed9/WSaa7f950/UIa5bfd2e. Per-actor reservation вместо world lock на SQL; cancellable per-owner gate вместо Handler.mu на IO. Док/бой проверяются при принятии операции, последующий урон не отменяет её и не задерживается; no immunity. Reconnect ждёт commit до нового bootstrap, idle locks удаляются. Реальный PG row-lock тест подтверждает, что B move/ships + Tick + C join продолжаются при заблокированной записи A. Полный Go+PG+Godot441 test/subtest/22 пакета PASS,0 FAIL; hangar40/0, vet/build PASS. Итог интеграции/CI — ships-rpg/HANDOFF.md. ERROR-SR-007 остаётся Kimi, новый APK/production не выпущены. Следующий этап — SR-100d: игровая/графическая/Android приёмка, затем дальнейшее оснащение по roadmap.
 
 SR-100c-4 DONE: non-force main5b71ca7 (corebc0aed9,WSaa7f950,UIa5bfd2e), чужой FinalQuest.md сохранён; полный441/22 PASS, hangar40/0, vet/build PASS. CI42656434874 pending, не remote success; final docs/чужие commits могут сменить run. Свой PG удалён. Следующий SR-100d; ERROR-SR-007 остаётся Kimi. Production/APK не выпущены.
+
+## PP — актуальная прогрессия пилота
+
+PP-02 IN_PROGRESS: cap 150 и базовый бюджет до 60 реализованы; прежние пороги XP сохранены. Архив/сброс билдов, бонусные достижения и клиентская приёмка не завершены. План: [PILOT_PROGRESSION_PLAN](PILOT_PROGRESSION_PLAN.md). Исторические капы выше не описывают новый целевой дизайн. EB-FOUNDATION сохранён; публикация в main не означает production-деплой.

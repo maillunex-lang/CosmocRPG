@@ -105,3 +105,9 @@ EB-ERROR-002 checkpoint: после сообщения Cloud файлы и ко�
 
 ## EB-INTEGRATION — конфликт только дорожной карты
 При merge с main3026811 конфликт docs/ROADMAP.md из-за перехода другой сессии на dashboard+tasks.json. Сохранён новый dashboard, добавлена точная EB-контрольная точка; новый реестр дополнен2 задачами и перегенерирован штатным tools/gen_roadmap.py. Валидатор PASS35 tasks. Конфликтов Go/SQL нет; полный Go+realPG race PASS. Это integration conflict, не новая gameplay-ошибка.
+
+## PP-INTEGRATION-001 — сводки ROADMAP и лимит CI
+
+Дата: 2026-11-09; задача PP-02; подсистема документации/CI. При объединении с main 0f3ff41 конфликтовали tasks.json, ROADMAP.md, STATUS.md, DEPENDENCIES.md. Причина: независимое добавление PP и EB задач к одной базе. Исправление: сохранены карточки EB из свежей main, добавлены PP по уникальным ID, сводки перегенерированы. Проверка: validate_roadmap.py PASS, уникальность 21 номеров SQL подтверждена; код EB/SQL не менялся. Статус: конфликт устранён.
+
+Отдельное наблюдение CI main 0f3ff41: GitHub Actions не запустил jobs, annotation сообщает failed payments/spending limit. Это подтверждённое внешнее ограничение, не доказанная ошибка игрового кода. Статус: OPEN, требует действий владельца в Billing & plans; не изменять workflow для обхода.

@@ -1,6 +1,6 @@
 # Модуль: RPG-фундамент
 
-Прогрессия пилота/кораблей/мастерство, капсы 100/50 (SR-014a). План: `docs/design/RPG_ARCHITECTURE.md` (этапы RPG-0…RPG-6).
+Прогрессия пилота/кораблей/мастерство: текущие капсы 150/50 (PP-02/SR-014a). План: `docs/design/RPG_ARCHITECTURE.md` (этапы RPG-0…RPG-6).
 
 ## RPG-фундамент (R-28, `MASTER TASK: STAR FRONTIERS RPG FOUNDATION V1`)
 
@@ -33,3 +33,7 @@
 Предложенные модули (названия предварительные, адаптируются к архитектуре без новых микросервисов): PilotProgression, Professions, Attributes, TalentGraph, AbilitiesAndEffects, ShipProgression, ShipLoadouts, ItemDefinitionsAndInstances, LootAndSalvage, Engineering, CraftingAndResearch, ReputationAndPolitics, AchievementsAndChronicle, MasteryAndEndgame, OfflineExpeditions.
 
 Требования к ядру: дерево талантов — уникальные ID, связи, несколько маршрутов, стоимость и требования, типы эффектов, проверка связности, пересчёт при сбросе, версии контента, безопасная миграция, масштабируемая визуализация в Godot; предметы — шаблоны отдельно от экземпляров; сервер — единственный источник истины для характеристик, валюты, инвентаря, боя, наград и AFK; экономика атомарная и защищена от повторного применения; ИИ-капитаны подчиняются тем же ограничениям и не создают ресурсы бесконтрольно.
+
+## Актуальная прогрессия PP
+
+[План PP-01…08](../PILOT_PROGRESSION_PLAN.md), [баланс v1](../../../QUESTJOB/PilotProgressionBalance.md). Кап пилота 150, базовые очки до 60 реализованы; PP-02 остаётся IN_PROGRESS. Исторические строки ниже/выше с капами 60/100 и размером дерева не заменяют утверждённый PilotProgression. Оснащение EB-FOUNDATION сохранено; его продолжение отдельно от PP. Production-деплой этой интеграции не разрешён.

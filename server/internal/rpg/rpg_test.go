@@ -204,7 +204,7 @@ func TestCurves(t *testing.T) {
 	if lvl, into, _ := DefaultPilotCurve.LevelFor(-5); lvl != 1 || into != 0 {
 		t.Fatal("отрицательный опыт считается нулём")
 	}
-	if TalentPoints(60) < 40 || AttributePoints(1) != 0 || TalentPoints(1) != 0 {
+	if TalentPoints(60) != 30 || AttributePoints(1) != 0 || TalentPoints(1) != 0 {
 		t.Fatal("очки по уровням заданы неверно")
 	}
 }
@@ -252,7 +252,7 @@ func TestExtendedCurvesPreserveLegacyXP(t *testing.T) {
 		legacy, current Curve
 		cap             int
 	}{
-		{"pilot", Curve{MaxLevel: 60, Base: 100, Growth: 1.08}, DefaultPilotCurve, 100},
+		{"pilot", Curve{MaxLevel: 100, Base: 100, Growth: 1.08}, DefaultPilotCurve, 150},
 		{"ship", Curve{MaxLevel: 30, Base: 150, Growth: 1.12}, DefaultShipCurve, 50},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -285,5 +285,26 @@ func TestExtendedCurvesPreserveLegacyXP(t *testing.T) {
 				t.Fatalf("new cap: %d/%d", got, next)
 			}
 		})
+	}
+}
+
+func TestPilotTalentBudget150(t *testing.T) {
+	for _, tc := range []struct{ level, want int }{{-1, 0}, {0, 0}, {1, 0}, {2, 1}, {3, 1}, {100, 50}, {119, 59}, {120, 60}, {121, 60}, {150, 60}, {151, 60}} {
+		if got := TalentPoints(tc.level); got != tc.want {
+			t.Errorf("level %d: got %d want %d", tc.level, got, tc.want)
+		}
+	}
+	for level := 1; level <= 150; level++ {
+		xp := DefaultPilotCurve.TotalXP(level)
+		got, into, _ := DefaultPilotCurve.LevelFor(xp)
+		if got != level || into != 0 {
+			t.Fatalf("threshold %d: level=%d into=%d", level, got, into)
+		}
+		if level > 1 {
+			prev, _, _ := DefaultPilotCurve.LevelFor(xp - 1)
+			if prev != level-1 {
+				t.Fatalf("before threshold %d: %d", level, prev)
+			}
+		}
 	}
 }

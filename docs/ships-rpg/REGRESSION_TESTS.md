@@ -162,3 +162,11 @@ Own tmpfs PostgreSQL16 container cosmoc-equipment-builds-20261109, loopback only
 
 ## EB-020: интеграция с параллельной main
 2026-11-09: merge base main3026811, дополнительно сохранены b3349a7 и f9c3340 (QUESTJOB/AI.md, без пересечений кода). `COSMOC_TEST_DATABASE_URL=<own local PG16> go test -race -p 1 -count=1 -timeout=300s ./...`: exit0, все пакеты PASS. equipment17.477s/fitting6.464s/db3.162s/world7.907s/ws26.143s. `go vet ./...`, `go build ./cmd/server`, gofmt выбранных пакетов, git diff --check и python3 tools/validate_roadmap.py PASS. Godot live harness не запускался (COSMOC_TEST_GODOT не задан), Android/production не проверялись и не выпускались. Новая миграция0021 прогнана на отдельной локальной БД, production не затрагивался. Существующие client/site/QUESTJOB изменения main сохранены.
+
+## 2026-11-09 — интеграция PP с оборудованием из main
+
+База интеграции 0f3ff41, feature e3bf6a4; отдельный worktree CosmocRPG-integration. Ручное объединение tasks.json сохранило все 35 исходных карточек, добавило PP-01…08; конфликт сводок устранён штатной генерацией. Go/SQL оборудования не изменены; 21 уникальный номер миграций, новых SQL нет.
+
+Проверки: go test -race -json ./... exit 0, отдельный PostgreSQL 16 в собственном контейнере cosmoc-pp-integration-20261109 (loopback, tmpfs), COSMOC_TEST_DATABASE_URL. Итоги событий: {('skip', 'package'): 3, ('pass', 'test'): 483, ('pass', 'package'): 23, ('skip', 'test'): 3}. Единственный test SKIP — TestAmbientFollowFromAnotherCaptain: движок не дал ответную реплику, допустимый skip в существующем тесте; DB-тесты не пропущены. go vet ./..., go build ./..., gofmt, git diff --check, validate_roadmap.py PASS. Клиент/Android и production не проверялись и не развёртывались.
+
+Реализованы только cap пилота 150 и базовые очки до 60. PP-02 IN_PROGRESS: архив/сброс билдов, бонусные достижения и клиентская приёмка остаются. PP-01 DONE — согласование политики, не миграция. Публикация в main разрешена, production-деплой запрещён. CI до интеграции не запускается из-за failed payments/spending limit GitHub; результат нового SHA проверяется после push.

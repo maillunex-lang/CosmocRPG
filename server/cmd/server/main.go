@@ -21,6 +21,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/db"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
@@ -346,9 +347,15 @@ func run() error {
 		designSvc = ds
 		log.Info("библиотека дизайна готова", "публикация", signer != nil)
 	}
+	// корпорации минимум (R-64): взнос списывается через quest-сервис
+	var corpSvc *corp.Service
+	if quests != nil {
+		corpSvc = corp.NewService(corp.NewPGStore(pool), quests.Spend)
+	}
+
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: universe, Store: playerStore, ShipPassports: &passports, Quests: quests, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
+		World: universe, Store: playerStore, ShipPassports: &passports, Quests: quests, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
 	if cfg.FeatureAI {

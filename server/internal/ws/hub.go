@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
@@ -267,7 +268,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 	}
 	pw := h.opts.World.For(ss.pid)
 	switch m.Type {
-	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "jump":
+	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "jump", "market", "repair", "buy", "ship_upgrade":
 		h.gameShip(ctx, c, ss, m)
 	case "shop", "shop_buy", "shop_equip":
 		h.shopMsg(ctx, c, ss, m)
@@ -315,6 +316,8 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		reply(errMsg(m.ID, "not_joined", "вы не в мире"))
 		return
 	}
+	sctx, scancel := context.WithTimeout(ctx, 5*time.Second)
+	defer scancel()
 	w := hww
 	fail := func(err error) {
 		code := err.Error()
@@ -360,6 +363,123 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		}
 	case "mine_stop":
 		w.StopMining(ss.pid)
+	case "market":
+		// Э-2: цены покупки ресурсов, стоимость ремонта и улучшения у станции
+		prices := map[string]float64{}
+		cfg := h.opts.World.For(ss.pid)
+		if cfg != nil {
+			for name := range marketResources {
+				if pr, ok := cfg.ResourcePrice(name); ok {
+					prices[name] = pr
+				}
+			}
+		}
+		var repairCost, upgradeCost int64 = -1, -1
+		if c, err := h.opts.World.For(ss.pid).RepairCost(ss.pid); err == nil {
+			repairCost = c
+		}
+		if lvl, ok := h.opts.World.For(ss.pid).ShipLevelOf(ss.pid); ok {
+			if lvl < 50 {
+				upgradeCost = int64(lvl) * 1000
+			}
+		}
+		reply(Message{Type: "market", ID: m.ID, Payload: mustJSON(map[string]any{"prices": prices, "repair_cost": repairCost, "upgrade_cost": upgradeCost})})
+	case "repair":
+		cost, err := h.opts.World.For(ss.pid).RepairCost(ss.pid)
+		if err != nil {
+			reply(errMsg(m.ID, stationCode(err), stationText(err)))
+			return
+		}
+		if cost <= 0 {
+			reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": 0})})
+			return
+		}
+		total, err := h.opts.Quests.Spend(sctx, ss.pid, cost)
+		if err != nil {
+			code := "no_credits"
+			if err != quest.ErrNotEnough {
+				h.log.Error("ремонт", "player", ss.pid, "err", err)
+				code = "internal"
+			}
+			reply(errMsg(m.ID, code, "не хватает кредитов на ремонт"))
+			return
+		}
+		if err := h.opts.World.For(ss.pid).Repair(ss.pid); err != nil {
+			reply(errMsg(m.ID, stationCode(err), stationText(err)))
+			return
+		}
+		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": total, "spent": cost})})
+	case "buy":
+		var p struct {
+			Resource string  `json:"resource"`
+			Amount   float64 `json:"amount"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Resource == "" || len(p.Resource) > 24 || p.Amount <= 0 || p.Amount > 1000 {
+			reply(errMsg(m.ID, "bad_message", "некорректная покупка"))
+			return
+		}
+		w := h.opts.World.For(ss.pid)
+		price, ok := w.ResourcePrice(p.Resource)
+		if !ok {
+			reply(errMsg(m.ID, "no_item", "этот товар не продаётся"))
+			return
+		}
+		cost := int64(math.Ceil(price * p.Amount))
+		total, err := h.opts.Quests.Spend(sctx, ss.pid, cost)
+		if err != nil {
+			code := "no_credits"
+			if err != quest.ErrNotEnough {
+				h.log.Error("покупка", "player", ss.pid, "err", err)
+				code = "internal"
+			}
+			reply(errMsg(m.ID, code, "не хватает кредитов"))
+			return
+		}
+		if err := w.AddCargo(ss.pid, p.Resource, p.Amount); err != nil {
+			reply(errMsg(m.ID, stationCode(err), stationText(err)))
+			return
+		}
+		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": total, "spent": cost})})
+	case "ship_upgrade":
+		w := h.opts.World.For(ss.pid)
+		shipType, ok := w.ShipTypeOf(ss.pid)
+		if !ok {
+			reply(errMsg(m.ID, "not_joined", "вы не в мире"))
+			return
+		}
+		st, err := h.opts.Ships.State(sctx, ss.pid, shipType)
+		if err != nil {
+			h.log.Error("улучшение корабля: прогресс", "player", ss.pid, "err", err)
+			reply(errMsg(m.ID, "internal", "внутренняя ошибка"))
+			return
+		}
+		if st.Level >= st.MaxLevel {
+			reply(errMsg(m.ID, "max_level", "корабль уже максимального уровня"))
+			return
+		}
+		cost := int64(st.Level) * 1000
+		total, err := h.opts.Quests.Spend(sctx, ss.pid, cost)
+		if err != nil {
+			code := "no_credits"
+			if err != quest.ErrNotEnough {
+				h.log.Error("улучшение корабля", "player", ss.pid, "err", err)
+				code = "internal"
+			}
+			reply(errMsg(m.ID, code, "не хватает кредитов на улучшение"))
+			return
+		}
+		// покупка = гарантированный уровень: докидываем опыт до порога следующего уровня (идемпотентно по ключу)
+		if st.IntoLevel < st.ToNext {
+			key := fmt.Sprintf("buy_level:%s:%d", shipType, st.Level)
+			if g, err := h.opts.Ships.Grant(sctx, ss.pid, shipType, key, "market", st.ToNext-st.IntoLevel); err == nil && g.Granted {
+				h.log.Info("корабль улучшен за кредиты", "player", ss.pid, "ship", shipType, "level", g.State.Level)
+			}
+		}
+		var sp any = h.applyShipLevel(sctx, ss.pid, shipType)
+		if sp == nil {
+			sp = map[string]any{"level": st.Level + 1}
+		}
+		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": total, "spent": cost, "ship_progress": sp})})
 	case "jump":
 		var p struct {
 			To string `json:"to"`
@@ -1097,6 +1217,39 @@ func (h *Handler) grantSubscriptionDaily(ctx context.Context, pid string, st sho
 	}
 	if granted {
 		h.log.Info("подписка: ежедневная награда выдана", "player", pid, "credits", daily)
+	}
+}
+
+// marketResources — ресурсы, доступные для покупки у станции (Э-2).
+var marketResources = map[string]bool{"iron_ore": true, "crystals": true, "gas": true, "scrap": true}
+
+func stationCode(err error) string {
+	switch err {
+	case world.ErrNoStable:
+		return "not_at_station"
+	case world.ErrHoldFull:
+		return "hold_full"
+	case world.ErrNoResource:
+		return "no_item"
+	case world.ErrDead:
+		return "dead"
+	default:
+		return "bad_request"
+	}
+}
+
+func stationText(err error) string {
+	switch err {
+	case world.ErrNoStable:
+		return "услуги станции доступны только у станции"
+	case world.ErrHoldFull:
+		return "трюм полон"
+	case world.ErrNoResource:
+		return "этот товар не продаётся"
+	case world.ErrDead:
+		return "корабль уничтожен: дождитесь восстановления"
+	default:
+		return "операция отклонена"
 	}
 }
 

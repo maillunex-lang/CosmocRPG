@@ -3,6 +3,7 @@ package quest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -144,6 +145,45 @@ func (m *MemStore) GrantCredits(_ context.Context, pid, key string, amount int64
 	m.grants[k] = true
 	m.credits[pid] += amount
 	return true, m.credits[pid], nil
+}
+
+func (m *MemStore) SpendCredits(_ context.Context, pid string, amount int64) (bool, int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cur, ok := m.credits[pid]
+	if !ok {
+		return false, 0, nil
+	}
+	if amount > 0 && cur < amount {
+		return false, cur, nil
+	}
+	m.credits[pid] = cur - amount
+	return true, m.credits[pid], nil
+}
+
+// SpendCredits списывает кредиты атомарно: баланс не может уйти в минус.
+func (s *PGStore) SpendCredits(ctx context.Context, pid string, amount int64) (bool, int64, error) {
+	if amount <= 0 {
+		var cur int64
+		if err := s.pool.QueryRow(ctx, `SELECT credits FROM players WHERE public_id = $1`, pid).Scan(&cur); err != nil {
+			return false, 0, err
+		}
+		return true, cur, nil
+	}
+	var credits int64
+	if err := s.pool.QueryRow(ctx, `
+		UPDATE players SET credits = credits - $2, updated_at = now()
+		WHERE public_id = $1 AND credits >= $2
+		RETURNING credits`, pid, amount).Scan(&credits); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			if err := s.pool.QueryRow(ctx, `SELECT credits FROM players WHERE public_id = $1`, pid).Scan(&credits); err != nil {
+				return false, 0, err
+			}
+			return false, credits, nil
+		}
+		return false, 0, err
+	}
+	return true, credits, nil
 }
 
 // MemStore — хранилище в памяти для тестов; повторяет семантику PGStore.

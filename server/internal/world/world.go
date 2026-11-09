@@ -74,7 +74,7 @@ type Player struct {
 	deadUntil    float64
 	revealed     map[string]float64 // скрытый объект -> игровое время окончания видимости
 	spec         ShipSpec
-	shipLevel    int // уровень корабля 1–30: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
+	shipLevel    int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
 
 	gender    string
 	pilotSpec string

@@ -37,7 +37,7 @@ func TestShipLevelsIndependentAndIdempotent(t *testing.T) {
 			s, pid := mk(t)
 			ctx := context.Background()
 			st, _ := s.State(ctx, pid, "FTR-001")
-			if st.Level != 1 || st.XP != 0 || st.MaxLevel != 30 {
+			if st.Level != 1 || st.XP != 0 || st.MaxLevel != 50 {
 				t.Fatalf("новый корабль: %+v", st)
 			}
 			g, err := s.Grant(ctx, pid, "FTR-001", "sxp:a", "kill", 200)
@@ -56,7 +56,7 @@ func TestShipLevelsIndependentAndIdempotent(t *testing.T) {
 				t.Fatalf("уровни при смене корабля не сохранились: %+v", all)
 			}
 			g, _ = s.Grant(ctx, pid, "FTR-001", "sxp:huge", "kill", 1<<40)
-			if g.State.Level != 30 || g.State.ToNext != 0 {
+			if g.State.Level != 50 || g.State.ToNext != 0 {
 				t.Fatalf("потолок уровня: %+v", g.State)
 			}
 			if g, _ = s.Grant(ctx, pid, "FTR-001", "zero", "kill", 0); g.Granted {

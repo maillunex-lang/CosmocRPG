@@ -19,3 +19,9 @@
 - До исправления: `go test -count=1 ./internal/world -run TestUnsupportedCatalogAbilityFailsAtomically` — FAIL, `custom: got <nil>, want ErrUnknown`. Ошибка ERROR-SR-002 воспроизведена.
 - Первая команда исправления использовала неверный cwd, FileNotFoundError; правка повторена с правильным путём. Промежуточный JSON-прогон не используется как итог, поскольку начался до исправления.
 - Финальный запуск после правки: `go test -race -count=1 -json ./...`, PASS (exit 0): 253 test/subtest событий PASS, 62 SKIP, 0 FAIL; 20 пакетов PASS, 3 без тестов. Регрессионный TestUnsupportedCatalogAbilityFailsAtomically — PASS. Повторный go vet и gofmt — PASS.
+
+## 2026-11-09 — SR-014a, подтверждённые caps 100/50
+Владелец ответил «Да, применить новые требования». Изменён только MaxLevel (пилот 100, корабль 50); Base/Growth прежние.
+`go test -race -count=1 -json ./internal/rpg ./internal/pilot ./internal/shipxp ./internal/world ./internal/ws` — PASS (exit 0), все 5 пакетов.
+TestExtendedCurvesPreserveLegacyXP проверяет все прежние пороги 1–60/1–30 и XPForNext ниже старого cap, продолжение после прежнего cap, новые caps. Существующие service-тесты проверяют идемпотентность начислений, отдельный XP каждого корабля, world clamp — 50.
+Интеграционные PostgreSQL cases пропущены через testdb; миграции не менялись и не выполнялись. Клиент не менялся: max_level приходит с сервера; fallback 60 в profile_screen для старых/неполных данных оставлен совместимым. Godot/Android/production не проверялись.

@@ -29,7 +29,7 @@ func TestShipLevelScalesStatsAndIsIdempotent(t *testing.T) {
 		t.Fatal("повторное применение уровня накопило рост")
 	}
 	w.SetShipLevel("p1", 999)
-	if s, _ := w.Snapshot("p1"); s.Ship.Level != 30 {
+	if s, _ := w.Snapshot("p1"); s.Ship.Level != 50 {
 		t.Fatalf("потолок уровня корабля: %d", s.Ship.Level)
 	}
 	w.SetShipLevel("p1", 0)

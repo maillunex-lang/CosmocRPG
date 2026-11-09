@@ -64,11 +64,11 @@ func TestGrantIdempotentAndLevels(t *testing.T) {
 				t.Fatal("нулевой опыт не начисляется")
 			}
 			st, _ = s.State(ctx, pid)
-			if st.AttrFree != 2 || st.TalentPoints != 1 || st.MaxLevel != 60 {
+			if st.AttrFree != 2 || st.TalentPoints != 1 || st.MaxLevel != 100 {
 				t.Fatalf("очки на уровне 2: %+v", st)
 			}
 			g, _ = s.Grant(ctx, pid, "huge", "kill", 1<<40)
-			if g.State.Level != 60 || g.State.ToNext != 0 {
+			if g.State.Level != 100 || g.State.ToNext != 0 {
 				t.Fatalf("потолок уровня: %+v", g.State)
 			}
 		})

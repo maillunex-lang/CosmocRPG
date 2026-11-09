@@ -9,10 +9,10 @@ type Curve struct {
 	Growth   float64 `json:"growth"`
 }
 
-// Стартовые кривые (ориентиры, не утверждённый баланс): пилот 1–60, корабль 1–30 (АР-4).
+// Стартовые кривые (ориентиры, не утверждённый баланс): пилот 1–100, корабль 1–50 (Ships RPG v2.1, подтверждено владельцем 2026-11-09).
 var (
-	DefaultPilotCurve = Curve{MaxLevel: 60, Base: 100, Growth: 1.08}
-	DefaultShipCurve  = Curve{MaxLevel: 30, Base: 150, Growth: 1.12}
+	DefaultPilotCurve = Curve{MaxLevel: 100, Base: 100, Growth: 1.08}
+	DefaultShipCurve  = Curve{MaxLevel: 50, Base: 150, Growth: 1.12}
 )
 
 // Valid проверяет параметры кривой.

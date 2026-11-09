@@ -245,3 +245,45 @@ func TestTalentTreeValidate(t *testing.T) {
 		t.Error("цикл не замечен")
 	}
 }
+
+func TestExtendedCurvesPreserveLegacyXP(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		legacy, current Curve
+		cap             int
+	}{
+		{"pilot", Curve{MaxLevel: 60, Base: 100, Growth: 1.08}, DefaultPilotCurve, 100},
+		{"ship", Curve{MaxLevel: 30, Base: 150, Growth: 1.12}, DefaultShipCurve, 50},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.current.MaxLevel != tc.cap {
+				t.Fatalf("cap: %d", tc.current.MaxLevel)
+			}
+			for level := 1; level <= tc.legacy.MaxLevel; level++ {
+				xp := tc.legacy.TotalXP(level)
+				if tc.current.TotalXP(level) != xp {
+					t.Fatalf("legacy XP changed at %d", level)
+				}
+				got, into, _ := tc.current.LevelFor(xp)
+				if got != level || into != 0 {
+					t.Fatalf("legacy save changed at %d: %d/%d", level, got, into)
+				}
+				if level < tc.legacy.MaxLevel && tc.current.XPForNext(level) != tc.legacy.XPForNext(level) {
+					t.Fatalf("legacy next XP changed at %d", level)
+				}
+			}
+			if tc.current.XPForNext(tc.legacy.MaxLevel) <= 0 {
+				t.Fatal("old cap cannot progress")
+			}
+			level := tc.legacy.MaxLevel + 1
+			got, _, _ := tc.current.LevelFor(tc.current.TotalXP(level))
+			if got != level {
+				t.Fatalf("cannot continue beyond old cap: %d", got)
+			}
+			got, _, next := tc.current.LevelFor(tc.current.TotalXP(tc.cap) + 1234)
+			if got != tc.cap || next != 0 {
+				t.Fatalf("new cap: %d/%d", got, next)
+			}
+		})
+	}
+}

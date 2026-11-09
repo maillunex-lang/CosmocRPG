@@ -602,7 +602,7 @@
    "module": "RPG",
    "priority": "P2",
    "status": "BLOCKED",
-   "description": "Этап по PILOT_PROGRESSION_PLAN.md; баланс v1 в PilotProgressionBalance.md. Не считать наличие спецификации реализацией.",
+   "description": "Кривая до 150 утверждена: round(100*1.08^(n-1)); XP и пороги до 100 сохраняются. BLOCKED: server/internal/rpg занят активной SR-100c/d; требуется передача или согласование области изменений. Игровой код не изменён.",
    "updated": "2026-11-09",
    "depends_on": [
     "PP-01"

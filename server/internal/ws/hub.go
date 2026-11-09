@@ -153,7 +153,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "ship_upgrade":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -391,7 +391,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			return
 		}
 		if cost <= 0 {
-			reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": 0})})
+			reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": "repair", "credits": 0})})
 			return
 		}
 		total, err := h.opts.Quests.Spend(sctx, ss.pid, cost)
@@ -408,7 +408,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			reply(errMsg(m.ID, stationCode(err), stationText(err)))
 			return
 		}
-		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": total, "spent": cost})})
+		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": "repair", "credits": total, "spent": cost})})
 	case "buy":
 		var p struct {
 			Resource string  `json:"resource"`
@@ -439,7 +439,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			reply(errMsg(m.ID, stationCode(err), stationText(err)))
 			return
 		}
-		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": total, "spent": cost})})
+		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": "buy", "credits": total, "spent": cost})})
 	case "ship_upgrade":
 		w := h.opts.World.For(ss.pid)
 		shipType, ok := w.ShipTypeOf(ss.pid)
@@ -479,7 +479,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		if sp == nil {
 			sp = map[string]any{"level": st.Level + 1}
 		}
-		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"credits": total, "spent": cost, "ship_progress": sp})})
+		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": "ship_upgrade", "credits": total, "spent": cost, "ship_progress": sp})})
 	case "jump":
 		var p struct {
 			To string `json:"to"`

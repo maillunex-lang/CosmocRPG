@@ -20,3 +20,8 @@ DB: собственный временный контейнер postgres:16-alp
 6. Неподдержанные/повреждённые loadout не нормализуются молча и не теряют чужие slots; error возвращает нулевой snapshot.
 
 Клиент/рендер не менялись/не проверялись: ERROR-SR-007 выполняет Kimi. Store пока не подключён к runtime/RPC, док/бой/масса/мощность всех модулей/авторизация команды и согласование с world — следующий интеграционный шаг.
+
+## Итог общего прогона
+`go test -race -p 4 -count=1 -json -timeout300s ./...` с реальным PostgreSQL завершился exit1: 425 событий PASS (включая пакеты/подтесты), один упавший тест TestPGStoreCorporationFlow и FAIL его пакета. Ошибка pgstore_test.go:27: SQLSTATE42P08, несовместимые типы параметра$1. На чистом архиве базы0b77fea этот же тест воспроизвёл ту же ошибку (exit1); это не регрессия equipment. См. CST-ERROR-004. Все новые SQL cases выполнены.
+5 SKIP-событий:3 пакета без тестов и2 теста (существующий AmbientFollowFromAnotherCaptain; PassportGodotClient без внешнего Godot). Это не пропуски SQL equipment.
+`go vet ./...` и `go build -o /workspace/scratch/cosmoc-equipment-storage ./cmd/server` — PASS. Сервер не запускался, production не затронут.

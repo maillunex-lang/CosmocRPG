@@ -85,4 +85,15 @@ Run42606462785: **все4 jobs success** (сервер Go/PostgreSQL, Godot4.7.2
 - `--script res://tests/hud_test.gd` —161/0 (существующие layout/бой/управление/состояния).
 - Расширенный live `TestPassportGodotClient`: настоящий local ephemeral WS→gateway→ангар показывает owned/equipped engine; gateway выбирает M01 и отправляет команду, state подтверждает boosting. SQL/production не используется, child закрывается тестом.
 - `go vet ./...`, `go build -o /workspace/scratch/cosmoc-server-m01 ./cmd/server`, gofmt/diff-check PASS. Бинарник не запускался. APK не собирался, Mobile/Android визуальная приёмка не заявляется.
-Core server commit21aaa0b; клиентский SHA записывается после фиксации. Remote CI нового main будет проверен отдельно; прежняя база a19f7c0 уже имеет CI42608041551 success.
+Core server commit21aaa0b; клиентский SHA d465afe. Remote CI нового main будет проверен отдельно; прежняя база a19f7c0 уже имеет CI42608041551 success.
+
+Push сначала отклонён non-fast-forward: другой ИИ добавил landing commit545032a (2 строки site/index.html). Выполнен обычный merge c9a3391 без конфликтов/force; server/client/tools относительно протестированного d465afe не изменились. `python3 tools/check_site.py`: CSP PASS,14 ссылок. Повторный push main c9a3391 PASS. CI42616666345 запущен, первые admin/Docker jobs success, Go/Godot ожидаются. Это ожидаемая защита Git от потери чужой работы, не программная регрессия.
+
+## SR-100b: полный remote CI и toast lifecycle
+CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 для main c9a3391: все4 jobs **success** (Go/PostgreSQL job129158113492, Godot4.7.2 job129158113111, admin, Docker). Это remote подтверждение gameplay шага21aaa0b+d465afe и сохранённого concurrent landing545032a.
+После первоначального локального HUD161/0 найден один raw Lambda capture ERROR. Baseline a19f7c0 в отдельном worktree:161/0, без ERROR в одном прогоне; lifecycle busy timer ожидание2.2s тоже не воспроизвело. Затем toast+screen close+3.7s дал детерминированный FAIL live test: child exit0 с3 rawERROR, Go guard ловит их. ERROR-SR-008.
+После connect(p.queue_free) вместо toast lambda:
+- `COSMOC_TEST_GODOT=godot go test -race -count=1 -v ./internal/ws -run '^TestPassportGodotClient$'` — PASS9.034s (включает настоящий M01 cast, закрытие сцены, истечение toast таймера; ни ERROR, ни SCRIPT ERROR).
+- `godot --headless --path client --script res://tests/hud_test.gd` —161/0, ERROR/SCRIPT ERROR отсутствуют.
+- Временный baseline worktree удалён, общий imported cache не удалялся/не менял tracked assets.
+Это дополнительный локальный lifecycle fix после зелёного CI c9a3391; новый push проверит его отдельно. Новый полный Go run не нужен: production Go/механика модулей не менялись, обновлены3 lifecycle/test файла и документы.

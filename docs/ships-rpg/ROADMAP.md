@@ -47,7 +47,7 @@ SR-014a не закрывает SR-014: данные/ранги/таланты �
 |---|---|---|---|---|---|---|---|---|
 | SR-090 | P0 | SR-011 | Опубликовать накопленные проверенные изменения и новый порядок в main; изучить APK Claude | DONE | 2026-11-09 / 2026-11-09 | docs; существующая ветка | main fast-forward push PASS | 75931d4 / — |
 | SR-100a | P0 | SR-011 | Серверный паспорт Стрижа в ангаре; активные base/stats не подменяются, старые клиенты совместимы | DONE | 2026-11-09 / 2026-11-09 | shipcatalog; ws; gateway; hangar | live Go WS + Godot PASS; полный race PASS; hangar28/0 | cb34353 / ERROR-SR-004 |
-| SR-100b | P0 | SR-100a | Один стартовый модуль → один навык (ENG/M01); сервер проверяет доступность, энергия/CD legacy сохранены | DONE | 2026-11-09 / 2026-11-09 | world; ws; shipcatalog | negative atomicity; shared alias/CD; live client cast; full race322/0 | 21aaa0b + текущий client commit / — |
+| SR-100b | P0 | SR-100a | Один стартовый модуль → один навык (ENG/M01); сервер проверяет доступность, энергия/CD legacy сохранены | DONE | 2026-11-09 / 2026-11-09 | world; ws; shipcatalog | negative atomicity; shared alias/CD; live client cast; full race322/0 | 21aaa0b + d465afe / — |
 | SR-100c | P0 | SR-100b | Сохранение/повторный вход, смена только в доке вне боя, ангар/HUD и причины недоступности | TODO | — / — | db; ws; client | Тестовая БД, rollback, reconnect, Godot | — / — |
 | SR-100d | P0 | SR-100a…c | Игровая приёмка первого сценария, release APK при клиентских изменениях, отдельный серверный выпуск | TODO | — / — | tests; release docs | Сквозной клиент+сервер, прежняя подпись APK, signed manifest; prod по разрешению | — / — |
 
@@ -69,6 +69,12 @@ SR-100a DONE означает код и локальные сквозные те
 | ID | Приоритет | Зависимости | Критерии DONE | Статус | Даты | Файлы | Проверки | SHA / ERROR |
 |---|---|---|---|---|---|---|---|---|
 | SR-100b1 | P0 | SR-100a | Привязанный starter instance ENG, M01/boost единый ресурсный путь, запрет без ownership/equipment/rank, прочие hulls без миграции | DONE | 2026-11-09 / 2026-11-09 | world/starter_engine*.go; combat/ship/world; ws; passport_data_test | race world/shipcatalog; live WS alias, negative atomicity | 21aaa0b / — |
-| SR-100b2 | P0 | SR-100b1 | Client gateway/HUD/ангар показывают starter и availability, вызывают M01; старый payload совместим | DONE | 2026-11-09 / 2026-11-09 | client gateway/hud/hangar/tests | hangar33/0; HUD161/0; real client cast PASS | текущий client commit / — |
+| SR-100b2 | P0 | SR-100b1 | Client gateway/HUD/ангар показывают starter и availability, вызывают M01; старый payload совместим | DONE | 2026-11-09 / 2026-11-09 | client gateway/hud/hangar/tests | hangar33/0; HUD161/0; real client cast PASS | d465afe / — |
 
 Фиксированный starter entitlement штатного двигателя не является свободным инвентарём. В SR-100b нет RPC снятия/установки: сохранённая изменяемая экипировка и условия дока/боя — SR-100c. Отрицательные тесты отсутствия модуля проверяют серверную целостность/доступность, не кнопку, которой ещё нет.
+
+Публикация SR-100b: main c9a3391 (merge после параллельного landing commit545032a); без force, чужой site/index.html сохранён. CI https://github.com/maillunex-lang/CosmocRPG/actions/runs/42616666345 проверяет этот head; все4 jobs success.
+
+| SR-100b3 | P1 | SR-100b2 | Уведомление переживает закрытие экрана без freed lambda ERROR; live harness отвергает raw ERROR при exit0 | DONE | 2026-11-09 / 2026-11-09 | alert_bar.gd; passport_online_test.gd; ws/passport_test.go | red→green real-client race9.034s, HUD161/0 без ERROR | следующий lifecycle fix / ERROR-SR-008 |
+
+CI c9a3391 для полного gameplay шага — success. Дополнительный lifecycle fix проверен локально отдельно и вызывает новый CI после push; Vulkan ERROR-SR-007 остаётся открытым.

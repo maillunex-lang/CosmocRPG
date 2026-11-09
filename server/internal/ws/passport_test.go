@@ -119,7 +119,7 @@ func TestPassportGodotClient(t *testing.T) {
 	cmd := exec.CommandContext(ctx, binary, "--headless", "--path", clientRoot, "--script", "res://tests/passport_online_test.gd")
 	cmd.Env = append(os.Environ(), "COSMOC_TEST_WS_URL=ws"+strings.TrimPrefix(srv.URL, "http"))
 	output, err := cmd.CombinedOutput()
-	if err != nil || strings.Contains(string(output), "SCRIPT ERROR") || !strings.Contains(string(output), "PASSPORT_ONLINE_PASS") {
+	if err != nil || strings.Contains(string(output), "ERROR:") || !strings.Contains(string(output), "PASSPORT_ONLINE_PASS") {
 		t.Fatalf("live Godot scenario: %v\n%s", err, output)
 	}
 	t.Log("Godot -> real local WebSocket -> hangar: PASS")

@@ -60,7 +60,16 @@ func _run() -> void:
 	if not bool(gateway.snapshot().get("ship", {}).get("boosting", false)):
 		push_error("M01 did not execute via the real client command")
 		_failed = true
+	# A server timeout may outlive the HUD when leaving a screen.
+	screen.get_node("%Hud")._begin_attack_busy("Ожидание…", true)
+	screen.get_node("%Hud")._alerts.toast("Проверка завершения сцены")
+	var settle_time: float = float(screen.get_node("%Hud")._alerts.TOAST_SECONDS) + 0.2
+	gateway.close()
 	Session.gateway = null
+	screen.queue_free()
+	await process_frame
+	await process_frame
+	await create_timer(settle_time).timeout
 	if not _failed:
 		print("PASSPORT_ONLINE_PASS: real WebSocket -> Strizh hangar -> bound engine -> M01 cast")
 	quit(1 if _failed else 0)

@@ -72,6 +72,6 @@ func toast(text: String) -> void:
 	var p := _make_panel(text, false)
 	p.set_meta("toast", true)
 	add_child(p)
-	get_tree().create_timer(TOAST_SECONDS).timeout.connect(func() -> void:
-		if is_instance_valid(p):
-			p.queue_free())
+	# A bound Node method disconnects when the panel is freed (screen close or
+	# toast limit). A lambda captures the freed panel before its validity guard.
+	get_tree().create_timer(TOAST_SECONDS).timeout.connect(p.queue_free)

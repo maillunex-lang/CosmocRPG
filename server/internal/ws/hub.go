@@ -1689,6 +1689,31 @@ func (h *Handler) PushChat(m chat.Message) {
 	}
 }
 
+// PushServerUpdated говорит игрокам в мире, что сервер уже применил настройки или перезапускается.
+func (h *Handler) PushServerUpdated(reason string) {
+	if h == nil {
+		return
+	}
+	if reason == "" {
+		reason = "настройки"
+	}
+	out := Message{Type: "server_updated", Payload: mustJSON(map[string]any{"reason": reason})}
+	h.mu.Lock()
+	targets := make([]*session, 0, len(h.active))
+	for _, s := range h.active {
+		if s != nil && !s.ai {
+			targets = append(targets, s)
+		}
+	}
+	h.mu.Unlock()
+	for _, s := range targets {
+		select {
+		case s.events <- out:
+		default:
+		}
+	}
+}
+
 // chatMsg обрабатывает chat_history (история и параметры) и chat_send (отправка).
 func (h *Handler) chatMsg(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
 	reply := func(msg Message) { _ = writeJSON(ctx, c, msg) }

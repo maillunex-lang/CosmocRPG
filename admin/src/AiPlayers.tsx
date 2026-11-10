@@ -174,7 +174,7 @@ function SettingsForm({ settings, onSave }: { settings: AiSettings; onSave: (s: 
         </label>
       </div>
       <div className="row wrap">
-        <label>Капитанов в мире <input type="number" value={s.civ_cast} onChange={num("civ_cast", 1, 8)} /></label>
+        <label>Капитанов в мире, 1–500 <input type="number" value={s.civ_cast} onChange={num("civ_cast", 1, 500)} /></label>
         <label>Реплик в разговоре от <input type="number" value={s.civ_talk_min} onChange={num("civ_talk_min", 1, 30)} /></label>
         <label>до <input type="number" value={s.civ_talk_max} onChange={num("civ_talk_max", 1, 30)} /></label>
         <label>Пауза между репликами, с <input type="number" value={s.civ_interval_sec} onChange={num("civ_interval_sec", 4, 120)} /></label>

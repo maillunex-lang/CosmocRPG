@@ -1,6 +1,8 @@
 # Ручная сборка APK через GitHub Actions
 
-Workflow `.github/workflows/android-release.yml`, задание `android-apk`, запускается только вручную: Actions → Android release APK → Run workflow, ветка `main`. Собирает подписанный APK и прикладывает artifact на 14 дней. Не публикует GitHub Release, `latest.json` и не делает деплой. Успешный workflow ещё не запускался: прогон [42756907822](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42756907822) остановился на установке SDK (`android-actions/setup-android` искал удалённый пакет `tools`). Этот пакет из workflow убран. Пока новый прогон не станет зелёным, APK не считать собранным.
+Workflow `.github/workflows/android-release.yml`, задание `android-apk`, запускается только вручную: Actions → Android release APK → Run workflow, ветка `main`. Собирает подписанный APK и прикладывает artifact на 14 дней. Не публикует GitHub Release, `latest.json` и не делает деплой.
+
+Проверено запуском [42758272938](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42758272938) (коммит `f5728ec`): `apksigner` подтвердил схему v2, package `ru.cosmocrpg.game`, отпечаток SHA-256 совпал с `docs/SECURITY.md`. Схема v3 в этом APK не включена. Это не установка на телефон и не публикация в `/download/`. Предыдущий прогон [42756907822](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42756907822) падал раньше, на удалённом пакете `tools` внутри `setup-android`.
 
 Задание не добавлено в `.github/workflows/ci.yml`: тот workflow запускается на `pull_request`. Подпись живёт отдельно и на запросы слияния не подписана.
 

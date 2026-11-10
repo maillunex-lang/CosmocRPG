@@ -407,6 +407,28 @@ func run() error {
 				return ids
 			})
 			log.Info("AI civilization Director started (gateway flag, studio candidates)")
+			// Minimal real join + PvE farm (one agent, training drone dr1).
+			farm := &aiciv.FarmController{
+				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
+				Store:     aiState,
+				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
+				TargetID:  "dr1",
+				Log:       log,
+			}
+			go func() {
+				// wait a bit so HTTP is listening, then try one agent
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(3 * time.Second):
+				}
+				profiles, err := aiagent.StudioSource{Svc: studioSvc}.Profiles(ctx)
+				if err != nil || len(profiles) == 0 {
+					return
+				}
+				farm.RunOnce(ctx, []string{profiles[0].ID})
+			}()
+			log.Info("AI civilization farm controller scheduled (one agent)")
 		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)

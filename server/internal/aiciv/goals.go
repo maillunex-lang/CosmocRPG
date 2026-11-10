@@ -39,6 +39,7 @@ const (
 type GoalRunner struct {
 	World   WorldView
 	Store   *Store
+	Board   *Board
 	Log     *slog.Logger
 	LowHull float64
 	Name    string
@@ -78,6 +79,12 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			snap, ok := r.World.Snapshot(playerID)
 			if !ok {
 				continue
+			}
+			if r.Board != nil {
+				if ord, ok := r.Board.OrderFor(captainID, time.Now()); ok {
+					r.execPact(ctx, g, ord, snap)
+					continue
+				}
 			}
 			if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax < threshold && st.step != StepRetreat && st.step != StepWait {
 				st.step = StepRetreat

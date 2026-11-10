@@ -171,9 +171,16 @@ func _ready() -> void:
 	for bar in [%ShieldBar, %HullBar, %EnergyBar]:
 		bar.custom_minimum_size.y = 18.0
 	_skills_grid.add_theme_constant_override("separation", 10)
-	# чат по умолчанию свёрнут: космос занимает основную площадь
+	# чат — одна строка. «Открыть» поднимает окно, а не панель над джойстиком.
+	_chat_card.peek_only = true
+	_chat_card.peek_requested.connect(func() -> void: chat_requested.emit())
 	_pref_collapsed["chat"] = true
 	_chat_card.set_collapsed(true, false)
+	_target_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_target_info.max_lines_visible = 2
+	_target_info.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_autopilot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_autopilot.custom_minimum_size = Vector2(168, Tokens.TOUCH_MIN)
 
 	_hull.fill_color = Tokens.SUCCESS
 	_hull.warn_below = 0.25   # критический корпус краснеет
@@ -236,6 +243,9 @@ func _ready() -> void:
 	Icons.apply(%HangarMenuButton, "rocket", Tokens.ACCENT, 22)
 	Icons.apply(%StorageMenuButton, "package", Tokens.ACCENT, 22)
 	Icons.apply(%MailMenuButton, "mail", Tokens.ACCENT, 22)
+	%StorageMenuButton.visible = false
+	%MailMenuButton.visible = false
+	_order_menu()
 	%SettingsMenuButton.pressed.connect(func() -> void: _set_menu_open(false); settings_requested.emit())
 	Icons.apply(%SettingsMenuButton, "settings", Tokens.ACCENT, 22)
 	_build_cargo_ui()
@@ -274,6 +284,8 @@ func _setup_chat(gw: UiGateway) -> void:
 	chat_panel.unread_changed.connect(func(n: int) -> void:
 		_chat_card.title = "Чат" if n <= 0 else "Чат · %d" % n)
 	chat_panel.expand_requested.connect(func() -> void: chat_requested.emit())
+	chat_panel.preview_changed.connect(_set_chat_preview)
+	_set_chat_preview(chat_panel.preview_text())
 
 
 ## Короткое сообщение игроку (всплывающая плашка).
@@ -282,6 +294,25 @@ func show_toast(text: String) -> void:
 
 
 ## Меню (R-35): полупрозрачная кнопка справа сверху раскрывает панель действий.
+func _order_menu() -> void:
+	var box := %StationMenuButton.get_parent()
+	var fly := ActionButton.new()
+	fly.name = "SystemMapMenuButton"
+	fly.text = "Карта"
+	fly.tooltip_text = "Карта системы"
+	fly.pressed.connect(func() -> void: _set_menu_open(false); map_requested.emit())
+	Icons.apply(fly, "globe", Tokens.ACCENT, 22)
+	box.add_child(fly)
+	var order: Array[Node] = [
+		%StationMenuButton, fly, %HangarMenuButton, %ProfileMenuButton,
+		%ShopMenuButton, %CorporationMenuButton, %StarMapMenuButton, %ChatMenuButton,
+		%SettingsMenuButton, %ExitButton,
+		%StorageMenuButton, %MailMenuButton,
+	]
+	for i in order.size():
+		box.move_child(order[i], i)
+
+
 func _toggle_menu() -> void:
 	_set_menu_open(not _menu_popup.visible)
 
@@ -674,9 +705,23 @@ func _apply_lists(state: Dictionary) -> void:
 			c.queue_free()
 		if chat.is_empty():
 			_add_muted(_chat_lines, "Сообщений нет")
+			if gateway == null or not gateway.has_chat():
+				_set_chat_preview("")
+		var last := ""
 		for m in chat.slice(maxi(0, chat.size() - 3)):
 			var who: String = ("%s: " % m["author"]) if str(m["author"]) != "" else ""
-			_add_muted(_chat_lines, "[%s] %s%s" % [m["channel"], who, m["text"]])
+			var line := "[%s] %s%s" % [m["channel"], who, m["text"]]
+			_add_muted(_chat_lines, line)
+			last = ("%s: %s" % [m["author"], m["text"]]).strip_edges()
+		if gateway == null or not gateway.has_chat():
+			_set_chat_preview(last)
+
+
+func _set_chat_preview(text: String) -> void:
+	var line := text.strip_edges().replace("\n", " ")
+	if line.length() > 28:
+		line = line.substr(0, 27) + "…"
+	_chat_card.title = "Чат" if line == "" else line
 
 
 func _add_muted(parent: Control, text: String) -> void:

@@ -41,14 +41,14 @@ func (s *Service) Generate(ctx context.Context, admin string, seed int64, count 
 		return GenerateResult{}, 0, err
 	}
 	res := Generate(&cfg, GenerateOptions{Seed: seed, Count: count})
-	if len(res.Added) == 0 && ver != 0 {
+	if len(res.Added) == 0 && res.Enriched == 0 && ver != 0 {
 		return res, ver, nil
 	}
 	if bad := firstErrors(Validate(cfg), 3); len(bad) > 0 {
 		return res, 0, fmt.Errorf("сгенерированная конфигурация не проходит проверку: %s", strings.Join(bad, "; "))
 	}
 	id, err := s.store.SaveVersion(ctx, NewVersion{Admin: admin, Source: "generated", Config: cfg, ExpectActive: &ver,
-		Note: fmt.Sprintf("Генерация капитанов: добавлено %d (seed %d)", len(res.Added), seed)})
+		Note: fmt.Sprintf("Генерация капитанов: добавлено %d, уточнены %d (seed %d)", len(res.Added), res.Enriched, seed)})
 	return res, id, err
 }
 
@@ -131,8 +131,8 @@ func (s *Service) Export(ctx context.Context, admin string, req ExportRequest) (
 		ids = all[:min(3, len(all))]
 		opts.Extra = map[string][]byte{"captains/README.md": []byte(captainsReadme)}
 	case "batch":
-		if req.Size < 1 || req.Size > 300 {
-			return nil, "", errors.New("размер партии: от 1 до 300")
+		if req.Size < 1 || req.Size > 500 {
+			return nil, "", errors.New("размер партии: от 1 до 500")
 		}
 		total := len(all)
 		nb := Batches(total, req.Size)
@@ -152,8 +152,8 @@ func (s *Service) Export(ctx context.Context, admin string, req ExportRequest) (
 				return nil, "", fmt.Errorf("капитана %s нет в реестре", id)
 			}
 		}
-		if len(req.IDs) == 0 || len(req.IDs) > 300 {
-			return nil, "", errors.New("выберите от 1 до 300 капитанов")
+		if len(req.IDs) == 0 || len(req.IDs) > 500 {
+			return nil, "", errors.New("выберите от 1 до 500 капитанов")
 		}
 		ids = append([]string{}, req.IDs...)
 		sort.Strings(ids)
@@ -482,7 +482,7 @@ func (s *Service) Dashboard(ctx context.Context) (Dashboard, error) {
 	if err != nil {
 		return Dashboard{}, err
 	}
-	d := Dashboard{Captains: len(cfg.Captains), Target: 300, ActiveVersion: ver, Quality: Quality(&cfg), Statuses: map[string]int{}}
+	d := Dashboard{Captains: len(cfg.Captains), Target: 500, ActiveVersion: ver, Quality: Quality(&cfg), Statuses: map[string]int{}}
 	d.BySource = d.Quality["by_source"].(map[string]int)
 	if d.Versions, err = s.store.ListVersions(ctx, 15); err != nil {
 		return d, err

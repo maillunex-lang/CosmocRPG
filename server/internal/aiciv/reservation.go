@@ -9,9 +9,9 @@ import (
 // Reservation tracks captains that the new civilization system has claimed.
 // The old aiagent.Manager must not spawn these as FSM ships to avoid duplicates.
 type Reservation struct {
-	mu   sync.RWMutex
-	ids  map[string]time.Time
-	ttl  time.Duration
+	mu  sync.RWMutex
+	ids map[string]time.Time
+	ttl time.Duration
 }
 
 func NewReservation(ttl time.Duration) *Reservation {

@@ -11,7 +11,7 @@ import (
 // and provides a tick hook for future goal selection / combat / planning.
 // Autonomous behavior stays behind feature flags; this type does not open Gateways by itself.
 type Director struct {
-	res      *Reservation
+	res       *Reservation
 	maxActive int
 	log       *slog.Logger
 }

@@ -13,18 +13,22 @@ import (
 type Voice struct {
 	ID, Name string
 	Goal     GoalKind
+	Arch     Archetype
 }
 
-// Chorus runs short AI↔AI exchanges: one voice opens, others answer in their own role.
-// The same captain never replies to himself. Exact lines are not repeated.
+// Chorus runs short AI↔AI exchanges.
+// A request is not just a line: if someone agrees, Board gives them a flight order.
 type Chorus struct {
 	Speaker *ChatSpeaker
+	Board   *Board
 	Log     *slog.Logger
 
 	mu         sync.Mutex
 	voices     []Voice
 	lastID     string
 	beat       int
+	follow     string
+	followLine string
 	pauseUntil time.Time
 }
 
@@ -32,13 +36,15 @@ func NewChorus(s *ChatSpeaker, log *slog.Logger) *Chorus {
 	return &Chorus{Speaker: s, Log: log}
 }
 
-// Add registers a joined captain. Duplicate IDs are ignored.
 func (c *Chorus) Add(v Voice) {
 	if c == nil || v.ID == "" {
 		return
 	}
 	if v.Name == "" {
 		v.Name = v.ID
+	}
+	if v.Arch == "" {
+		v.Arch = ArchetypeFor(v.ID, v.Goal)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -58,7 +64,6 @@ func (c *Chorus) snapshot() []Voice {
 	return out
 }
 
-// Run speaks one turn every interval. A conversation is opener + up to two replies, then a pause.
 func (c *Chorus) Run(ctx context.Context, interval time.Duration) {
 	if c == nil || c.Speaker == nil {
 		return
@@ -86,17 +91,48 @@ func (c *Chorus) turn(ctx context.Context, now time.Time) {
 	if len(voices) < 2 {
 		return
 	}
+	if c.beat == 2 && c.follow != "" {
+		speaker := findVoice(voices, c.follow)
+		line := c.followLine
+		c.follow, c.followLine = "", ""
+		c.beat = 0
+		c.pauseUntil = now.Add(40 * time.Second)
+		if speaker.ID != "" && line != "" {
+			_ = c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", line)
+			c.lastID = speaker.ID
+		}
+		return
+	}
 	speaker := pickOther(voices, c.lastID, int(now.Unix()/12))
 	if speaker.ID == "" {
 		return
 	}
-	var lines []string
-	if c.beat == 0 {
-		lines = rotate(openers(speaker.Goal), int(now.Unix()/30)+len(speaker.ID))
-	} else {
-		_, heard := c.Speaker.Last("general")
-		lines = rotate(replies(speaker.Goal, heard), int(now.Unix()/12)+len(speaker.Name))
+	if c.beat == 1 && c.Board != nil {
+		if d, ok := c.Board.Decide(speaker, now); ok && d.Line != "" {
+			if c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", d.Line) {
+				c.Board.Commit(d, speaker.ID)
+				c.lastID = speaker.ID
+				c.beat = 2
+				c.follow = d.AskerID
+				c.followLine = closeLine(d)
+				if c.Log != nil {
+					c.Log.Info("AI pact", "from", speaker.Name, "arch", string(speaker.Arch), "asker", d.AskerID, "goes", d.Order != nil, "lie", d.Troll)
+				}
+				return
+			}
+		}
 	}
+	if c.beat == 0 && c.Board != nil && now.Unix()/12%3 == 0 {
+		kind := askKind(speaker.Goal)
+		lines := requestLines(speaker.Arch, kind)
+		if c.sayFirst(ctx, speaker, lines) {
+			c.Board.Ask(speaker, kind, now)
+			c.lastID = speaker.ID
+			c.beat = 1
+			return
+		}
+	}
+	lines := rotate(personaLines(speaker.Arch, speaker.Goal), int(now.Unix()/30)+len(speaker.ID))
 	if !c.sayFirst(ctx, speaker, lines) {
 		return
 	}
@@ -104,10 +140,20 @@ func (c *Chorus) turn(ctx context.Context, now time.Time) {
 	c.beat++
 	if c.beat >= 3 {
 		c.beat = 0
-		c.pauseUntil = now.Add(50 * time.Second)
-		if c.Log != nil {
-			c.Log.Info("AI chorus: exchange finished, pausing")
-		}
+		c.pauseUntil = now.Add(45 * time.Second)
+	}
+}
+
+func closeLine(d Decision) string {
+	switch {
+	case d.Order != nil && d.Bait != nil:
+		return "ладно, жду у обломков."
+	case d.Order != nil:
+		return "вижу, подходи на мой курс."
+	case d.Troll:
+		return "опять обещал. сам разберусь."
+	default:
+		return "понял, тогда не жду."
 	}
 }
 
@@ -117,13 +163,19 @@ func (c *Chorus) sayFirst(ctx context.Context, v Voice, lines []string) bool {
 			continue
 		}
 		if c.Speaker.Say(ctx, v.ID, v.Name, "general", text) {
-			if c.Log != nil {
-				c.Log.Info("AI chorus", "from", v.Name, "goal", string(v.Goal), "text", text)
-			}
 			return true
 		}
 	}
 	return false
+}
+
+func findVoice(voices []Voice, id string) Voice {
+	for _, v := range voices {
+		if v.ID == id {
+			return v
+		}
+	}
+	return Voice{}
 }
 
 func pickOther(voices []Voice, except string, salt int) Voice {
@@ -153,113 +205,7 @@ func rotate(lines []string, salt int) []string {
 	salt = salt % len(lines)
 	out := make([]string, 0, len(lines))
 	out = append(out, lines[salt:]...)
-	out = append(out, lines[:salt]...)
-	return out
-}
-
-func openers(goal GoalKind) []string {
-	switch goal {
-	case GoalFarmCredits:
-		return []string{
-			"вижу вражеский корабль, иду на перехват.",
-			"если кто рядом — могу прикрыть.",
-			"корпус в порядке, продолжаю патруль.",
-			"цель снята, ищу следующую.",
-		}
-	case GoalMineAndSell:
-		return []string{
-			"нашёл месторождение, начинаю добычу.",
-			"трюм почти полный, скоро на станцию.",
-			"если кто знает хорошую жилу — пишите.",
-			"продал груз, ищу следующее.",
-		}
-	case GoalExplore:
-		return []string{
-			"иду проверить сигнал, в чат пока не пишу координаты.",
-			"ничего опасного по курсу пока не вижу.",
-			"отметил точку, двигаюсь дальше.",
-		}
-	case GoalTradeRun:
-		return []string{
-			"если трюм полный — могу забрать груз по пути на станцию.",
-			"на причале цена нормальная, не держите руду долго.",
-			"маршрут пока пустой, жду контракт.",
-		}
-	default:
-		return []string{
-			"стою у причала. если корпус сел — пишите, подлечу.",
-			"не геройствуйте в одиночку, сектор не пустой.",
-			"я на станции, могу принять повреждённый корабль.",
-		}
-	}
-}
-
-func topicOf(heard string) string {
-	switch {
-	case containsAny(heard, "враг", "атак", "бой", "патрул", "перехват", "фланг", "пират"):
-		return "combat"
-	case containsAny(heard, "руд", "добы", "месторож", "жил", "трюм", "груз"):
-		return "mine"
-	case containsAny(heard, "сигнал", "точк", "курс", "развед"):
-		return "explore"
-	case containsAny(heard, "станц", "причал", "корпус", "ремонт"):
-		return "dock"
-	default:
-		return "chat"
-	}
-}
-
-func replies(goal GoalKind, heard string) []string {
-	switch topicOf(heard) {
-	case "combat":
-		switch goal {
-		case GoalFarmCredits:
-			return []string{"беру его на себя.", "не лезь в лоб, я зайду с фланга.", "если меня собьют — добей, я отойду чинить корпус."}
-		case GoalMineAndSell:
-			return []string{"я не боевой, ухожу с линии огня.", "скажите, когда сектор чистый — вернусь к жиле.", "груз в трюме, в драку не полезу."}
-		case GoalExplore:
-			return []string{"вижу его, но в чат координаты не кидаю — идите по моему курсу.", "обхожу бой по дуге, сигнал важнее.", "если он сменит курс — напишу."}
-		case GoalTradeRun:
-			return []string{"обхожу бой, груз дороже геройства.", "скажите, когда коридор свободен, пойду на станцию.", "пиратов не кормлю, держусь в стороне."}
-		default:
-			return []string{"если корпус сядет — не добивайте, отходите ко мне.", "прикрою отход, сам в бой не лезу.", "живыми важнее, чем ещё один фраг."}
-		}
-	case "mine":
-		switch goal {
-		case GoalFarmCredits:
-			return []string{"копайте, я присмотрю подходы к жиле.", "пираты любят гружёных шахтёров, не зевайте.", "если засветит красным — бросайте жилу, я прикрою."}
-		case GoalMineAndSell:
-			return []string{"там ещё одна жила чуть дальше по курсу.", "не столкнитесь у одной точки, трюм не резиновый.", "я эту уже обирал, берите следующую."}
-		case GoalTradeRun:
-			return []string{"полный трюм — зовите, заберу по пути.", "на станции сейчас нормальная цена, не ждите.", "могу взять излишек, самому вести не обязательно."}
-		case GoalExplore:
-			return []string{"за жилой был слабый сигнал, гляну потом.", "не шумите на частоте, я слушаю эфир.", "если жила пустая — скажите, не буду гнать вас туда."}
-		default:
-			return []string{"как набьёте полный — не тяните до станции на последнем корпусе.", "могу принять вас после рейса, только не в бою.", "жила никуда не денется, корабль — да."}
-		}
-	case "explore":
-		switch goal {
-		case GoalExplore:
-			return []string{"я этот край уже смотрел, там тихо.", "сигнал плавает, не гонитесь все сразу.", "отмечу соседнюю точку и вернусь."}
-		case GoalFarmCredits:
-			return []string{"если там чужой — не суйтесь, сначала я.", "скиньте точку, проверю подход.", "разведка без прикрытия — плохая привычка."}
-		default:
-			return []string{"если там пусто — не тратьте ход, вернитесь.", "интересно, но я своё не брошу.", "напишите, если найдёте что-то ценное."}
-		}
-	default:
-		switch goal {
-		case GoalFarmCredits:
-			return []string{"принял. я на обходе, если что — зовите.", "слышу. пока тихо, но я не сплю."}
-		case GoalMineAndSell:
-			return []string{"услышал. докопаю и пойду сдавать.", "понял, жилу не бросаю без причины."}
-		case GoalExplore:
-			return []string{"принял, продолжаю обход.", "слышу. если всплывёт новый сигнал — напишу отдельно."}
-		case GoalTradeRun:
-			return []string{"принял. если нужен перевоз — скажите куда.", "на связи. груз пока не трогаю."}
-		default:
-			return []string{"слышу вас. я у причала, если надо — подойду.", "принял. не пропадайте, сектор живой."}
-		}
-	}
+	return append(out, lines[:salt]...)
 }
 
 // PickCast chooses up to n captains, preferring different professions so the chat has different voices.

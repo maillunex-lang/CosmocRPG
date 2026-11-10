@@ -1,0 +1,96 @@
+# Ручная выкладка только игрового сервера. База, Caddy и каталог /download/ не пересоздаются.
+# Секреты SSH те же, что у публикации APK: окружение android-signing, только ветка main.
+name: Выкладка сервера
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Сервер на VPS
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
+    environment: android-signing
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      EXPECTED: ${{ github.sha }}
+    steps:
+      - name: Выложить коммит main на игровой сервер
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [ "$VPS_HOST" != "78.17.214.25" ] || [ "$VPS_USER" != "gamedev" ]; then
+            echo "секрет VPS_HOST или VPS_USER указывает не на ожидаемый сервер" >&2
+            exit 1
+          fi
+          case "$EXPECTED" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+            *) echo "некорректный коммит" >&2; exit 1 ;;
+          esac
+          install -d -m 700 "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          chmod 600 "$RUNNER_TEMP/ssh/id"
+          if ! ssh-keygen -y -f "$RUNNER_TEMP/ssh/id" >/dev/null; then
+            rm -f "$RUNNER_TEMP/ssh/id"
+            echo "VPS_SSH_KEY не читается как приватный ключ OpenSSH" >&2
+            exit 1
+          fi
+          printf '%s\n' '78.17.214.25 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDdx157SYryf6CgzVb9aniy6NI/gtbUq3wJysx9zbbjJ' > "$RUNNER_TEMP/ssh/known_hosts"
+          opt=(-i "$RUNNER_TEMP/ssh/id" -o "UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          remote="${VPS_USER}@${VPS_HOST}"
+          short="${EXPECTED:0:7}"
+          ssh "${opt[@]}" "$remote" "bash -s -- '$EXPECTED'" <<'EOF'
+          set -euo pipefail
+          expected="$1"
+          short="${expected:0:7}"
+          root="$HOME/projects/CosmocRPG"
+          cd "$root"
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "на сервере есть незакоммиченные правки, выкладка остановлена" >&2
+            git status --porcelain --untracked-files=no >&2
+            exit 1
+          fi
+          export GIT_TERMINAL_PROMPT=0
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$expected" ]; then
+            echo "origin/main на сервере не равен коммиту запуска" >&2
+            git rev-parse origin/main >&2
+            exit 1
+          fi
+          git checkout main
+          git merge --ff-only "$expected"
+          if docker info >/dev/null 2>&1; then
+            compose=(docker compose)
+          else
+            compose=(sudo -n docker compose)
+          fi
+          VERSION="$short" "${compose[@]}" -f infrastructure/docker-compose.yml --env-file "$HOME/keys/cosmoc/stack.env" up -d --build --no-deps --wait --wait-timeout 180 server
+          echo "контейнер сервера обновлён до $short"
+          EOF
+          rm -rf "$RUNNER_TEMP/ssh"
+          ok=0
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            body="$(curl -fsS --max-time 10 https://rikagro.ru/health || true)"
+            echo "$body"
+            if printf '%s' "$body" | grep -q "\"version\":\"$short\""; then
+              ok=1
+              break
+            fi
+            sleep 3
+          done
+          test "$ok" = 1
+
+      - name: Удалить временный ключ
+        if: always()
+        run: rm -rf "${RUNNER_TEMP}/ssh"

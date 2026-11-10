@@ -78,7 +78,7 @@ jobs:
           else
             compose=(sudo -n docker compose)
           fi
-          VERSION="$short" "${compose[@]}" -f infrastructure/docker-compose.yml --env-file "$HOME/keys/cosmoc/stack.env" up -d --build --no-deps --wait --wait-timeout 180 server
+          VERSION="$short" "${compose[@]}" -f infrastructure/docker-compose.yml --env-file "$HOME/keys/cosmoc/stack.env" up -d --build --no-deps --wait --wait-timeout 180 server caddy
           echo "контейнер сервера обновлён до $short"
           EOF
           rm -rf "$RUNNER_TEMP/ssh"

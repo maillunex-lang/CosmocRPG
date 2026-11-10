@@ -1612,7 +1612,8 @@
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
    },
-   "spec": "docs/ships-rpg/ROADMAP.md"
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Каталог по ship_id отвергает чужую профессию до записи. Бонус 3–5% выключен. TMP без боевой профессии. Старый SetSpec и сейв без профессии работают."
   },
   {
    "id": "CLASS-120",
@@ -1630,7 +1631,8 @@
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
    },
-   "spec": "docs/ships-rpg/ROADMAP.md"
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Узел одного дерева помечен слоем. Сумма очков билда не больше бюджета пилота, потолок 70. Узел без обработчика не даёт эффекта. Второго дерева нет."
   },
   {
    "id": "CLASS-130",
@@ -1647,7 +1649,8 @@
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
    },
-   "spec": "QUESTJOB/PilotProgression.md"
+   "spec": "QUESTJOB/PilotProgression.md",
+   "acceptance": "Три слота раскладывают один бюджет. Смена в бою и открытом космосе отклоняется. Нет лечения, сброса кулдаунов и суммы двух билдов. Повтор запроса идемпотентен."
   },
   {
    "id": "CLASS-140",
@@ -1665,7 +1668,8 @@
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
    },
-   "spec": "docs/ships-rpg/ROADMAP.md"
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Альтернатива дроновода не включается, пока дрон не отдельная сущность с корпусом."
   },
   {
    "id": "CLASS-150",
@@ -1682,7 +1686,8 @@
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
    },
-   "spec": "docs/ships-rpg/ROADMAP.md"
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Псионик не появляется в каталоге корпусов без отдельного разрешения."
   }
  ]
 }

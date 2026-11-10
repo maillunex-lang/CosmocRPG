@@ -135,8 +135,8 @@ func _ready() -> void:
 	vp.add_child(_turntable)
 	_visual = ShipVisual.new()
 	_visual.ship_id = ship_id
+	_visual.skin_id = skin
 	_turntable.add_child(_visual)
-	_visual.build(ship_id, skin)
 
 	var side := PanelContainer.new()
 	side.custom_minimum_size = Vector2(340, 0)

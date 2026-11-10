@@ -40,6 +40,11 @@ func _run() -> void:
 	_c(v.point("Engine_L").position.z > 0.0 and v.point("Engine_R").position.z < 0.0, "двигатели по обе стороны оси")
 	_c(v.flames.size() == 2, "два двигателя с пламенем")
 	_c(v.skin_id == "a", "облик по умолчанию «a»")
+	_c(v.build_count == 1 and v.skin_instance_count == 1, "одна первоначальная сборка")
+	var original_id: int = v._skin_root.get_instance_id()
+	for i in 100:
+		v.set_skin("a")
+	_c(v._skin_root.get_instance_id() == original_id, "100 одинаковых set_skin сохраняют GLB")
 	var mesh_count := _count_meshes(v.model)
 	v.set_skin("b")
 	await process_frame

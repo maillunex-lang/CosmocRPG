@@ -9,6 +9,9 @@ const ShipVfx := preload("res://ui/ships/ship_vfx.gd")
 
 const POINT_NAMES := ["Engine_L", "Engine_R", "Weapon_L", "Weapon_R", "Missile_01", "Hit_Center", "Camera_Focus", "Dock_Point"]
 
+var build_count := 0
+var skin_instance_count := 0
+var _loaded_ship := ""
 var ship_id := ShipDef.DEFAULT_ID
 var skin_id := ""
 var bank: Node3D       # наклон при манёвре (крен)
@@ -46,7 +49,10 @@ func _ready() -> void:
 
 ## Строит иерархию: Bank > Model (ориентация, масштаб) > GLB + точки + двигатели. Повторный вызов пересобирает.
 func build(sid: String, skin: String = "") -> void:
-	ship_id = sid
+	build_count += 1
+	ship_id = sid if ShipDef.PATHS.has(sid) else ShipDef.DEFAULT_ID
+	_skin_root = null
+	_loaded_ship = ""
 	for c in get_children():
 		c.queue_free()
 	points.clear()
@@ -64,7 +70,7 @@ func build(sid: String, skin: String = "") -> void:
 	_skill_bolt = null
 	_boost_trail = null
 	_move_trail = null
-	var def := ShipDef.get_def(sid)
+	var def := ShipDef.get_def(ship_id)
 	bank = Node3D.new()
 	bank.name = "Bank"
 	add_child(bank)
@@ -81,7 +87,7 @@ func build(sid: String, skin: String = "") -> void:
 		m.position = Vector3(v[0], v[1], v[2])
 		model.add_child(m)
 		points[n] = m
-	set_skin(skin if skin != "" else str(ShipDef.skin_ids(sid)[0]))
+	set_skin(skin if skin != "" else str(ShipDef.skin_ids(ship_id)[0]))
 	for n in ["Engine_L", "Engine_R"]:
 		var f := ShipVfx.flame(_flame_color)
 		f.position = Vector3(0.2, 0, 0)
@@ -94,17 +100,29 @@ func build(sid: String, skin: String = "") -> void:
 func set_skin(skin: String) -> void:
 	if not (ShipDef.get_def(ship_id).get("skins", {}) as Dictionary).has(skin):
 		return   # неизвестный облик: выбор не меняется
+	if is_instance_valid(_skin_root) and not _skin_root.is_queued_for_deletion() and skin_id == skin and _loaded_ship == ship_id:
+		return
 	var sk := ShipDef.skin(ship_id, skin)
-	skin_id = skin
-	if _skin_root != null and is_instance_valid(_skin_root):
+	var path := str(sk.get("glb", ""))
+	if not ResourceLoader.exists(path):
+		return
+	var ps := load(path) as PackedScene
+	if ps == null:
+		return
+	var replacement := ps.instantiate()
+	if replacement == null:
+		return
+	if is_instance_valid(_skin_root):
+		model.remove_child(_skin_root)
 		_skin_root.queue_free()
-	var ps := load(str(sk.get("glb", ""))) as PackedScene
-	if ps != null:
-		_skin_root = ps.instantiate()
-		model.add_child(_skin_root)
-		var tint: Array = sk.get("tint", [])
-		if tint.size() >= 3:
-			_apply_tint(_skin_root, Color(float(tint[0]), float(tint[1]), float(tint[2])))
+	_skin_root = replacement
+	model.add_child(_skin_root)
+	skin_id = skin
+	_loaded_ship = ship_id
+	skin_instance_count += 1
+	var tint: Array = sk.get("tint", [])
+	if tint.size() >= 3:
+		_apply_tint(_skin_root, Color(float(tint[0]), float(tint[1]), float(tint[2])))
 	var fc: Array = sk.get("flame", [0.35, 0.9, 1.0])
 	_flame_color = Color(fc[0], fc[1], fc[2])
 	for f in flames:

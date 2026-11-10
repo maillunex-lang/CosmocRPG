@@ -75,7 +75,8 @@ func setup(id: String, kind_: String, stance: String, display_name: String, is_m
 		_build_world_object(kind_, id, display_name, info)
 	else:
 		# облик по умолчанию: у разных объектов чередуются два облика «Стрижа» (сервер присылает настоящий через set_ship)
-		set_ship(ShipDef.DEFAULT_ID, str(ShipDef.skin_ids()[int(hash(id)) % 2]))
+		set_ship(str(info.get("ship", info.get("type", ShipDef.DEFAULT_ID))),
+			str(info.get("skin", "")))
 		var glow := MeshInstance3D.new()
 		var sph := SphereMesh.new()
 		sph.radius = 0.1
@@ -219,15 +220,17 @@ func _resource_of(display_name: String) -> String:
 func set_ship(type_id: String, skin_id: String) -> void:
 	if type_id == "" or not ShipDef.PATHS.has(type_id):
 		type_id = ShipDef.DEFAULT_ID
-	if visual != null and ship_type == type_id and skin == skin_id:
+	if skin_id == "":
+		skin_id = str(ShipDef.skin_ids(type_id)[0])
+	if visual != null and ship_type == type_id and skin == skin_id and is_instance_valid(visual._skin_root):
 		return
 	if visual == null or ship_type != type_id:
 		if visual != null:
 			visual.queue_free()
 		visual = ShipVisual.new()
 		visual.ship_id = type_id
+		visual.skin_id = skin_id
 		add_child(visual)
-		visual.build(type_id, skin_id)
 	else:
 		visual.set_skin(skin_id)
 	ship_type = type_id

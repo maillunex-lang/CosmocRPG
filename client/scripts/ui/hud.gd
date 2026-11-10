@@ -24,6 +24,7 @@ signal shop_requested   # кнопка «Магазин»
 signal map_requested
 signal star_map_requested   # Э-1: звёздная карта
 signal station_requested    # Э-2: экран станции (ремонт, покупка, улучшение)   # кнопка «Карта»
+signal corporation_requested
 signal settings_requested   # пункт меню «Настройки»
 signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
@@ -218,6 +219,8 @@ func _ready() -> void:
 	(%MenuPopup/Backdrop as Control).gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and ev.pressed:
 			_set_menu_open(false))
+	%CorporationMenuButton.pressed.connect(func() -> void: _set_menu_open(false); corporation_requested.emit())
+	Icons.apply(%CorporationMenuButton, "user", Tokens.ACCENT, 22)
 	%ProfileMenuButton.pressed.connect(func() -> void: _set_menu_open(false); profile_requested.emit())
 	%StarMapMenuButton.pressed.connect(func() -> void: _set_menu_open(false); star_map_requested.emit())
 	Icons.apply(%StarMapMenuButton, "globe", Tokens.ACCENT, 22)

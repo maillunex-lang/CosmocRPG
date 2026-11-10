@@ -161,3 +161,37 @@ func shop_equip(_slot: String, _item: String) -> void:
 
 func _unsupported(action: String) -> void:
 	command_failed.emit(action, "Сервер пока не поддерживает это действие")
+
+
+## Корпорации: только существующие серверные команды К-1.
+signal corporation_updated(data: Dictionary)
+signal corporation_failed(text: String)
+signal corporation_busy_changed(busy: bool)
+
+
+func has_corporations() -> bool:
+	return false
+
+
+func corporation_snapshot() -> Dictionary:
+	return {"known": false}
+
+
+func corporation_busy() -> bool:
+	return false
+
+
+func corporation_info() -> void:
+	pass
+
+
+func corporation_create(_name: String, _tag: String) -> void:
+	corporation_failed.emit("Корпорации доступны только при игре на сервере")
+
+
+func corporation_join(_name: String) -> void:
+	corporation_failed.emit("Корпорации доступны только при игре на сервере")
+
+
+func corporation_leave() -> void:
+	corporation_failed.emit("Корпорации доступны только при игре на сервере")

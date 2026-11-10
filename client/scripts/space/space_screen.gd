@@ -16,6 +16,7 @@ const CameraGestures := preload("res://ui/camera/camera_gestures.gd")
 const LoadingOverlay := preload("res://ui/loading_overlay.gd")
 const Hangar := preload("res://ui/ships/hangar.gd")
 const ShopScreen := preload("res://ui/shop_screen.gd")
+const CorporationScreen := preload("res://ui/corporation_screen.gd")
 const ProfileScreen := preload("res://ui/profile_screen.gd")
 const StarMapScreen := preload("res://ui/star_map_screen.gd")
 const StationScreen := preload("res://ui/station_screen.gd")
@@ -114,6 +115,7 @@ func _ready() -> void:
 	_hud.map_requested.connect(open_map)
 	_hud.settings_requested.connect(open_settings)
 	_hud.profile_requested.connect(open_profile)
+	_hud.corporation_requested.connect(open_corporation)
 	_hud.star_map_requested.connect(open_star_map)
 	_hud.station_requested.connect(open_station)
 	_hud.chat_requested.connect(func() -> void: open_chat())
@@ -468,6 +470,10 @@ func open_profile() -> Control:
 	p.theme = theme
 	p.set_data(gateway.snapshot())
 	p.set_shop_available(gateway.has_shop())
+	p.set_corporation(gateway.corporation_snapshot())
+	gateway.corporation_updated.connect(p.set_corporation)
+	if gateway.has_corporations():
+		gateway.corporation_info()
 	var on_shop := func(d: Dictionary) -> void:
 		if is_instance_valid(p):
 			p.set_data(gateway.snapshot(), d.get("state", {}))
@@ -638,7 +644,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if event.pressed:
 					gestures.wheel(-1, camera_config.wheel_zoom_step)
 	elif event.is_action_pressed("ui_cancel"):
-		if not close_chat():
+		if not close_corporation() and not close_chat():
 			_on_exit()
 
 
@@ -677,7 +683,7 @@ func select_at(pos: Vector2) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:  # кнопка «Назад» на Android
-		if not close_chat():   # открытое окно чата закрывается первым
+		if not close_corporation() and not close_chat():   # сначала закрываем открытый экран корпорации или чат
 			_on_exit()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		if gestures != null:
@@ -689,3 +695,32 @@ func _on_exit() -> void:
 	if auto_exit:
 		Session.gateway = null
 		get_tree().change_scene_to_file("res://scenes/connect.tscn")
+
+
+func open_corporation() -> Control:
+	var existing := get_node_or_null("CorporationLayer/CorporationOverlay")
+	if existing != null:
+		return existing
+	if not gateway.has_corporations():
+		_hud.show_toast("Корпорации доступны только при игре на сервере")
+		return null
+	gestures.cancel()
+	var screen := CorporationScreen.new()
+	screen.name = "CorporationOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.name = "CorporationLayer"
+	add_child(layer)
+	layer.add_child(screen)
+	screen.theme = theme
+	screen.bind(gateway)
+	screen.closed.connect(func() -> void: layer.queue_free())
+	return screen
+
+
+func close_corporation() -> bool:
+	var screen := get_node_or_null("CorporationLayer/CorporationOverlay")
+	if screen == null:
+		return false
+	screen._close_screen()
+	return true

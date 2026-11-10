@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 rc=0
 
 echo "== интерфейс: тема, безопасная зона, раскладка, компоненты, шлюз, HUD космоса"
-for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test profile_screen_test background_test art_standard_test frame_stats_test camera_test camera_input_test labels_test loading_overlay_test ship_visual_test hangar_test fleet_shop_test world_decor_test map_screen_test start_splash_test updater_test nameplates_test settings_screen_test chat_panel_test content_test apk_installer_test auto_battle_test pilot_ui_test touch_scroll_test chat_overlay_test; do
+for t in theme_test safe_area_test layout_test components_test demo_gateway_test hud_test profile_screen_test corporation_test background_test art_standard_test frame_stats_test camera_test camera_input_test labels_test loading_overlay_test ship_visual_test hangar_test fleet_shop_test world_decor_test map_screen_test start_splash_test updater_test nameplates_test settings_screen_test chat_panel_test content_test apk_installer_test auto_battle_test pilot_ui_test touch_scroll_test chat_overlay_test; do
   echo "-- $t"
   timeout 180 godot --headless --path "$ROOT/client" --script "res://tests/$t.gd" 2>&1 \
     | grep -E "^(FAIL|Итого|SCRIPT ERROR|ERROR)"
@@ -18,6 +18,9 @@ done
 
 echo "== Ships RPG: настоящий локальный WebSocket → ангар Стрижа (без БД)"
 (cd "$ROOT/server" && COSMOC_TEST_GODOT=godot go test -count=1 ./internal/ws -run '^TestPassportGodotClient$') || rc=1
+
+echo "== корпорации: настоящий WebSocket → создание/вступление/профиль/переподключение/выход"
+(cd "$ROOT/server" && COSMOC_TEST_GODOT=godot go test -count=1 ./internal/ws -run '^TestCorporationGodotClient$') || rc=1
 
 echo "== Ships RPG: сохранённый двигатель, настоящий WebSocket → PostgreSQL → Godot"
 EQUIPMENT_TEST_DATABASE_URL="${COSMOC_TEST_DATABASE_URL:-${PG_URL:-}}"

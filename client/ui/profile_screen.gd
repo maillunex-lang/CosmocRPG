@@ -20,6 +20,7 @@ const ATTRIBUTES := [
 var _nick: Label
 var _title: Label
 var _spec: Label
+var _corporation: Label
 var _ship: Label
 var _vip: Label
 var _sub: Label
@@ -117,6 +118,10 @@ func _ready() -> void:
 	_sub.name = "SubValue"
 	_credits = _row(box, "coins", "Кредиты")
 	_credits.name = "CreditsValue"
+
+	_corporation = _row(box, "user", "Корпорация")
+	_corporation.name = "CorporationValue"
+	set_corporation({"known": false})
 
 	_build_development(box)
 	_fit_scroll.call_deferred()
@@ -266,3 +271,10 @@ static func _fmt(n: int) -> String:
 func set_shop_available(ok: bool) -> void:
 	if _shop_button != null:
 		_shop_button.visible = ok
+
+
+func set_corporation(data: Dictionary) -> void:
+	var corp: Dictionary = data.get("corp", {})
+	_corporation.text = "[%s] %s" % [str(corp.get("tag", "")), str(corp.get("name", ""))] if not corp.is_empty() else ("нет" if bool(data.get("known", false)) else "—")
+	_corporation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_fit_scroll.call_deferred()

@@ -29,7 +29,7 @@ export function ChatGPT() {
   async function dl() {
     setErr(""); setMsg("");
     try {
-      const n = await download("/ai/zip/export", size === 300 ? { kind: "all" } : { kind: "batch", size, index }, "batch.zip");
+      const n = await download("/ai/zip/export", size === 500 ? { kind: "all" } : { kind: "batch", size, index }, "batch.zip");
       setMsg(`Скачан ${n}. Загрузите его в ChatGPT вместе с промптом.`);
       load();
     } catch (e) { setErr(errText(e)); }
@@ -38,7 +38,7 @@ export function ChatGPT() {
   return (
     <>
       <section className="card" aria-label="Инструкция">
-        <h2>Как обучить 300 капитанов через ChatGPT</h2>
+        <h2>Как обучить 500 капитанов через ChatGPT</h2>
         <ol className="steps">
           <li>На вкладке «Обзор» сгенерируйте капитанов (до 300).</li>
           <li>Ниже выберите размер партии (рекомендуется 25 — это 12 партий) и скачайте ZIP партии.</li>

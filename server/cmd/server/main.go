@@ -407,13 +407,18 @@ func run() error {
 				return ids
 			})
 			log.Info("AI civilization Director started (gateway flag, studio candidates)")
-			// Real join + PvE farm: nearest hostile from world snapshot.
+			// Several professions join so chat has different voices.
 			speaker := aiciv.NewChatSpeaker(chatSvc, log)
+			speaker.Push = wsHandler.PushChat
+			chorus := aiciv.NewChorus(speaker, log)
+			go chorus.Run(ctx, 12*time.Second)
 			farm := &aiciv.FarmController{
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
 				Store:     aiState,
 				World:     gameWorld,
 				Speaker:   speaker,
+				Chorus:    chorus,
+				Res:       reservation,
 				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
 				Fallback:  []string{"dr1", "dr2"},
 				Log:       log,
@@ -428,11 +433,14 @@ func run() error {
 				if err != nil || len(profiles) == 0 {
 					return
 				}
-				// choose goal by profession
-				goal := aiciv.GoalForProfile(profiles[0])
-				farm.RunGoalOnce(ctx, []string{profiles[0].ID}, goal)
+				cast := aiciv.PickCast(profiles, 3)
+				members := make([]aiciv.CastMember, 0, len(cast))
+				for _, p := range cast {
+					members = append(members, aiciv.CastMember{ID: p.ID, Name: p.Name, Goal: aiciv.GoalForProfile(p)})
+				}
+				farm.RunCast(ctx, members)
 			}()
-			log.Info("AI civilization goal runner scheduled (farm_credits chain)")
+			log.Info("AI civilization cast scheduled (up to 3 voices)")
 		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)

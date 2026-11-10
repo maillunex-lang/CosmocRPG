@@ -27,8 +27,7 @@ Repository Secrets с теми же именами пока дублируют �
 3. Владелец открывает запуск → кнопка **«Approve and deploy»** (раздел Review pending deployments).
 4. Сборка: Godot 4.7.2 → Gradle → apksigner (проверки package ID `ru.cosmocrpg.game`,
    подписи v2/v3, отпечатка SHA-256) → артефакты (APK + cert-sha256.txt + SHA256SUMS + отчёты).
-5. Публикации APK автоматически НЕТ: артефакт скачивается вручную; публикация в `/download/`
-   выполняется с VPS через `tools/publish_release.sh`.
+5. Если в окружении `android-signing` заданы `VPS_SSH_KEY`, `VPS_HOST` и `VPS_USER`, тот же запуск заливает APK на VPS и вызывает `tools/publish_release.sh`. Игра видит обновление в `https://rikagro.ru/download/latest.json`. Игровой сервер и база при этом не перезапускаются. Ключ подписи манифеста остаётся только на VPS.
 
 ## Восстановление после ошибки
 
@@ -37,6 +36,8 @@ Repository Secrets с теми же именами пока дублируют �
 - «расшифрованный файл не похож на Java keystore» — секрет BASE64 повреждён: перезалить из
   `base64 -w0 ~/keys/cosmoc/release.keystore`.
 - Подпись не совпала — сверить `cert-sha256.txt` с отпечатком в `docs/SECURITY.md`.
+- «VPS_SSH_KEY не читается» — секрет должен быть файлом приватного ключа OpenSSH целиком, без пароля. Заново: `gh secret set VPS_SSH_KEY --env android-signing --repo maillunex-lang/CosmocRPG < ~/.ssh/apk_publish`.
+- SSH не пускает — на VPS в `~/.ssh/authorized_keys` пользователя `gamedev` должна быть открытая пара этого ключа. Хост только `78.17.214.25`.
 
 ## Резервное хранение keystore (критично)
 

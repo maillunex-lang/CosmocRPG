@@ -1,10 +1,15 @@
-# Подписанный release APK. Только ручной запуск с ветки main.
-# pull_request и pull_request_target намеренно отсутствуют: код из запроса на слияние
-# не должен получать ANDROID_KEYSTORE_*. GitHub Release и production этим файлом не публикуются.
+# Подписанный release APK и публикация обновления клиента в /download/.
+# Только ручной запуск с ветки main. pull_request намеренно отсутствует.
+# Игровой сервер, база и Docker этим файлом не перезапускаются.
 name: Android release APK
 
 on:
   workflow_dispatch:
+    inputs:
+      notes:
+        description: Текст окна обновления в игре
+        required: false
+        default: Квесты Меридиана и Красного Шторма
 
 permissions:
   contents: read
@@ -245,6 +250,61 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+      - name: Опубликовать обновление для игры
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          RELEASE_NOTES: ${{ github.event.inputs.notes }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [ "$VPS_HOST" != "78.17.214.25" ] || [ "$VPS_USER" != "gamedev" ]; then
+            echo "секрет VPS_HOST или VPS_USER указывает не на ожидаемый сервер" >&2
+            exit 1
+          fi
+          notes="${RELEASE_NOTES:-Квесты Меридиана и Красного Шторма}"
+          if [ "${#notes}" -gt 400 ]; then
+            echo "текст обновления длиннее 400 символов" >&2
+            exit 1
+          fi
+          install -d -m 700 "$RUNNER_TEMP/ssh" "$RUNNER_TEMP/bundle/tools" "$RUNNER_TEMP/bundle/client/assets"
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          chmod 600 "$RUNNER_TEMP/ssh/id"
+          if ! ssh-keygen -y -f "$RUNNER_TEMP/ssh/id" >/dev/null; then
+            rm -f "$RUNNER_TEMP/ssh/id"
+            echo "VPS_SSH_KEY не читается как приватный ключ OpenSSH" >&2
+            exit 1
+          fi
+          printf '%s\n' '78.17.214.25 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDdx157SYryf6CgzVb9aniy6NI/gtbUq3wJysx9zbbjJ' > "$RUNNER_TEMP/ssh/known_hosts"
+          opt=(-i "$RUNNER_TEMP/ssh/id" -o "UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          remote="${VPS_USER}@${VPS_HOST}"
+          cp tools/publish_release.sh "$RUNNER_TEMP/bundle/tools/publish_release.sh"
+          cp client/project.godot "$RUNNER_TEMP/bundle/client/project.godot"
+          cp client/assets/update_public.pem "$RUNNER_TEMP/bundle/client/assets/update_public.pem"
+          cp dist/zvezdnye-rubezhi-release.apk "$RUNNER_TEMP/bundle/app.apk"
+          printf '%s' "$notes" > "$RUNNER_TEMP/bundle/notes.txt"
+          export BUNDLE_DIR="$RUNNER_TEMP/bundle"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          script = """set -euo pipefail
+          cd "$HOME/apk-publish-bundle"
+          test -f "$HOME/keys/cosmoc/manifest_private.pem"
+          test -d "$HOME/apk-share"
+          NOTES=$(cat notes.txt)
+          APK_DIR="$HOME/apk-share" bash tools/publish_release.sh app.apk "$NOTES"
+          rm -rf "$HOME/apk-publish-bundle"
+          """
+          path = Path(os.environ["BUNDLE_DIR"]) / "publish_remote.sh"
+          path.write_text("\n".join(line.strip() for line in script.strip().splitlines()) + "\n")
+          path.chmod(0o700)
+          PY
+          ssh "${opt[@]}" "$remote" "rm -rf ~/apk-publish-bundle && mkdir -p ~/apk-publish-bundle"
+          scp "${opt[@]}" -r "$RUNNER_TEMP/bundle/." "${remote}:apk-publish-bundle/"
+          ssh "${opt[@]}" "$remote" "bash ~/apk-publish-bundle/publish_remote.sh"
+          rm -rf "$RUNNER_TEMP/ssh" "$RUNNER_TEMP/bundle"
+
       - name: Удалить временный keystore
         if: always()
         run: |
@@ -253,5 +313,6 @@ jobs:
             (cd client/android/build && ./gradlew --stop) || true
           fi
           rm -f "${RUNNER_TEMP}/release.keystore"
+          rm -rf "${RUNNER_TEMP}/ssh" "${RUNNER_TEMP}/bundle"
           find client -type f -name '*.keystore' -delete
           rm -rf "${HOME}/.gradle/daemon" client/android/build/.gradle

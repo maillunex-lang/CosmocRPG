@@ -20,9 +20,9 @@ type Config struct {
 	FeatureLiving                bool   // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
 	AssetSignKeyFile             string // COSMOC_ASSET_SIGN_KEY_FILE: приватный ключ подписи манифеста ресурсов (пусто: публикация ресурсов выключена)
 	MediaDir                     string // COSMOC_MEDIA_DIR: каталог файлов библиотеки музыки; по умолчанию data/media; off выключает
-	FeatureAICivilizationGateway bool   // COSMOC_AI_CIVILIZATION_GATEWAY: экспериментальный шлюз, default false
+	FeatureAICivilizationGateway bool   // COSMOC_AI_CIVILIZATION_GATEWAY: шлюз цивилизации, по умолчанию включён
 	FeatureAICivilizationShadow  bool   // COSMOC_AI_CIVILIZATION_SHADOW: только постоянные идентичности, без действий
-	FeatureAI                    bool   // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
+	FeatureAI                    bool   // COSMOC_FEATURE_AI: ИИ-игроки в мире, по умолчанию включено
 	FeatureQuests                bool   // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
 
 	AdminAddr         string        // COSMOC_ADMIN_ADDR, адрес админ-API (по умолчанию 127.0.0.1:8081); значение off выключает
@@ -85,6 +85,11 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		c.WSRatePerSec = n
 	}
+	// ИИ включены, пока оператор явно не выключил. Шлюз цивилизации едет вместе с ними.
+	c.FeatureAI = true
+	c.FeatureAICivilizationGateway = true
+	aiExplicit := getenv("COSMOC_FEATURE_AI") != ""
+	gwExplicit := getenv("COSMOC_AI_CIVILIZATION_GATEWAY") != ""
 	for _, b := range []struct {
 		name string
 		dst  *bool
@@ -96,6 +101,9 @@ func Load(getenv func(string) string) (Config, error) {
 			}
 			*b.dst = x
 		}
+	}
+	if aiExplicit && !c.FeatureAI && !gwExplicit {
+		c.FeatureAICivilizationGateway = false
 	}
 	if v := getenv("COSMOC_ADMIN_SESSION_TTL"); v != "" {
 		d, err := time.ParseDuration(v)

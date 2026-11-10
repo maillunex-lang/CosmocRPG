@@ -34,11 +34,32 @@ func (h *Handler) aiPlayersGet(w http.ResponseWriter, r *http.Request, _ User) {
 		status.Target = want
 		civErr = last
 		on := h.opts.Cast.OnlineSet()
+		names := h.opts.Cast.Roster()
 		now := time.Now()
+		seen := map[string]bool{}
+		counts := map[string]int{}
 		for i := range caps {
-			if on[caps[i].ID] {
-				caps[i].Since = now
+			if !on[caps[i].ID] {
+				continue
 			}
+			caps[i].Since = now
+			seen[caps[i].ID] = true
+			if caps[i].Behavior != "" {
+				counts[caps[i].Behavior]++
+			}
+		}
+		for id, name := range names {
+			if seen[id] {
+				continue
+			}
+			if name == "" {
+				name = id
+			}
+			caps = append(caps, aiagent.OnlineCaptain{ID: id, Name: name, Profession: "капитан", Behavior: "support", Since: now})
+			counts["support"]++
+		}
+		if online > 0 {
+			status.ByBehavior = counts
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

@@ -2,6 +2,7 @@ package aiagent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -271,5 +272,19 @@ func TestBehaviorAndShipMapping(t *testing.T) {
 				t.Fatalf("корабль %s для поведения %s отсутствует в каталоге", typ, b)
 			}
 		}
+	}
+}
+
+func TestOnlineCaptainJSONUsesLowercase(t *testing.T) {
+	raw, err := json.Marshal(OnlineCaptain{ID: "cpt-0001", Name: "Кира", Profession: "разведчик", Behavior: "scout"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err = json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc["id"] != "cpt-0001" || doc["name"] != "Кира" || doc["since"] != nil {
+		t.Fatalf("админка ждёт маленькие поля и пустой since у офлайн: %s", raw)
 	}
 }

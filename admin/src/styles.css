@@ -91,3 +91,62 @@ button.small, a.small { padding: .3rem .6rem; font-size: .85rem; }
 td.actions { white-space: normal; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 td.actions a { color: var(--accent); }
 .model-preview > div { max-width: 640px; min-height: 320px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+/* ИИ-игроки: liquid glass, телефон в первую очередь */
+.ai-page {
+  min-height: 100vh;
+  padding: 1.25rem 1rem 3rem;
+  color: #f4f7ff;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(120, 170, 255, .28), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(255, 186, 120, .16), transparent 50%),
+    #070b16;
+}
+.ai-top { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.ai-top h1 { margin: 0; font-size: 1.8rem; letter-spacing: -.03em; }
+.ai-kicker { margin: 0; color: rgba(244, 247, 255, .62); font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; }
+.ai-top-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.ai-user { color: rgba(244, 247, 255, .7); font-size: .9rem; }
+.glass {
+  background: rgba(18, 26, 48, .55);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 22px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 18px 50px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  padding: 1rem 1.1rem 1.15rem;
+  margin: 0 0 .9rem;
+}
+.glass.hero { display: grid; grid-template-columns: minmax(140px, 180px) 1fr; gap: 1rem; align-items: center; }
+.hero-now { display: flex; flex-direction: column; align-items: flex-start; gap: .15rem; }
+.hero-now strong { font-size: 4rem; line-height: .9; letter-spacing: -.05em; }
+.hero-now span, .hero-target p { margin: .35rem 0 0; color: rgba(244, 247, 255, .72); }
+.hero-target label { display: block; font-size: 1.05rem; color: #fff; margin-bottom: .45rem; }
+.target-row { display: flex; gap: .75rem; align-items: center; }
+.target-row input[type="range"] { flex: 1; accent-color: #9ec1ff; }
+.target-row input[type="number"] { width: 5.2rem; text-align: center; font-size: 1.3rem; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .2); color: #fff; border-radius: 14px; }
+.ai-page .check { display: flex; flex-direction: row; align-items: center; gap: .55rem; color: #fff; margin: .8rem 0; }
+.ai-page .primary { min-width: 11rem; border-radius: 14px; padding: .75rem 1.1rem; background: linear-gradient(180deg, #8eb4ff, #4f7dff); }
+.glass-btn { background: rgba(255, 255, 255, .08); color: #fff; border: 1px solid rgba(255, 255, 255, .18); border-radius: 12px; }
+.ai-banner { margin: 0 0 .8rem; padding: .7rem .9rem; border-radius: 14px; }
+.ai-banner.bad { background: rgba(255, 90, 80, .16); color: #ffd0cb; }
+.ai-banner.ok { background: rgba(110, 220, 150, .14); color: #d9ffe8; }
+.chips { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 0 .9rem; }
+.chip { padding: .28rem .7rem; border-radius: 999px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); }
+.online-list { list-style: none; margin: .4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+.online-list li { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .75rem .85rem; border-radius: 16px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .1); }
+.online-list b { display: block; }
+.online-list span { color: rgba(244, 247, 255, .68); font-size: .88rem; }
+.online-list li.is-off { opacity: .55; }
+.ai-empty { margin: .2rem 0 0; color: rgba(244, 247, 255, .75); }
+.ai-page details summary { cursor: pointer; font-size: 1.05rem; }
+.ai-page .fine { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; margin-top: .9rem; }
+.ai-page .fine input[type="number"] { background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); color: #fff; border-radius: 12px; }
+.ai-search { margin: .8rem 0; }
+.ai-search input { width: 100%; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); color: #fff; border-radius: 14px; }
+@media (max-width: 720px) {
+  .glass.hero { grid-template-columns: 1fr; }
+  .hero-now strong { font-size: 3.2rem; }
+  .ai-top { align-items: flex-start; flex-direction: column; }
+}
+

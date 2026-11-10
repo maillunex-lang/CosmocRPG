@@ -2,6 +2,7 @@ package aiagent
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"sort"
 	"strings"
@@ -330,8 +331,22 @@ func (m *Manager) Status() Status {
 
 // OnlineCaptain — капитан онлайн для админки и диалога.
 type OnlineCaptain struct {
-	ID, Name, Profession, Behavior string
-	Since                          time.Time
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Profession string    `json:"profession"`
+	Behavior   string    `json:"behavior"`
+	Since      time.Time `json:"since,omitempty"`
+}
+
+// MarshalJSON не пишет нулевую дату: для админки пустой since значит «не в мире».
+func (c OnlineCaptain) MarshalJSON() ([]byte, error) {
+	doc := map[string]any{
+		"id": c.ID, "name": c.Name, "profession": c.Profession, "behavior": c.Behavior,
+	}
+	if !c.Since.IsZero() {
+		doc["since"] = c.Since.UTC().Format(time.RFC3339)
+	}
+	return json.Marshal(doc)
 }
 
 // IsOnline говорит, что капитан сейчас в мире.

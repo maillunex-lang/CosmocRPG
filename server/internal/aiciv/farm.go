@@ -19,21 +19,21 @@ type WorldView interface {
 
 // FarmController joins reserved captains as real players and runs their goals.
 type FarmController struct {
-	Bootstrap *Bootstrapper
-	Store     *Store
-	World     WorldView
-	Speaker   *ChatSpeaker
-	Chorus    *Chorus
-	Board     *Board
-	Live      *Live
-	Res       *Reservation
-	Endpoint  string
-	Fallback  []string
-	LowHull   float64
-	Log       *slog.Logger
-	Clans     *corp.Service
+	Bootstrap  *Bootstrapper
+	Store      *Store
+	World      WorldView
+	Speaker    *ChatSpeaker
+	Chorus     *Chorus
+	Board      *Board
+	Live       *Live
+	Res        *Reservation
+	Endpoint   string
+	Fallback   []string
+	LowHull    float64
+	Log        *slog.Logger
+	Clans      *corp.Service
 	censusOnce sync.Once
-	census      *castCensus
+	census     *castCensus
 }
 
 // CastMember is one captain to put in the world and in the chat.
@@ -157,7 +157,6 @@ func (f *FarmController) keepReserved(ctx context.Context, members []CastMember)
 		}
 	}
 }
-
 
 // Supervise keeps the cast aligned with admin knobs.
 // A failed join is remembered and retried; captains already in the world stay.
@@ -406,6 +405,21 @@ func (f *FarmController) OnlineSet() map[string]bool {
 	defer st.mu.Unlock()
 	for id := range st.online {
 		out[id] = true
+	}
+	return out
+}
+
+// Roster — кто сейчас в мире: идентификатор студии и ник.
+func (f *FarmController) Roster() map[string]string {
+	out := map[string]string{}
+	if f == nil {
+		return out
+	}
+	st := f.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	for id, name := range st.online {
+		out[id] = name
 	}
 	return out
 }

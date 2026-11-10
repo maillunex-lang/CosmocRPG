@@ -38,6 +38,8 @@ const (
 type GoalRunner struct {
 	World   WorldView
 	Store   *Store
+	Speaker *ChatSpeaker
+	Name    string
 	Log     *slog.Logger
 	LowHull float64
 }
@@ -76,6 +78,15 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			snap, ok := r.World.Snapshot(playerID)
 			if !ok {
 				continue
+			}
+			// occasional contextual line (anti-repeat inside Speaker)
+			if r.Speaker != nil && r.Name != "" && int(time.Now().Unix())%50 == 0 {
+				if line := LineForGoal(st.goal, r.Name, time.Now()); line != "" {
+					r.Speaker.Say(ctx, captainID, r.Name, "general", line)
+				}
+				if fu := r.Speaker.FollowUp("general", captainID); fu != "" {
+					r.Speaker.Say(ctx, captainID, r.Name, "general", fu)
+				}
 			}
 			if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax < threshold && st.step != StepRetreat && st.step != StepWait {
 				st.step = StepRetreat

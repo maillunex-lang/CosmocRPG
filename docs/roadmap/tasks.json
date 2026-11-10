@@ -569,9 +569,9 @@
    "title": "Радио: плеер, библиотека, прерывания",
    "module": "CLIENT",
    "priority": "P1",
-   "status": "TODO",
-   "description": "6 треков готовы (R-43), рекламные вставки позже",
-   "updated": "2026-11-09",
+   "status": "IN_PROGRESS",
+   "description": "М-1 в main: плеер, громкость, библиотека и /media/. М-2 (эфир, реклама, срочные новости) ещё нет. Production/APK не выпущены.",
+   "updated": "2026-11-10",
    "release": {
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"

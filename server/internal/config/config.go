@@ -19,6 +19,7 @@ type Config struct {
 
 	FeatureLiving                bool   // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
 	AssetSignKeyFile             string // COSMOC_ASSET_SIGN_KEY_FILE: приватный ключ подписи манифеста ресурсов (пусто: публикация ресурсов выключена)
+	MediaDir                     string // COSMOC_MEDIA_DIR: каталог файлов библиотеки музыки; по умолчанию data/media; off выключает
 	FeatureAICivilizationGateway bool   // COSMOC_AI_CIVILIZATION_GATEWAY: экспериментальный шлюз, default false
 	FeatureAICivilizationShadow  bool   // COSMOC_AI_CIVILIZATION_SHADOW: только постоянные идентичности, без действий
 	FeatureAI                    bool   // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
@@ -36,6 +37,7 @@ func Load(getenv func(string) string) (Config, error) {
 		HTTPAddr:         def(getenv("COSMOC_HTTP_ADDR"), ":8080"),
 		DatabaseURL:      getenv("COSMOC_DATABASE_URL"),
 		AssetSignKeyFile: getenv("COSMOC_ASSET_SIGN_KEY_FILE"),
+		MediaDir:         "data/media",
 		LogLevel:         def(getenv("COSMOC_LOG_LEVEL"), "info"),
 		ShutdownTimeout:  10 * time.Second,
 		WSMaxMessage:     4096,
@@ -50,6 +52,12 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if c.DatabaseURL == "" {
 		return Config{}, errors.New("COSMOC_DATABASE_URL не задана")
+	}
+	if v := getenv("COSMOC_MEDIA_DIR"); v != "" {
+		c.MediaDir = v
+	}
+	if c.MediaDir == "off" {
+		c.MediaDir = ""
 	}
 	switch c.LogLevel {
 	case "debug", "info", "warn", "error":

@@ -4,7 +4,7 @@ import { ChangePassword } from "./ChangePassword";
 
 const REFRESH_MS = 5000;
 
-export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips, onOpenWorld, onOpenChat, onOpenAi, onOpenDesign }: { username: string; onLoggedOut: () => void; onOpenStudio?: () => void; onOpenShips?: () => void; onOpenWorld?: () => void; onOpenChat?: () => void; onOpenAi?: () => void; onOpenDesign?: () => void }) {
+export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips, onOpenWorld, onOpenChat, onOpenAi, onOpenDesign, onOpenRadio }: { username: string; onLoggedOut: () => void; onOpenStudio?: () => void; onOpenShips?: () => void; onOpenWorld?: () => void; onOpenChat?: () => void; onOpenAi?: () => void; onOpenDesign?: () => void; onOpenRadio?: () => void }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [error, setError] = useState("");
@@ -50,6 +50,7 @@ export function Dashboard({ username, onLoggedOut, onOpenStudio, onOpenShips, on
           {onOpenChat && <button onClick={onOpenChat}>Чат</button>}
           {onOpenAi && <button onClick={onOpenAi}>ИИ-игроки</button>}
           {onOpenDesign && <button onClick={onOpenDesign}>Дизайн</button>}
+          {onOpenRadio && <button onClick={onOpenRadio}>Музыка</button>}
           <button onClick={() => void logout()}>Выйти</button>
         </div>
       </header>

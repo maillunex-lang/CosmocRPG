@@ -49,6 +49,10 @@
 	handle /assets/* {
 		reverse_proxy server:8080
 	}
+	# Библиотека музыки (R-37): только чтение. Загрузка — через админ-API, файлы на томе сервера.
+	handle /media/* {
+		reverse_proxy server:8080
+	}
 	# Раздача APK по HTTPS: https://<домен>/download/<файл>.apk (каталог монтируется только на чтение, без списка файлов)
 	handle /download/* {
 		uri strip_prefix /download

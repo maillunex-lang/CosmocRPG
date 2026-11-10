@@ -17,7 +17,7 @@
 ## Сводка прогресса
 
 <!--GEN:SUMMARY-->
-Всего задач в реестре: **64** · DONE **23** · IN_PROGRESS **4** · BLOCKED **3** · TODO **33** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
+Всего задач в реестре: **64** · DONE **23** · IN_PROGRESS **5** · BLOCKED **3** · TODO **32** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
 <!--/GEN-->
 
 Правило подсчёта: прогресс = доля DONE-задач в `tasks.json`. Это **не** готовность игры — см. `roadmap/STATUS.md`.
@@ -33,7 +33,7 @@
 | SR-100C | P0 | Оснащение: сохранение и смена в доке | Codex | IN_PROGRESS | `docs/ships-rpg/ROADMAP.md` |
 | SR-100D | P0 | Приёмка оснащения + release | Codex | TODO | после SR-100C |
 | E-4 | P2 | Серверные препятствия (минимум NAV-01) | свободен | TODO | `modules/GALAXY.md` |
-| RADIO | P1 | Радио: плеер и библиотека | свободен | TODO | `modules/CLIENT.md` |
+| RADIO | P1 | Радио: М-1 в main, М-2 ещё нет | свободен | IN_PROGRESS | `modules/CLIENT.md` |
 
 Полная очередь: `roadmap/NOW.md`. Свободные задачи: `roadmap/AGENT_TASKS.md`.
 

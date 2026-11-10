@@ -27,6 +27,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/equipment"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/media"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
@@ -349,6 +350,17 @@ func run() error {
 		designSvc = ds
 		log.Info("библиотека дизайна готова", "публикация", signer != nil)
 	}
+	var mediaSvc *media.Service
+	if cfg.MediaDir != "" {
+		ms, err := media.NewService(media.NewPGStore(pool), cfg.MediaDir)
+		if err != nil {
+			return fmt.Errorf("библиотека музыки: %w", err)
+		}
+		mediaSvc = ms
+		log.Info("библиотека музыки готова", "dir", cfg.MediaDir)
+	} else {
+		log.Info("библиотека музыки выключена (COSMOC_MEDIA_DIR=off)")
+	}
 	// корпорации минимум (R-64): взнос списывается через quest-сервис
 	var corpSvc *corp.Service
 	if quests != nil {
@@ -399,7 +411,7 @@ func run() error {
 	}()
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           gameMux(pool, version, wsHandler, designSvc),
+		Handler:           gameMux(pool, version, wsHandler, designSvc, mediaSvc),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -421,7 +433,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ
@@ -474,11 +486,14 @@ func cleanupSessions(ctx context.Context, log *slog.Logger, store *admin.Store) 
 	}
 }
 
-// gameMux — публичные маршруты игрового порта: здоровье, WebSocket и раздача подписанных ресурсов дизайна (/assets/).
-func gameMux(db httpapi.Pinger, version string, ws http.Handler, d *design.Service) *http.ServeMux {
+// gameMux — публичные маршруты игрового порта: здоровье, WebSocket, ресурсы дизайна (/assets/) и музыка (/media/).
+func gameMux(db httpapi.Pinger, version string, ws http.Handler, d *design.Service, m *media.Service) *http.ServeMux {
 	mux := httpapi.NewMux(db, version, ws)
 	if d != nil {
 		mux.Handle("/assets/", d.PublicHandler())
+	}
+	if m != nil {
+		mux.Handle("/media/", m.PublicHandler())
 	}
 	return mux
 }

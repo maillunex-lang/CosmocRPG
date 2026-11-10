@@ -295,6 +295,9 @@ func _enter_world() -> void:
 			add_child(_client)
 		gw.queue_free())
 	var url := _url_edit.text.strip_edges()
+	var music := get_node_or_null("/root/Music")
+	if music != null and music.has_method("configure"):
+		music.configure(url)
 	gw.adopt(_client, url)
 
 

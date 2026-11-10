@@ -44,9 +44,15 @@ func _ready() -> void:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(720, 0)
 	center.add_child(panel)
+	var scroll := ScrollContainer.new()
+	scroll.name = "SettingsScroll"
+	scroll.custom_minimum_size = Vector2(680, 600)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 14)
-	panel.add_child(box)
+	box.custom_minimum_size = Vector2(660, 0)
+	scroll.add_child(box)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	head.add_child(Icons.rect("settings", 32, Tokens.ACCENT))
@@ -59,6 +65,7 @@ func _ready() -> void:
 		box.add_child(_row(o))
 		if o["key"] == "auto_retaliate":
 			box.add_child(_auto_target_row())
+	box.add_child(_music_section())
 	var close := ActionButton.new()
 	close.text = "Закрыть"
 	close.variant = ActionButton.Variant.PRIMARY
@@ -87,11 +94,13 @@ func _row(o: Dictionary) -> Control:
 	b.custom_minimum_size = Vector2(120, 56)
 	var key := str(o["key"])
 	_toggles[key] = b
-	_sync_button(b, get_value(key))
+	_sync_button(b, UiSettings.get_bool(key, bool(o.get("default", false))))
 	b.pressed.connect(func() -> void:
 		var v := b.button_pressed
 		UiSettings.set_bool(key, v)
 		_sync_button(b, v)
+		if key == "music_enabled":
+			_apply_music()
 		option_changed.emit(key, v))
 	row.add_child(b)
 	return row
@@ -151,3 +160,95 @@ func _sync_button(b: Button, on: bool) -> void:
 	b.set_pressed_no_signal(on)
 	b.text = "Вкл" if on else "Выкл"
 	(b as ActionButton).variant = ActionButton.Variant.PRIMARY if on else ActionButton.Variant.SECONDARY
+
+
+func _music() -> Node:
+	return get_node_or_null("/root/Music")
+
+
+func _apply_music() -> void:
+	var m := _music()
+	if m != null and m.has_method("apply_mix"):
+		m.apply_mix()
+
+
+func _music_section() -> Control:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	var t := Label.new()
+	t.text = "Музыка"
+	t.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
+	col.add_child(t)
+	var a := Label.new()
+	a.text = "Играет фоном с сервера, к которому вы подключены. По умолчанию включена на половине громкости. Радиоэфир появится позже."
+	a.theme_type_variation = &"MutedLabel"
+	a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(a)
+	col.add_child(_row({"key": "music_enabled", "title": "Музыка", "about": "Выключите, если хотите тишину. Выбор запоминается на этом устройстве.", "default": true}))
+	col.add_child(_volume("music_volume", "Громкость музыки", 0.5))
+	col.add_child(_volume("radio_volume", "Громкость радио", 0.5))
+	col.add_child(_volume("sfx_volume", "Громкость эффектов", 0.5))
+	var now := Label.new()
+	now.name = "NowPlaying"
+	now.theme_type_variation = &"MutedLabel"
+	now.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(now)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var prev := ActionButton.new()
+	prev.text = "Предыдущий"
+	prev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	prev.custom_minimum_size = Vector2(0, 52)
+	prev.pressed.connect(func() -> void:
+		var m := _music()
+		if m != null and m.has_method("prev_track"):
+			m.prev_track())
+	var nxt := ActionButton.new()
+	nxt.text = "Следующий"
+	nxt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nxt.custom_minimum_size = Vector2(0, 52)
+	nxt.pressed.connect(func() -> void:
+		var m := _music()
+		if m != null and m.has_method("next_track"):
+			m.next_track())
+	row.add_child(prev)
+	row.add_child(nxt)
+	col.add_child(row)
+	var timer := Timer.new()
+	timer.wait_time = 0.5
+	timer.timeout.connect(func() -> void:
+		var m := _music()
+		if m == null:
+			now.text = ""
+			return
+		var title := str(m.get("track_title"))
+		var st := str(m.get("status"))
+		if not UiSettings.get_bool("music_enabled", true):
+			now.text = "Музыка выключена"
+		elif title != "":
+			now.text = "Сейчас играет: %s" % title
+		else:
+			now.text = st
+	)
+	timer.autostart = true
+	add_child(timer)
+	return col
+
+
+func _volume(key: String, title: String, default: float) -> Control:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	var t := Label.new()
+	t.text = title
+	col.add_child(t)
+	var s := HSlider.new()
+	s.min_value = 0
+	s.max_value = 100
+	s.step = 1
+	s.custom_minimum_size = Vector2(0, 36)
+	s.set_value_no_signal(round(UiSettings.get_float(key, default) * 100.0))
+	s.value_changed.connect(func(v: float) -> void:
+		UiSettings.set_float(key, v / 100.0)
+		_apply_music())
+	col.add_child(s)
+	return col

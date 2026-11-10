@@ -1,3 +1,9 @@
+# Последняя передача — радио М-1 (2026-11-10)
+
+Плеер, громкость и библиотека музыки в main. Сервер хранит метаданные (миграция 0026) и файлы в `COSMOC_MEDIA_DIR` (в Compose — том `media_data`, наружу только чтение через `/media/`). Админка: раздел «Музыка». Клиент после входа в мир качает включённые треки вида music, проверяет SHA-256 и играет их на шине Music. По умолчанию музыка включена на 50%. Реклама, новости и эффекты в библиотеку класть можно, эфир их ещё не крутит — это М-2. Шесть присланных MP3 в репозиторий не входят: их нужно загрузить в админке. Production и новый APK не выпускались.
+
+---
+
 # Последняя передача — атомарная покупка (2026-11-10)
 
 Codex, main в /workspace/CosmocRPG-main по поручению владельца. BETA-ECO-001: общий SQL wallet+hold+receipt, world reservation/revision, status/reconnect recovery, persistent Godot intent. AIC-026: safe buy/status через общий AI gateway; default flags off. BETA-ECO-002: исправлен остаток XP платного уровня (red→green). Ремонт/upgrade ещё требуют атомарности (BETA-ECO-003/004 TODO); sell AI закрыт, AIC-025 BLOCKED. Production/APK не выпущены.

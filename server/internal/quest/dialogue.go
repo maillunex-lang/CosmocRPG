@@ -23,87 +23,9 @@ type Scene struct {
 	Nodes   map[string]Node
 }
 
-// Dialogue возвращает сцену задания, если разговор для него написан.
+// Dialogue возвращает сцену задания из data/dialogues.json.
 func Dialogue(questID string) (Scene, bool) {
-	switch questID {
-	case "meridian_voice":
-		return Scene{
-			Start:   "open",
-			Closing: "Тогда ворота на Красный Шторм. Обломки у первого поля помечены как мусор — не верьте этой пометке.",
-			Nodes: map[string]Node{
-				"open": {
-					Speaker: "Вора Кесс",
-					Text:    "Доклад приняла. След аномалии не кончается в Меридиане: такой же уходит к воротам Красного Шторма. Караваны там уже пропадали.",
-					Choices: []Choice{
-						{ID: "ask", Text: "Кто пропадает?", Next: "who"},
-						{ID: "go", Text: "Полечу к обломкам.", Next: "done"},
-					},
-				},
-				"who": {
-					Speaker: "Вора Кесс",
-					Text:    "Свободные системы списывают это на пиратов. Я бы сначала осмотрела обломки у поля, а не совалась в логово одна.",
-					Choices: []Choice{
-						{ID: "go", Text: "Полечу к обломкам.", Next: "done"},
-					},
-				},
-			},
-		}, true
-	case "storm_dispatch":
-		return Scene{
-			Start:   "open",
-			Closing: "Контур на карте — аномалия. Снимите служебные метки и вернитесь. Корабль «Арго» там не ищите.",
-			Nodes: map[string]Node{
-				"open": {
-					Speaker: "Кира Роан",
-					Text:    "Контейнер у поля — чужой транспорт, не «Арго». Дальше есть старый контур. На карте он числится аномалией.",
-					Choices: []Choice{
-						{ID: "danger", Text: "Насколько опасен сектор?", Next: "danger"},
-						{ID: "go", Text: "Полечу к контуру.", Next: "done"},
-					},
-				},
-				"danger": {
-					Speaker: "Кира Роан",
-					Text:    "Пираты спрашивают, что можно забрать, а не кто спонсировал экспедицию. К контуру можно подойти, не лезя в логово.",
-					Choices: []Choice{
-						{ID: "go", Text: "Полечу к контуру.", Next: "done"},
-					},
-				},
-			},
-		}, true
-	case "storm_report":
-		return Scene{
-			Start:   "open",
-			Closing: "Отчёт закрыт. Метаданные прошли через контур, второй импульс не объяснён. «Арго» по-прежнему не найден.",
-			Nodes: map[string]Node{
-				"open": {
-					Speaker: "Вера Элл",
-					Text:    "По индексу есть совпадение: через контур шли метаданные, не обязательно весь пакет. Второй импульс есть, и его время не сходится с журналом.",
-					Choices: []Choice{
-						{ID: "ship", Text: "Значит, «Арго» был здесь?", Next: "ship"},
-						{ID: "who", Text: "Кто отправил импульс?", Next: "who"},
-						{ID: "close", Text: "Закрываю отчёт.", Next: "done"},
-					},
-				},
-				"ship": {
-					Speaker: "Вера Элл",
-					Text:    "Нет. Это след данных, не корабля. Где «Арго» и жив ли экипаж, отсюда не следует.",
-					Choices: []Choice{
-						{ID: "who", Text: "А импульс?", Next: "who"},
-						{ID: "close", Text: "Закрываю отчёт.", Next: "done"},
-					},
-				},
-				"who": {
-					Speaker: "Вера Элл",
-					Text:    "Отправитель не восстановлен. Это не доказательство разумного сигнала и не вина рубежа.",
-					Choices: []Choice{
-						{ID: "close", Text: "Закрываю отчёт.", Next: "done"},
-					},
-				},
-			},
-		}, true
-	default:
-		return Scene{}, false
-	}
+	return sceneFor(questID)
 }
 
 // Reply — то, что клиент показывает в окне разговора.

@@ -537,3 +537,11 @@ SR-100b: run42616666345 для c9a3391 завершён, все4 jobs success (�
 Результаты тестов переиспользованы для идентичного кода: full race+тестовыйPG506/24 PASS, три testSKIP; затем последние профильные случаи PASS, отдельно оба Godot harness PASS, vet/build PASS (docs/ai/TESTS.md). Повторять долгий suite при неизменном коде без причины не требуется. На объединённом дереве дополнительно проверены validator/format/diff/source anchors/миграции. AIC-020 остаётся IN_PROGRESS, AIC-025/BETA-ECO-001 не закрыты. Flags shadow/gateway выключены; новый population director не включён. Выпуск APK и production НЕ выполняются.
 
 Обычный push после повторного fetch, CI проверить по итоговому remoteSHA; не считать его успешным до подтверждения. При следующем deploy отдельно backup/проверка миграций/health, не включать новые AI flags до AIC-030/canary.
+
+## 2026-11-10 — K-1B: клиент корпораций
+
+По выбору владельца выполнен пункт 1: корпорации на клиенте, `feature/corporation-client`, отдельный worktree `/workspace/CosmocRPG-review`, база `c297607`, код `b9b29e9`. Новый экран и пункт меню, подтверждения создания/выхода, состав/роли/казна, тег в профиле. Клиент использует существующие corp_create/join/leave/info; runtime сервера/AI, миграции и оснащение не изменены.
+
+36 новых проверок PASS; profile10/HUD161/pilot20/chat_overlay33/touch_scroll11 PASS. Live Godot→локальный WS→corp/quest memory services: два пилота, создание со списанием ровно10 000, вступление/состав/переподключение/выход/обновление профиля, Android back notification PASS с Go race. Соседний TestPassportGodotClient с race PASS; go vet ./internal/ws PASS. Godot в окружении4.6.3, Go1.27.3 установлен в `/workspace/scratch/corporation-tools/go` (системный `/usr/bin/go` оказался другой программой). Графическая/Android-приёмка и полный CI suite не выполнялись. Подробности: `docs/ui/CORPORATIONS.md`.
+
+K-1B DONE означает реализацию и локальную проверку; main/production/APK не опубликованы. Следующий шаг — ревью/интеграция после синхронизации с другой сессией, затем целевая Godot4.7.2/Android-приёмка.

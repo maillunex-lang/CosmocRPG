@@ -19,7 +19,7 @@ Markdown — НЕ блокировка. Перед изменениями све
 
 ## Свободные задачи (можно брать)
 
-- `K-1B` Корпорации: клиент (меню ☰, экран корпорации, тег в профиле).
+- `K-1B` выполнен локально в `feature/corporation-client` (`b9b29e9`); интеграция в main и выпуск APK ещё не выполнены.
 - `K-2` Квест deliver + продолжение главы 1 (зависит от K-1B).
 - `E-4` Серверные препятствия (минимум NAV-01).
 - `RADIO` Радио: плеер и библиотека (треки готовы).
@@ -49,3 +49,9 @@ Codex, feature/ai-civilization, дата2026-11-10: аiciv/bootstrap+gateway+rec
 ## Публикация AI checkpoint в main
 
 2026-11-10: владелец разрешил main. Отдельный worktree CosmocRPG-ai-main/integration/ai-civilization-main, merge feature0971d8a с origin/main588fde6 без конфликтов, код тождествен проверенному. AIC-020 IN_PROGRESS, economics BLOCKED; production/flags не включены. Для продолжения брать свежую main и учитывать SQL0022/0023/0024.
+
+## K-1B — клиент корпораций, 2026-11-10
+
+Codex, `feature/corporation-client`, отдельный worktree `/workspace/CosmocRPG-review`: DONE локально, код `b9b29e9`, owner снят. Область: новый экран корпорации, клиентский gateway, меню HUD, профиль, клиентские тесты. Серверный world/WS/AI, миграции и оснащение не менять. Владелец выбрал пункт 1 предложенного плана; main и production не публиковать.
+
+Результат K-1B: 36 клиентских проверок PASS, live Godot→WS с двумя пилотами и реальным списанием взноса PASS с race; см. `docs/ui/CORPORATIONS.md`. Серверные production-файлы, AI и миграции не изменялись. Ветка подготовлена к ревью; Android/графическая приёмка не выполнена.

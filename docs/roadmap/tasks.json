@@ -285,15 +285,35 @@
    "title": "Корпорации: клиент",
    "module": "CORPORATIONS",
    "priority": "P1",
-   "status": "TODO",
+   "status": "DONE",
    "description": "экран корпорации в меню ☰: создание, вступление, состав, тег в профиле",
-   "updated": "2026-11-09",
+   "updated": "2026-11-10",
    "release": {
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
    },
    "depends_on": [
     "K-1"
+   ],
+   "owner": null,
+   "branch": "feature/corporation-client",
+   "commits": [
+    "b9b29e9"
+   ],
+   "tests": [
+    "client/tests/corporation_test.gd: 36 PASS",
+    "TestCorporationGodotClient: real localhost WS, two pilots, debit once, reconnect, profile, Android back notification; race PASS",
+    "profile_screen_test 10, hud_test 161, pilot_ui_test 20, chat_overlay_test 33, touch_scroll_test 11: PASS",
+    "TestPassportGodotClient: race PASS; go vet ./internal/ws PASS"
+   ],
+   "acceptance": "Экран в меню: создание с подтверждением 10 000 кредитов, вступление по имени/тегу, состав/роли/казна, выход с подтверждением, тег в профиле. Реализовано и проверено локально в feature-ветке; main/production/APK не опубликованы. Графическая и Android-приёмка на устройстве не выполнены.",
+   "components": [
+    "client/ui/corporation_screen.gd",
+    "client/ui/gateway",
+    "client/scripts/space/space_screen.gd",
+    "client/scripts/ui/hud.gd",
+    "client/scenes/hud.tscn",
+    "client/ui/profile_screen.gd"
    ]
   },
   {

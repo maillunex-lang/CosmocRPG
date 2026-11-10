@@ -81,7 +81,11 @@ export function AiPlayers({ username, onBack, onLoggedOut }: { username: string;
         </div>
         <div className="card">
           <b>{data.status.enabled ? (data.status.paused ? "пауза" : "включены") : "выключены"}</b>
-          <span>состояние</span>
+          <span>простые корабли</span>
+        </div>
+        <div className="card">
+          <b>{data.settings.civ_enabled ? "включена" : "выключена"}</b>
+          <span>цивилизация, в мире {data.settings.civ_cast}</span>
         </div>
       </section>
 
@@ -131,9 +135,23 @@ export function AiPlayers({ username, onBack, onLoggedOut }: { username: string;
   );
 }
 
+function withCiv(settings: AiSettings): AiSettings {
+  return {
+    ...settings,
+    civ_enabled: settings.civ_enabled ?? true,
+    civ_cast: settings.civ_cast || 3,
+    civ_chat: settings.civ_chat ?? true,
+    civ_talk_min: settings.civ_talk_min || 3,
+    civ_talk_max: settings.civ_talk_max || 15,
+    civ_interval_sec: settings.civ_interval_sec || 12,
+    civ_retreat_pct: settings.civ_retreat_pct || 30,
+    civ_help: settings.civ_help ?? true,
+  };
+}
+
 function SettingsForm({ settings, onSave }: { settings: AiSettings; onSave: (s: AiSettings) => void }) {
-  const [s, setS] = useState<AiSettings>(settings);
-  useEffect(() => setS(settings), [settings]);
+  const [s, setS] = useState<AiSettings>(withCiv(settings));
+  useEffect(() => setS(withCiv(settings)), [settings]);
   const num = (key: keyof AiSettings, min: number, max: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Math.max(min, Math.min(max, Number(e.target.value) || 0));
     setS({ ...s, [key]: v });
@@ -186,6 +204,26 @@ function SettingsForm({ settings, onSave }: { settings: AiSettings; onSave: (s: 
         <label>Потолок реплик/мин <input type="number" value={s.chat_max_per_min} onChange={num("chat_max_per_min", 0, 120)} /></label>
         <label>Сами пишут раз в, с (0 — не пишут) <input type="number" value={s.chat_ambient_every_sec} onChange={num("chat_ambient_every_sec", 0, 3600)} /></label>
         <label>ИИ отвечает на ИИ, % <input type="number" value={s.chat_follow_chance} onChange={num("chat_follow_chance", 0, 100)} /></label>
+      </div>
+      <h3>Цивилизация (шлюз)</h3>
+      <p className="muted">Настоящие капитаны в мире. Меняется сразу, перезапуск сервера не нужен.</p>
+      <div className="row wrap">
+        <label>
+          <input type="checkbox" checked={s.civ_enabled} onChange={(e) => setS({ ...s, civ_enabled: e.target.checked })} /> цивилизация включена
+        </label>
+        <label>
+          <input type="checkbox" checked={s.civ_chat} onChange={(e) => setS({ ...s, civ_chat: e.target.checked })} /> чат
+        </label>
+        <label>
+          <input type="checkbox" checked={s.civ_help} onChange={(e) => setS({ ...s, civ_help: e.target.checked })} /> помощь из чата (реально летят)
+        </label>
+      </div>
+      <div className="row wrap">
+        <label>Капитанов в мире <input type="number" value={s.civ_cast} onChange={num("civ_cast", 1, 8)} /></label>
+        <label>Реплик в разговоре от <input type="number" value={s.civ_talk_min} onChange={num("civ_talk_min", 1, 30)} /></label>
+        <label>до <input type="number" value={s.civ_talk_max} onChange={num("civ_talk_max", 1, 30)} /></label>
+        <label>Пауза между репликами, с <input type="number" value={s.civ_interval_sec} onChange={num("civ_interval_sec", 4, 120)} /></label>
+        <label>Отступление при корпусе, % <input type="number" value={s.civ_retreat_pct} onChange={num("civ_retreat_pct", 5, 90)} /></label>
       </div>
       <button className="primary" onClick={() => onSave(s)}>Сохранить настройки</button>
     </section>

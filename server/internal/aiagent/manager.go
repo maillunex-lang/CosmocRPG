@@ -21,6 +21,12 @@ type World interface {
 	SetAIViewRadius(r float64)
 }
 
+// Reservations lets the new civilization system claim captains so the old FSM
+// Manager does not spawn them as simple ships (avoids visible duplicates).
+type Reservations interface {
+	IsReserved(ctx context.Context, id string) (bool, error)
+}
+
 const (
 	settingsRefresh = 30 * time.Second
 	profilesRefresh = 60 * time.Second
@@ -40,11 +46,12 @@ type Status struct {
 
 // Manager держит нужное число ИИ-капитанов в мире.
 type Manager struct {
-	w     World
-	caps  CaptainSource
-	store SettingsStore
-	log   *slog.Logger
-	now   func() time.Time
+	w            World
+	caps         CaptainSource
+	store        SettingsStore
+	reservations Reservations // optional; nil = no reservations
+	log          *slog.Logger
+	now          func() time.Time
 
 	mu            sync.Mutex
 	settings      Settings
@@ -74,6 +81,13 @@ type onlineAI struct {
 func NewManager(w World, caps CaptainSource, store SettingsStore, log *slog.Logger) *Manager {
 	return &Manager{w: w, caps: caps, store: store, log: log, now: time.Now, settings: DefaultSettings(),
 		online: map[string]onlineAI{}, leftAt: map[string]time.Time{}, rng: 2463534242, spawnBudget: 3}
+}
+
+// SetReservations attaches the new-system reservation checker. Safe to call after NewManager.
+func (m *Manager) SetReservations(r Reservations) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.reservations = r
 }
 
 func (m *Manager) rand() float64 {
@@ -235,6 +249,20 @@ func (m *Manager) pickBehavior(s Settings, total int) string {
 	return best
 }
 
+func (m *Manager) isReserved(id string) bool {
+	if m.reservations == nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	ok, err := m.reservations.IsReserved(ctx, id)
+	if err != nil {
+		m.log.Error("ИИ: проверка резервации", "id", id, "err", err)
+		return false // fail-open for old system; new system is responsible for its own actors
+	}
+	return ok
+}
+
 func (m *Manager) spawnOne(s Settings, now time.Time) bool {
 	if len(m.profiles) == 0 {
 		return false
@@ -243,7 +271,7 @@ func (m *Manager) spawnOne(s Settings, now time.Time) bool {
 	disabled := s.DisabledSet()
 	var fresh, cooled []Profile
 	for _, p := range m.profiles {
-		if _, on := m.online[p.ID]; on || disabled[p.ID] || BehaviorFor(p.Profession) != behavior {
+		if _, on := m.online[p.ID]; on || disabled[p.ID] || BehaviorFor(p.Profession) != behavior || m.isReserved(p.ID) {
 			continue
 		}
 		if t, ok := m.leftAt[p.ID]; ok && now.Sub(t) < reuseCooldown {
@@ -258,7 +286,7 @@ func (m *Manager) spawnOne(s Settings, now time.Time) bool {
 	}
 	if len(pool) == 0 { // профилей этого поведения нет: берём любое свободное и не отключённое
 		for _, p := range m.profiles {
-			if _, on := m.online[p.ID]; !on && !disabled[p.ID] {
+			if _, on := m.online[p.ID]; !on && !disabled[p.ID] && !m.isReserved(p.ID) {
 				pool = append(pool, p)
 			}
 		}

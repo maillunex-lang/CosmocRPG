@@ -33,7 +33,7 @@
 | SR-100C | P0 | Оснащение: сохранение и смена в доке | Codex | IN_PROGRESS | `docs/ships-rpg/ROADMAP.md` |
 | SR-100D | P0 | Приёмка оснащения + release | Codex | TODO | после SR-100C |
 | E-4 | P2 | Серверные препятствия (минимум NAV-01) | свободен | TODO | `modules/GALAXY.md` |
-| RADIO | P1 | Радио: М-1 в main, М-2 ещё нет | свободен | IN_PROGRESS | `modules/CLIENT.md` |
+| RADIO | P1 | Радио: М-1 в main, М-3 в отдельной ветке, М-2 ещё нет | свободен | IN_PROGRESS | `modules/CLIENT.md` |
 
 Полная очередь: `roadmap/NOW.md`. Свободные задачи: `roadmap/AGENT_TASKS.md`.
 

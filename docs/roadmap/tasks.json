@@ -570,7 +570,7 @@
    "module": "CLIENT",
    "priority": "P1",
    "status": "IN_PROGRESS",
-   "description": "М-1 в main: плеер, громкость, библиотека и /media/. М-2 (эфир, реклама, срочные новости) ещё нет. Production/APK не выпущены.",
+   "description": "М-1 в main: плеер, громкость, библиотека и /media/. М-3 (кнопки, двигатель, свой выстрел и попадание) написан в ветке feature/game-sfx и в main ещё не влит. М-2 (эфир, реклама, срочные новости) ещё нет. Production/APK не выпущены.",
    "updated": "2026-11-10",
    "release": {
     "server": "NOT_RELEASED",

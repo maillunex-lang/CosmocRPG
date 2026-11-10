@@ -180,7 +180,7 @@ func _music_section() -> Control:
 	t.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
 	col.add_child(t)
 	var a := Label.new()
-	a.text = "Играет фоном с сервера, к которому вы подключены. По умолчанию включена на половине громкости. Радиоэфир появится позже."
+	a.text = "Музыка играет фоном с сервера. Звуки кнопок, двигателя и выстрелов тоже оттуда: в админке вид «Эффект» и тег ui, engine, weapon или hit. Пока файла нет, этот звук молчит. Радиоэфир появится позже."
 	a.theme_type_variation = &"MutedLabel"
 	a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(a)

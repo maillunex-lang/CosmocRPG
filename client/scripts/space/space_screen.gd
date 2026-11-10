@@ -27,6 +27,7 @@ const Nameplates := preload("res://ui/nameplates.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
 const WorldDecor := preload("res://scripts/space/world_decor.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
+const SfxRules := preload("res://audio/sfx.gd")
 
 signal exit_requested
 
@@ -598,6 +599,20 @@ func _on_combat_event(e: Dictionary) -> void:
 		"scan":
 			if from_v != null:
 				from_v.play("Scan", float(e.get("radius", 20.0)) / 2.0)
+	var role := SfxRules.cue_for(str(e.get("type", "")), from_id, to_id, _self_ids())
+	if role != "":
+		var sfx := get_node_or_null("/root/Sfx")
+		if sfx != null and sfx.has_method("play"):
+			sfx.play(role)
+
+
+func _self_ids() -> Array:
+	var ids: Array = ["me"]
+	if gateway != null and gateway.has_method("own_id"):
+		var oid := str(gateway.own_id())
+		if oid != "":
+			ids.append(oid)
+	return ids
 
 
 ## Идентификатор игрока в событиях сервера — публичный id; свой корабль в сцене хранится под ME.

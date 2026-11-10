@@ -22,7 +22,7 @@ Markdown — НЕ блокировка. Перед изменениями све
 - `K-1B` выполнен локально в `feature/corporation-client` (`b9b29e9`); интеграция в main и выпуск APK ещё не выполнены.
 - `K-2` Квест deliver + продолжение главы 1 (зависит от K-1B).
 - `E-4` Серверные препятствия (минимум NAV-01).
-- `RADIO` М-1 (плеер и библиотека) опубликован в main 2026-11-10; свободен М-2: станции, расписание, прерывания. Не переписывать `server/internal/media`, `client/audio` и страницу «Музыка» без сверки.
+- `RADIO` М-1 опубликован в main. М-3 (эффекты) делает отдельная ветка `feature/game-sfx`: не переписывать `client/audio/sfx.gd`, `client/audio/sfx_player.gd` и не забирать их в main без разрешения. М-2 по-прежнему свободен: станции, расписание, прерывания. Не переписывать `server/internal/media`, `client/audio/music.gd`, `client/audio/music_player.gd` и страницу «Музыка» без сверки.
 - `FPS-CHECK` Замер на устройстве (только владелец).
 
 ## Предупреждения о пересечениях
@@ -75,3 +75,7 @@ Codex: `codex/parallel-options`, worktree `/workspace/CosmocRPG-options`. Кар
 MAP-UX checkpoint: реализация и профильные headless-проверки завершены (306 PASS), ожидает визуальной приёмки и решения об интеграции. Подробности docs/HANDOFF.md. Серверные области и корпорации не затронуты.
 
 MAP-UX integration: владелец разрешил main. Merge в integration/map-ux-main от origin/main3774fd7; проверена совместимость с клиентом корпораций и purchase intent. Область освобождена; Android-приёмка остаётся.
+
+## М-3 — звуки интерфейса и боя, 2026-11-10
+
+Отдельная ветка `feature/game-sfx`, worktree `/workspace/CosmocRPG-sfx`, не main. Область: `client/audio/sfx.gd`, `client/audio/sfx_player.gd`, вызовы из космоса, подключения и подсказки админки. ИИ-игроки, world, экономика, `server/internal/media` и плеер М-1 не затронуты. В main не публиковать, пока владелец не разрешит. М-2 остаётся свободным.

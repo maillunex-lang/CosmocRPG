@@ -57,6 +57,7 @@ export function RadioAdmin({ username, onBack, onLoggedOut }: { username: string
         </div>
       </header>
       <p className="muted">Этап М-1: библиотека и фоновая музыка в игре. Эфир, реклама и срочные новости — следующий этап, но виды треков уже можно хранить. Файлы до 12 МБ и 10 минут, MP3 или OGG. Пометка «создано ИИ» по умолчанию включена.</p>
+      <p className="muted">Звуки игры (М-3) — это вид «Эффект». Тег решает, когда играть: ui — кнопки, engine — двигатель своего корабля, weapon — свой выстрел, hit — попадание по вам. Если такого включённого файла нет, игра молчит. В APK звуки не вшиваются.</p>
       {error && <p role="alert" className="error">{error}</p>}
       {msg && <p className="ok">{msg}</p>}
 

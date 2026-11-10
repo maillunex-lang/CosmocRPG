@@ -39,6 +39,7 @@ type Options struct {
 	AI            *aistudio.Service    // AI Civilization Training Studio (nil: раздел выключен)
 	Agent         *aiagent.Manager     // ИИ-игроки в мире: статус, настройки, капитаны (nil: раздел выключен)
 	Civ           *aiciv.Live          // живые настройки цивилизации (nil: шлюз не запущен)
+	Cast          *aiciv.FarmController // кто реально вошёл в мир (nil: шлюз не запущен)
 	Ships         *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
 	World         *worldcfg.Service    // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
 	Chat          *chat.Service        // чат: журнал, мьюты, настройки (nil: раздел выключен)

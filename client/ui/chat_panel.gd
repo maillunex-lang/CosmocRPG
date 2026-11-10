@@ -141,7 +141,7 @@ func set_overlay(on: bool) -> void:
 
 func bind(gw: Node) -> void:
 	gateway = gw
-	enabled = gw.has_chat()
+	enabled = not (gw.has_method("is_demo") and gw.is_demo())
 	_edit.editable = enabled
 	_send.disabled = not enabled
 	_edit.placeholder_text = "Сообщение…" if enabled else "Чат только при игре на сервере"

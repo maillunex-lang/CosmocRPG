@@ -38,22 +38,11 @@ func (s *Store) Ensure(ctx context.Context, id string) (Identity, error) {
 	return a, err
 }
 
-// Bind связывает уже созданного общим gameplay-сервисом персонажа. Оно не
-// создаёт аккаунт и не позволяет перепривязать капитана к чужому персонажу.
-// Вызывается только доверенным bootstrap после проверки actor ownership.
+// Bind оставлен для совместимости, но произвольная привязка запрещена.
+// Создание и привязка выполняются атомарно только через Bootstrapper.
 func (s *Store) Bind(ctx context.Context, id, player string, revision int64) error {
-	if !validID(id) || !validID(player) || revision < 1 {
-		return ErrInput
-	}
-	tag, err := s.pool.Exec(ctx, `UPDATE ai_agents SET player_id=$2,revision=revision+1,updated_at=now()
- WHERE studio_captain_id=$1 AND revision=$3 AND player_id IS NULL`, id, player, revision)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() != 1 {
-		return ErrConflict
-	}
-	return nil
+	// Произвольная привязка чужой players-записи запрещена. Только атомарный Bootstrapper.
+	return ErrPolicy
 }
 
 // Observe принимает только проверенные сервером события. Здесь нет произвольного

@@ -38,10 +38,10 @@ func TestIdentityMemoryRestartAndIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = s.Bind(ctx, a.CaptainID, player.ID, a.Revision); err != nil {
+	if err = s.Bind(ctx, a.CaptainID, player.ID, a.Revision); !errors.Is(err, ErrPolicy) {
 		t.Fatal(err)
 	}
-	if err = s.Bind(ctx, a.CaptainID, player.ID, a.Revision); !errors.Is(err, ErrConflict) {
+	if err = s.Bind(ctx, a.CaptainID, player.ID, a.Revision); !errors.Is(err, ErrPolicy) {
 		t.Fatal("stale bind", err)
 	}
 	if err = s.Bind(ctx, b.CaptainID, player.ID, b.Revision); err == nil {
@@ -57,7 +57,7 @@ func TestIdentityMemoryRestartAndIsolation(t *testing.T) {
 	}
 	s = NewStore(pool)
 	restored, err := s.Ensure(ctx, a.CaptainID)
-	if err != nil || restored.PlayerID != player.ID || restored.Revision != 2 {
+	if err != nil || restored.PlayerID != "" || restored.Revision != 1 {
 		t.Fatal(restored, err)
 	}
 	memory, err := s.Recall(ctx, a.CaptainID, now)

@@ -400,3 +400,37 @@ func TestStationServicesThroughProtocol(t *testing.T) {
 		t.Fatalf("ремонт: %+v %v", od, err)
 	}
 }
+
+func TestMiningWithoutCreditsAdvancesQuestOnce(t *testing.T) {
+	ctx := context.Background()
+	w := world.New()
+	r := world.NewRouter(w)
+	r.Add(w)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	q := quest.NewService(log, quest.NewMemStore(), w.ObjectPos)
+	if err := q.Join(ctx, "miner"); err != nil {
+		t.Fatal(err)
+	}
+	station, _ := w.ObjectPos(world.StationID)
+	q.Evaluate(ctx, "miner", station)
+	q.Event(ctx, "miner", "kill", "", 1)
+	h := NewHandler(log, Options{World: r, Quests: q})
+	event := world.Reward{Player: "miner", Key: "mine:test:zero-credit", Kind: "mine", Ref: "iron_ore", Amount: 2}
+	h.grantRewards([]world.Reward{event})
+	v, _ := q.View("miner")
+	if len(v.Quests) != 1 || v.Quests[0].ID != "first_ore" || v.Quests[0].Progress != 2 {
+		t.Fatalf("mining event lost: %+v", v)
+	}
+	h.grantRewards([]world.Reward{event})
+	v, _ = q.View("miner")
+	if v.Quests[0].Progress != 2 || v.Credits != 1200 {
+		t.Fatalf("duplicate or fabricated credits: %+v", v)
+	}
+	event.Key = "mine:test:next"
+	event.Amount = 3
+	h.grantRewards([]world.Reward{event})
+	v, _ = q.View("miner")
+	if len(v.Quests) != 1 || v.Quests[0].ID != "first_deal" || v.Credits != 2000 {
+		t.Fatalf("mining quest incomplete: %+v", v)
+	}
+}

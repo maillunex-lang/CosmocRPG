@@ -41,3 +41,7 @@ Markdown — НЕ блокировка. Перед изменениями све
 ## AI-CIVILIZATION — текущая работа
 
 Codex, ветка feature/ai-civilization, отдельный worktree CosmocRPG-ai: aiciv foundation, config/main shadow wiring, SQL0022, тесты и docs/ai. Изменений QUESTJOB/AI.md другой сессии не перезаписывать. Runtime world/WS/aiagent остаётся прежним; будущий ActionGateway согласовать с оснащением. AIC-090/110 не выполнять: владелец подтвердил gates. Production этого этапа не разрешён автоматически.
+
+## AIC-020 checkpoint
+
+Codex, feature/ai-civilization, дата2026-11-10: аiciv/bootstrap+gateway+receipts; общие world character rules, серверная маркировка и WS guard; quest EventOnce и SQL0023/0024. Оснащение и его SQL/интерфейс не заменены. Новые миграции перепроверить по свежей main перед merge. Экономический RED BETA-ECO-001 в docs/ai/repro, не копировать в активный suite без начала исправления.

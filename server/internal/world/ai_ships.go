@@ -84,6 +84,11 @@ func (w *World) SpawnAI(s AISpawn) bool {
 	if _, clash := w.players[s.ID]; clash {
 		return false
 	}
+	for _, p := range w.players {
+		if p.ai && p.aiCaptain == s.ID {
+			return false
+		}
+	}
 	sp, ok := w.catalog.Spec(s.ShipType)
 	if !ok {
 		sp, _ = w.catalog.Spec(DefaultShip)
@@ -154,7 +159,7 @@ func (w *World) PlayerCount() int {
 	defer w.mu.Unlock()
 	n := 0
 	for _, p := range w.players {
-		if p.connected {
+		if p.connected && !p.ai {
 			n++
 		}
 	}

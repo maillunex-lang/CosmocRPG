@@ -17,11 +17,12 @@ type Config struct {
 	WSMaxMessage    int64         // COSMOC_WS_MAX_MESSAGE, байт, по умолчанию 4096
 	WSRatePerSec    int           // COSMOC_WS_RATE_PER_SEC, сообщений в секунду, по умолчанию 20
 
-	FeatureLiving               bool   // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
-	AssetSignKeyFile            string // COSMOC_ASSET_SIGN_KEY_FILE: приватный ключ подписи манифеста ресурсов (пусто: публикация ресурсов выключена)
-	FeatureAICivilizationShadow bool   // COSMOC_AI_CIVILIZATION_SHADOW: только постоянные идентичности, без действий
-	FeatureAI                   bool   // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
-	FeatureQuests               bool   // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
+	FeatureLiving                bool   // COSMOC_FEATURE_LIVING: живые локации (враги, добыча, исследование), по умолчанию выключено
+	AssetSignKeyFile             string // COSMOC_ASSET_SIGN_KEY_FILE: приватный ключ подписи манифеста ресурсов (пусто: публикация ресурсов выключена)
+	FeatureAICivilizationGateway bool   // COSMOC_AI_CIVILIZATION_GATEWAY: экспериментальный шлюз, default false
+	FeatureAICivilizationShadow  bool   // COSMOC_AI_CIVILIZATION_SHADOW: только постоянные идентичности, без действий
+	FeatureAI                    bool   // COSMOC_FEATURE_AI: ИИ-игроки в мире (агент мира), по умолчанию выключено
+	FeatureQuests                bool   // COSMOC_FEATURE_QUESTS: контракты и награды (флаг незавершённой функции), по умолчанию выключено
 
 	AdminAddr         string        // COSMOC_ADMIN_ADDR, адрес админ-API (по умолчанию 127.0.0.1:8081); значение off выключает
 	AdminCookieSecure bool          // COSMOC_ADMIN_COOKIE_SECURE, по умолчанию true (админка за HTTPS)
@@ -79,7 +80,7 @@ func Load(getenv func(string) string) (Config, error) {
 	for _, b := range []struct {
 		name string
 		dst  *bool
-	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}, {"COSMOC_FEATURE_QUESTS", &c.FeatureQuests}, {"COSMOC_FEATURE_LIVING", &c.FeatureLiving}, {"COSMOC_FEATURE_AI", &c.FeatureAI}, {"COSMOC_AI_CIVILIZATION_SHADOW", &c.FeatureAICivilizationShadow}} {
+	}{{"COSMOC_ADMIN_COOKIE_SECURE", &c.AdminCookieSecure}, {"COSMOC_ADMIN_TRUST_PROXY", &c.AdminTrustProxy}, {"COSMOC_FEATURE_QUESTS", &c.FeatureQuests}, {"COSMOC_FEATURE_LIVING", &c.FeatureLiving}, {"COSMOC_FEATURE_AI", &c.FeatureAI}, {"COSMOC_AI_CIVILIZATION_SHADOW", &c.FeatureAICivilizationShadow}, {"COSMOC_AI_CIVILIZATION_GATEWAY", &c.FeatureAICivilizationGateway}} {
 		if v := getenv(b.name); v != "" {
 			x, err := strconv.ParseBool(v)
 			if err != nil {
@@ -95,7 +96,7 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		c.AdminSessionTTL = d
 	}
-	if c.FeatureAICivilizationShadow && !c.FeatureAI {
+	if (c.FeatureAICivilizationShadow || c.FeatureAICivilizationGateway) && !c.FeatureAI {
 		return Config{}, errors.New("COSMOC_AI_CIVILIZATION_SHADOW требует COSMOC_FEATURE_AI")
 	}
 	return c, nil

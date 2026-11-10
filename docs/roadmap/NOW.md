@@ -73,3 +73,7 @@ PP-02 IN_PROGRESS: cap 150 и базовый бюджет до 60 реализо
 ## AI-CIVILIZATION
 
 Новое поручение: реализовать AI.md по этапам AIC-010…110. Первым — foundation и shadow; затем общий ActionGateway и реальные персонажи. Матрица: [IMPLEMENTATION](../ai/IMPLEMENTATION.md). Неутверждённые корпоративные полномочия/постоянная смерть и отсутствующие gameplay-системы остаются выключенными по ответу владельца.
+
+## AI gateway / P0 экономика (2026-11-10)
+
+AIC-020 IN_PROGRESS,021…024 проверяются в feature/ai-civilization: общий player bootstrap, WS controls, receipts, исправление нулевой mine-награды для квестов. BETA-ECO-001 TODO P0: подтверждён debit11 при hold_full; AI economics AIC-025 BLOCKED. Детали docs/ai/GATEWAY.md. Не считать это включённой новой AI-цивилизацией или production-релизом.

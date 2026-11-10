@@ -94,18 +94,22 @@ type Player struct {
 	mineSince  float64
 	discovered map[string]bool
 
+	ai        bool
+	aiCaptain string
 	connected bool
 	lostAt    time.Time // момент обрыва связи
 }
 
 // Record — сохраняемое состояние игрока.
 type Record struct {
-	ID   string
-	Name string
-	Pos  Vec
-	Dir  Vec
-	Skin string // облик корабля ("" — по умолчанию)
-	Spec string // специализация корабля ("" — по умолчанию)
+	AI        bool   `json:"-"` // доверенная серверная метка
+	AICaptain string `json:"-"`
+	ID        string
+	Name      string
+	Pos       Vec
+	Dir       Vec
+	Skin      string // облик корабля ("" — по умолчанию)
+	Spec      string // специализация корабля ("" — по умолчанию)
 
 	// персонаж (создаётся при первом входе)
 	Created   bool
@@ -261,6 +265,9 @@ func (w *World) Join(r Record) (*Player, bool) {
 		return nil, false
 	}
 	if p, ok := w.players[r.ID]; ok {
+		if p.ai != r.AI || p.aiCaptain != r.AICaptain {
+			return nil, false
+		}
 		if p.equipmentLease != nil {
 			return nil, false
 		}
@@ -276,7 +283,18 @@ func (w *World) Join(r Record) (*Player, bool) {
 		p.Move = Vec{}
 		return p, true
 	}
-	if len(w.players) >= MaxPlayers {
+	humans, ais := 0, len(w.ais)
+	for _, existing := range w.players {
+		if existing.ai {
+			ais++
+		} else {
+			humans++
+		}
+	}
+	if (!r.AI && humans >= MaxPlayers) || (r.AI && ais >= 200) {
+		return nil, false
+	}
+	if r.AI && (r.AICaptain == "" || w.aiByID[r.AICaptain] != nil) {
 		return nil, false
 	}
 	pos := r.Pos
@@ -287,7 +305,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 	if dir == (Vec{}) {
 		dir = Vec{1, 0}
 	}
-	p := &Player{ID: r.ID, Name: r.Name, Pos: pos, Dir: dir, connected: true}
+	p := &Player{ID: r.ID, Name: r.Name, Pos: pos, Dir: dir, connected: true, ai: r.AI, aiCaptain: r.AICaptain}
 	p.gender, p.pilotSpec = r.Gender, r.PilotSpec
 	p.starterLoadout = copyStarter(r.StarterLoadout)
 	p.persistentEquipment = r.PersistentEquipment
@@ -343,7 +361,7 @@ func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 }
 
 func (p *Player) record() Record {
-	return Record{ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
+	return Record{AI: p.ai, AICaptain: p.aiCaptain, ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
 		PersistentEquipment: p.persistentEquipment, StarterLoadout: copyStarter(p.starterLoadout), Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType, Hold: copyHold(p.hold)}
 }
 
@@ -556,7 +574,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 	sort.Strings(ids)
 	for _, pid := range ids {
 		p := w.players[pid]
-		st.Objects = append(st.Objects, Object{ID: p.ID, Kind: "player", Stance: "neutral", Name: p.Name,
+		st.Objects = append(st.Objects, Object{AI: p.ai, ID: p.ID, Kind: "player", Stance: "neutral", Name: p.Name,
 			Pos: [2]float64{p.Pos.X, p.Pos.Y}, Dir: [2]float64{p.Dir.X, p.Dir.Y}, Ship: p.ShipType, Skin: p.Skin, Dead: p.deadUntil > w.t,
 			Vip: p.cosmetics.Vip, Badge: p.cosmetics.Badge, NameColor: p.cosmetics.NameColor, Engine: p.cosmetics.Engine})
 	}

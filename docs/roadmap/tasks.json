@@ -153,12 +153,15 @@
    "module": "ECONOMY",
    "priority": "P1",
    "status": "DONE",
-   "description": "атомарное списание, идемпотентные начисления",
+   "description": "атомарное списание, идемпотентные начисления NEEDS_VERIFICATION: BETA-ECO-001 — покупка при полном трюме списывает кредиты, исправление TODO; прежний DONE — исторический статус доставки.",
    "updated": "2026-11-09",
    "release": {
     "server": "PRODUCTION",
     "apk": "APK_RELEASED"
-   }
+   },
+   "errors": [
+    "BETA-ECO-001"
+   ]
   },
   {
    "id": "PROTO-09",
@@ -833,22 +836,23 @@
    "title": "Подключить AI-player и общий ActionGateway",
    "module": "AI_PLAYERS",
    "priority": "P1",
-   "status": "TODO",
-   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
-   "updated": "2026-11-09",
+   "status": "IN_PROGRESS",
+   "description": "Реальный player bootstrap, серверный AI marker, WS gateway controls и receipts реализованы в feature-ветке. Экономические команды закрыты; общий атомарный сервис покупки отсутствует, BETA-ECO-001 подтверждён. Полная замена старого AI ещё не выполнена.",
+   "updated": "2026-11-10",
    "depends_on": [
     "AIC-010"
    ],
    "spec": "QUESTJOB/AI.md#5-контракты-действий-псевдо-go-адаптировать-к-реальным-пакетам",
    "acceptance": "Проверяемый результат и границы этапа — docs/ai/IMPLEMENTATION.md; no fake rewards, no LLM, сохранённые права и Studio-ID.",
    "components": [
-    "server/internal/aiagent",
-    "server/internal/aistudio",
-    "server/internal/world",
-    "server/internal/ws"
+    "server/internal/aiciv",
+    "server/internal/world/character_service.go",
+    "server/internal/ws/hub.go",
+    "server/internal/db/migrations/0023_ai_gateway.sql"
    ],
    "tests": [
-    "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+    "docs/ai/GATEWAY.md",
+    "go test -race ./internal/aiciv ./internal/world ./internal/quest ./internal/ws с отдельной PostgreSQL"
    ],
    "release": {
     "server": "NOT_RELEASED",
@@ -1068,6 +1072,165 @@
    ],
    "tests": [
     "Go race + отдельная PostgreSQL; сценарии этапа из первоисточника; регрессия существующих игроков"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-021",
+   "title": "Создать и привязать AI-player общими правилами персонажа",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Атомарный Bootstrapper проверяет Studio-ID, ник/пол/стартер; повтор и гонка сохраняют один players ID.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "AIC-010"
+   ],
+   "spec": "QUESTJOB/AI.md#5-контракты-действий-псевдо-go-адаптировать-к-реальным-пакетам",
+   "acceptance": "Рестарт не сбрасывает данные; не создаются деньги/XP; неверный ник не оставляет orphan player.",
+   "tests": [
+    "docs/ai/GATEWAY.md",
+    "go test -race с отдельной тестовой PostgreSQL"
+   ],
+   "components": [
+    "server/internal/ws",
+    "server/internal/world",
+    "server/internal/aiciv"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-022",
+   "title": "Подключить безопасный набор AI-команд к обычному WS",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Lease с хешем токена, серверная метка, отказ expired/disabled и чужой привязке; controls через общий обработчик.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "AIC-021"
+   ],
+   "spec": "QUESTJOB/AI.md#5-контракты-действий-псевдо-go-адаптировать-к-реальным-пакетам",
+   "acceptance": "Живая добыча через настоящий WS даёт cargo; ошибки дальности/модуля те же, что у людей; прямой buy WS отвергается; AI не занимает human slot.",
+   "tests": [
+    "docs/ai/GATEWAY.md",
+    "go test -race с отдельной тестовой PostgreSQL"
+   ],
+   "components": [
+    "server/internal/ws",
+    "server/internal/world",
+    "server/internal/aiciv"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-023",
+   "title": "Сохранить receipts и запретить blind retry AI-команд",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Уникальный action_id/request_hash; completed replay, pending/uncertain fail closed, один dispatch на20 воркеров.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "AIC-021"
+   ],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Повтор после новой сессии не перезапускает добычу; payload mismatch отказ; unknown outcome не выдаёт success.",
+   "tests": [
+    "docs/ai/GATEWAY.md",
+    "go test -race с отдельной тестовой PostgreSQL"
+   ],
+   "components": [
+    "server/internal/ws",
+    "server/internal/world",
+    "server/internal/aiciv"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-024",
+   "title": "Учитывать нулевую кредитную добычу в квестах однократно",
+   "module": "QUESTS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Общий EventOnce сохраняет event receipt и прогресс; Join восстанавливает незавершённую выплату. Не исправляет доставку события между world и БД при аварии.",
+   "updated": "2026-11-10",
+   "depends_on": [],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Событие mine Credits=0 продвигает цель; повтор/restart не удваивает прогресс/награды; payload mismatch отказ; PG и Mem parity.",
+   "tests": [
+    "docs/ai/GATEWAY.md",
+    "go test -race с отдельной тестовой PostgreSQL"
+   ],
+   "components": [
+    "server/internal/quest",
+    "server/internal/ws"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "BETA-ECO-001",
+   "title": "Сделать покупку атомарной при полном трюме и сбоях",
+   "module": "ECONOMY",
+   "priority": "P0",
+   "status": "TODO",
+   "description": "Подтверждённый дефект: buy gas1 при полном трюме вернул hold_full и списал11 кредитов. Воспроизводитель docs/ai/repro/full_hold_buy_test.go.txt. Нужен общий путь людей и AI, не отдельный AI wallet.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "PROTO-08"
+   ],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Отказ не списывает деньги; одна операция при retry/CAS; SQL timeout/неизвестный commit/damage/race не создают потерь или бесплатного груза; профильные PG/race/WS тесты.",
+   "tests": [
+    "docs/ai/GATEWAY.md",
+    "go test -race с отдельной тестовой PostgreSQL"
+   ],
+   "components": [
+    "server/internal/ws",
+    "server/internal/world",
+    "server/internal/aiciv"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-025",
+   "title": "Разрешить AI-экономику только через атомарные общие команды",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "BLOCKED",
+   "description": "buy/sell/repair/upgrade пока выключены; кроме устранения подтверждённой покупки требуется отдельная проверка каждого money-changing handler.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "BETA-ECO-001"
+   ],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Только после проверки общей атомарности, сохранения, receipt и безопасности каждой команды; без привилегий для AI.",
+   "tests": [
+    "docs/ai/GATEWAY.md",
+    "go test -race с отдельной тестовой PostgreSQL"
+   ],
+   "components": [
+    "server/internal/ws",
+    "server/internal/world",
+    "server/internal/aiciv"
    ],
    "release": {
     "server": "NOT_RELEASED",

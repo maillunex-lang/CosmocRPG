@@ -5,7 +5,9 @@ package quest
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -80,6 +82,7 @@ type Store interface {
 	Assign(ctx context.Context, pid string, d Def) (bool, error)
 	// Advance атомарно сохраняет прирост активного задания с ограничением по goal.
 	Advance(ctx context.Context, pid string, d Def, n int) (int, error)
+	AdvanceOnce(ctx context.Context, pid, key string, hash [32]byte, defs []Def, n int) (map[string]int, error)
 	// Complete отмечает контракт выполненным и начисляет награду одной транзакцией.
 	// granted=false, если контракт уже был выполнен (повтор): ничего не меняется.
 	Complete(ctx context.Context, pid string, d Def) (granted bool, credits int64, err error)
@@ -179,6 +182,16 @@ func (s *Service) Join(ctx context.Context, pid string) error {
 	s.mu.Lock()
 	s.players[pid] = &playerState{data: data}
 	s.mu.Unlock()
+	// Восстановление после сбоя между сохранением последнего события и Complete.
+	for _, q := range data.Quests {
+		if q.State == "active" && q.Goal > 0 && q.Progress >= q.Goal {
+			if d, ok := s.def(q.QuestID, q.Version); ok {
+				if _, done := s.completeOne(ctx, pid, d); done {
+					s.activateFollowers(ctx, pid, d.ID)
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -278,6 +291,18 @@ func (s *Service) activateFollowers(ctx context.Context, pid, doneID string) str
 // Event учитывает серверное событие (kill/mine/sell/jump) в активных контрактах игрока.
 // Возвращает завершённые контракты (с Next — названием следующего).
 func (s *Service) Event(ctx context.Context, pid, kind, ref string, n int) []Completion {
+	return s.event(ctx, pid, "", kind, ref, n)
+}
+
+// EventOnce — только для подтверждённых событий сервера с постоянным ключом.
+// Receipt и изменения частичного прогресса сохраняются в одной транзакции.
+func (s *Service) EventOnce(ctx context.Context, pid, key, kind, ref string, n int) []Completion {
+	if key == "" || len(key) > 128 {
+		return nil
+	}
+	return s.event(ctx, pid, key, kind, ref, n)
+}
+func (s *Service) event(ctx context.Context, pid, key, kind, ref string, n int) []Completion {
 	if n <= 0 {
 		return nil
 	}
@@ -298,9 +323,25 @@ func (s *Service) Event(ctx context.Context, pid, kind, ref string, n int) []Com
 		}
 	}
 	s.mu.Unlock()
+	var once map[string]int
+	if key != "" {
+		hash := sha256.Sum256([]byte(fmt.Sprintf("%q:%q:%d", kind, ref, n)))
+		var err error
+		once, err = s.store.AdvanceOnce(ctx, pid, key, hash, matching, n)
+		if err != nil {
+			s.log.Error("учёт события задания", "player", pid, "event", key, "err", err)
+			return nil
+		}
+	}
 	var bumped []Def
 	for _, d := range matching {
-		progress, err := s.store.Advance(ctx, pid, d, n)
+		var progress int
+		var err error
+		if key != "" {
+			progress = once[d.ID]
+		} else {
+			progress, err = s.store.Advance(ctx, pid, d, n)
+		}
 		if err != nil {
 			s.log.Error("сохранение прогресса задания", "player", pid, "quest", d.ID, "err", err)
 			continue

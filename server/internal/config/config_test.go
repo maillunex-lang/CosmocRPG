@@ -99,3 +99,18 @@ func TestCivilizationShadowRequiresAI(t *testing.T) {
 		t.Fatal(c, err)
 	}
 }
+
+func TestCivilizationGatewayExplicitOptIn(t *testing.T) {
+	c, err := Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test"}))
+	if err != nil || c.FeatureAICivilizationGateway {
+		t.Fatal("gateway default enabled", c, err)
+	}
+	_, err = Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test", "COSMOC_AI_CIVILIZATION_GATEWAY": "true"}))
+	if err == nil {
+		t.Fatal("gateway enabled without AI")
+	}
+	c, err = Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test", "COSMOC_AI_CIVILIZATION_GATEWAY": "true", "COSMOC_FEATURE_AI": "true"}))
+	if err != nil || !c.FeatureAICivilizationGateway {
+		t.Fatal(c, err)
+	}
+}

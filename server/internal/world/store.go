@@ -11,6 +11,7 @@ import (
 	"sync"
 	"unicode"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -73,10 +74,20 @@ func fresh(h [32]byte, name string) Record {
 }
 
 // PGStore — хранилище в PostgreSQL.
-type PGStore struct{ pool *pgxpool.Pool }
+type playerSQL interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+type PGStore struct{ pool playerSQL }
 
 // NewPGStore создаёт хранилище.
 func NewPGStore(pool *pgxpool.Pool) *PGStore { return &PGStore{pool: pool} }
+
+// NewTransactionalStore использует ту же логику игрока внутри транзакции bootstrap.
+func NewTransactionalStore(tx pgx.Tx) *PGStore { return &PGStore{pool: tx} }
+
+// Load возвращает существующего игрока, не создавая новую идентичность.
+func (s *PGStore) Load(ctx context.Context, id string) (Record, error) { return s.byPublicID(ctx, id) }
 
 func (s *PGStore) Resolve(ctx context.Context, token, name string) (Record, error) {
 	h := TokenHash(token)

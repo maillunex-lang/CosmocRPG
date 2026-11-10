@@ -23,6 +23,8 @@ signal character_needed(options: Array)
 signal character_failed(reason: String)
 ## Вход не удался (причина для игрока).
 signal join_failed(reason: String)
+## Сервер применил настройки или сменил версию. reason — коротко, что изменилось.
+signal server_updated(reason: String)
 
 var url := ""
 var player_name := ""
@@ -56,6 +58,7 @@ var _sent_move := Vector2.ZERO
 var _move_cd := 0.0
 var _move_dirty := false
 var _token := ""
+var _server_version := ""
 var _corp_data: Dictionary = {"known": false}
 var _corp_request_id := ""
 var _corp_action := ""
@@ -102,7 +105,12 @@ func connect_to_server(server_url: String) -> void:
 
 
 func _wire() -> void:
-	_client.connected.connect(func(_s: String, _v: String) -> void: _join())
+	_client.connected.connect(func(_s: String, v: String) -> void:
+		if _server_version != "" and v != "" and v != _server_version:
+			server_updated.emit("новая версия")
+		if v != "":
+			_server_version = v
+		_join())
 	_client.connection_failed.connect(_on_link_lost)
 	_client.disconnected.connect(func(_c: int, _r: String) -> void: _on_link_lost("Соединение закрыто"))
 	_client.message_received.connect(_on_message)
@@ -167,6 +175,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 		_on_corporation_reply(type, payload)
 		return
 	match type:
+		"server_updated":
+			server_updated.emit(str(payload.get("reason", "настройки")))
 		"welcome":
 			if payload.get("needs_character", false):
 				player_id = str(payload.get("player_id", ""))

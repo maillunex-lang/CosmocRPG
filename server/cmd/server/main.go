@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -384,6 +385,7 @@ func run() error {
 	})
 	var agent *aiagent.Manager
 	var live *aiciv.Live
+	var farmCtl *aiciv.FarmController
 	if cfg.FeatureAI {
 		studioSvc := aistudio.NewService(aistudio.NewPGStore(pool))
 		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log) // ИИ-1 живёт в Авроре (Э-1)
@@ -433,6 +435,10 @@ func run() error {
 			chorus.Board = board
 			chorus.Live = live
 			go chorus.Run(ctx, 12*time.Second)
+			_, port, err := net.SplitHostPort(cfg.HTTPAddr)
+			if err != nil || port == "" {
+				port = "8080"
+			}
 			farm := &aiciv.FarmController{
 				Clans: corpSvc,
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
@@ -443,10 +449,11 @@ func run() error {
 				Board:     board,
 				Live:      live,
 				Res:       reservation,
-				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
+				Endpoint:  "ws://127.0.0.1:" + port + "/ws",
 				Fallback:  []string{"dr1", "dr2"},
 				Log:       log,
 			}
+			farmCtl = farm
 			go farm.Supervise(ctx, func(n int) []aiciv.CastMember {
 				profiles, err := aiagent.StudioSource{Svc: studioSvc}.Profiles(ctx)
 				if err != nil || len(profiles) == 0 {
@@ -506,7 +513,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: studio, Agent: agent, Civ: live, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
+				AI: studio, Agent: agent, Civ: live, Cast: farmCtl, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
 				OnChanged: func(reason string) {
 					log.Info("настройки применены", "what", reason)
 					wsHandler.PushServerUpdated(reason)

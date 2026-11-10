@@ -4,6 +4,7 @@ extends Button
 ## (никаких декоративных кнопок, которые выглядят рабочими, но ничего не делают).
 
 const Tokens := preload("res://ui/theme/tokens.gd")
+const UiSettings := preload("res://ui/ui_settings.gd")
 
 enum Variant { SECONDARY, PRIMARY, DANGER }
 
@@ -34,8 +35,27 @@ func _ready() -> void:
 	custom_minimum_size.y = maxf(custom_minimum_size.y, Tokens.TOUCH_MIN)
 	focus_mode = Control.FOCUS_ALL
 	_apply_variant()
+	button_down.connect(_glass_press)
+	button_up.connect(_glass_release)
 	if soon:
 		_apply_soon()  # безопасно при повторном вызове
+
+
+func _glass_press() -> void:
+	if UiSettings.reduce_motion() or disabled:
+		return
+	pivot_offset = size * 0.5
+	var tw := create_tween()
+	tw.tween_property(self, "scale", Vector2(0.97, 0.97), 0.08)
+
+
+func _glass_release() -> void:
+	if UiSettings.reduce_motion():
+		scale = Vector2.ONE
+		return
+	pivot_offset = size * 0.5
+	var tw := create_tween()
+	tw.tween_property(self, "scale", Vector2.ONE, 0.12)
 
 
 func _apply_variant() -> void:

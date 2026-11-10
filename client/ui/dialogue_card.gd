@@ -44,10 +44,10 @@ func _ready() -> void:
 	_panel.visible = false
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_panel.offset_left = -280
-	_panel.offset_right = 280
-	_panel.offset_top = -180
-	_panel.offset_bottom = 180
+	_panel.offset_left = -300
+	_panel.offset_right = 300
+	_panel.offset_top = -280
+	_panel.offset_bottom = 280
 	_panel.add_theme_stylebox_override("panel", _box())
 	add_child(_panel)
 	var margin := MarginContainer.new()
@@ -60,13 +60,23 @@ func _ready() -> void:
 	_speaker = Label.new()
 	_speaker.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
 	col.add_child(_speaker)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(520, 260)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(scroll)
+	var inner := VBoxContainer.new()
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.add_theme_constant_override("separation", 10)
+	scroll.add_child(inner)
 	_text = Label.new()
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_text.custom_minimum_size = Vector2(480, 0)
-	col.add_child(_text)
+	_text.custom_minimum_size = Vector2(520, 0)
+	inner.add_child(_text)
 	_choices = VBoxContainer.new()
+	_choices.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_choices.add_theme_constant_override("separation", 8)
-	col.add_child(_choices)
+	inner.add_child(_choices)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	col.add_child(row)

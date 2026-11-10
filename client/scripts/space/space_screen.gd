@@ -568,9 +568,12 @@ func open_chat(m: int = ChatOverlay.Mode.HALF) -> Control:
 	var existing := get_node_or_null("ChatLayer/ChatOverlay")
 	if existing != null:
 		return existing
-	if _hud == null or _hud.chat_panel == null or not _hud.chat_panel.enabled:
-		_hud.show_toast("Чат доступен только при игре на сервере")
+	var demo := gateway != null and gateway.has_method("is_demo") and gateway.is_demo()
+	if _hud == null or _hud.chat_panel == null or demo:
+		if _hud != null:
+			_hud.show_toast("Чат доступен только при игре на сервере")
 		return null
+	_hud.chat_panel.enabled = true
 	var layer := CanvasLayer.new()
 	layer.layer = 35
 	layer.name = "ChatLayer"

@@ -4,7 +4,7 @@
  "branch": "main",
  "generated_by": "docs/roadmap-refactor-v2.0 (Kimi Code)",
  "updated": "2026-11-10",
- "last_verified_sha": "0971d8a",
+ "last_verified_sha": "0a14c14",
  "modules": [
   "GALAXY",
   "SHIPS",
@@ -1234,7 +1234,10 @@
     "apk": "NOT_RELEASED"
    },
    "owner": null,
-   "branch": "main"
+   "branch": "main",
+   "commits": [
+    "85ee5d4"
+   ]
   },
   {
    "id": "AIC-025",
@@ -1285,7 +1288,10 @@
    "release": {
     "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "85ee5d4"
+   ]
   },
   {
    "id": "BETA-ECO-003",
@@ -1364,7 +1370,10 @@
    "release": {
     "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "85ee5d4"
+   ]
   }
  ]
 }

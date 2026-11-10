@@ -2,7 +2,7 @@
 
 Codex, main в /workspace/CosmocRPG-main по поручению владельца. BETA-ECO-001: общий SQL wallet+hold+receipt, world reservation/revision, status/reconnect recovery, persistent Godot intent. AIC-026: safe buy/status через общий AI gateway; default flags off. BETA-ECO-002: исправлен остаток XP платного уровня (red→green). Ремонт/upgrade ещё требуют атомарности (BETA-ECO-003/004 TODO); sell AI закрыт, AIC-025 BLOCKED. Production/APK не выпущены.
 
-Проверки: полный PG/race 519 PASS/3 SKIP/24 пакета; финальные AI/WS с настоящим PG+Godot 74 PASS/0 SKIP. vet/build PASS. Финальные economy/db/quest/world с отдельной PG/race PASS; offline purchase intent PASS; форматирование и валидатор дорожной карты PASS. [Контракт и следующие шаги](ai/ATOMIC_PURCHASE.md). Чужая PvE-001 документация c297607 сохраняется при объединении; миграция0025 не конфликтует с main. CI нужно проверять по итоговому SHA, локальные PASS не означают CI success.
+Проверки: полный PG/race 519 PASS/3 SKIP/24 пакета; финальные AI/WS с настоящим PG+Godot 74 PASS/0 SKIP. vet/build PASS. Финальные economy/db/quest/world с отдельной PG/race PASS; offline purchase intent PASS; форматирование и валидатор дорожной карты PASS. [Контракт и следующие шаги](ai/ATOMIC_PURCHASE.md). Чужая PvE-001 документация c297607 сохраняется при объединении; миграция0025 не конфликтует с main. Код85ee5d4, объединение0a14c14 с origin/main c297607 прошло без конфликтов; после merge изменился только QUESTJOB/PvE.md, тестированный код идентичен. CI нужно проверять по итоговому SHA, локальные PASS не означают CI success.
 
 ---
 

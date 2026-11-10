@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="CosmocRPG"
-config/version="0.3.13"
+config/version="0.3.14"
 run/main_scene="res://scenes/connect.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
@@ -16,7 +16,7 @@ Sfx="*res://audio/sfx_player.gd"
 
 [cosmoc]
 
-version_code=16
+version_code=17
 
 [display]
 window/size/viewport_width=1280

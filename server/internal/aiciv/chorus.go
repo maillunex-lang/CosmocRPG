@@ -311,11 +311,11 @@ func rotate(lines []string, salt int) []string {
 
 // PickCast chooses up to n captains, preferring different professions so the chat has different voices.
 func PickCast(in []aiagent.Profile, n int) []aiagent.Profile {
-	if n < 2 {
-		n = 2
+	if n < 1 {
+		n = 1
 	}
-	if n > 4 {
-		n = 4
+	if n > 500 {
+		n = 500
 	}
 	seenBeh := map[string]bool{}
 	var out []aiagent.Profile

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aiciv"
 )
 
 // ИИ-3 — админ-API «ИИ-игроки»: состояние и настройки агента мира, живой статус капитанов,
@@ -41,7 +42,11 @@ func (h *Handler) aiPlayersSettingsPut(w http.ResponseWriter, r *http.Request, u
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	h.audit_(r.Context(), 0, u.Username, "ai_players_settings", h.clientIP(r), map[string]any{"enabled": s.Enabled, "min": s.MinOnline, "max": s.MaxOnline})
+	s = h.opts.Agent.Settings()
+	if h.opts.Civ != nil {
+		h.opts.Civ.Set(aiciv.Knobs{Enabled: s.CivEnabled, Cast: s.CivCast, Chat: s.CivChat, TalkMin: s.CivTalkMin, TalkMax: s.CivTalkMax, IntervalSec: s.CivIntervalSec, RetreatPct: s.CivRetreatPct, Help: s.CivHelp})
+	}
+	h.audit_(r.Context(), 0, u.Username, "ai_players_settings", h.clientIP(r), map[string]any{"enabled": s.Enabled, "min": s.MinOnline, "max": s.MaxOnline, "civ": s.CivEnabled, "cast": s.CivCast})
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "settings": s})
 }
 

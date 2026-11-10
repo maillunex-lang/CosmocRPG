@@ -12,7 +12,7 @@ const UiSettings := preload("res://ui/ui_settings.gd")
 const DEFAULT_VISIBLE := false
 ## Ключ настройки. Сменён с debug_overlay (2026-11-08): в старых тестовых сборках у игроков сохранилось «включено», и новое значение по умолчанию не действовало.
 const SETTING_KEY := "debug_overlay2"
-const RING := 720                 # сколько последних кадров хранится (около 12 с при 60 FPS)
+const RING := 4096                # 10 s up to 409 FPS; overflow is reported
 const WINDOW_SEC := 10.0          # окно, по которому считаются показатели
 const HITCH_MS := 25.0            # кадр дольше этого считается «заиканием»
 const BIG_HITCH_MS := 50.0        # заметный фриз
@@ -33,6 +33,77 @@ var startup_hitches := 0
 var startup_max_ms := 0.0
 var startup_list: Array = []        # [{t, ms}] самые заметные кадры при старте
 var marks: Dictionary = {}          # этап -> длительность, мс
+
+var world_viewport: Viewport
+var context_source: Callable
+var timing_enabled := false
+var diagnostic_page := 0
+var diagnostics: Dictionary = {}
+
+func configure_diagnostics(viewport: Viewport, source: Callable) -> void:
+	world_viewport = viewport
+	context_source = source
+
+## Explicit opt-in; benchmark overhead before enabling on Android.
+func set_render_timing(enabled: bool) -> bool:
+	if not is_instance_valid(world_viewport) or DisplayServer.get_name() == "headless":
+		return false
+	if RenderingServer.get_rendering_device() == null:
+		return false
+	RenderingServer.viewport_set_measure_render_time(world_viewport.get_viewport_rid(), enabled)
+	timing_enabled = enabled
+	return true
+
+func sample_diagnostics() -> Dictionary:
+	var d := {
+		"app_process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+		"app_nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+		"app_resources": Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT),
+		"world_cpu_ms": null, "world_gpu_ms": null,
+		"ships": null, "active_vfx": null, "chunks": null,
+		"profile": UiSettings.graphics_preset(),
+	}
+	var monitors := {"app_draw_calls": Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME,
+		"app_objects": Performance.RENDER_TOTAL_OBJECTS_IN_FRAME,
+		"app_primitives": Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME,
+		"app_render_bytes": Performance.RENDER_VIDEO_MEM_USED,
+		"app_texture_bytes": Performance.RENDER_TEXTURE_MEM_USED,
+		"app_buffer_bytes": Performance.RENDER_BUFFER_MEM_USED}
+	for key in monitors:
+		d[key] = Performance.get_monitor(monitors[key]) if DisplayServer.get_name() != "headless" else null
+	if timing_enabled and is_instance_valid(world_viewport):
+		var rid := world_viewport.get_viewport_rid()
+		var cpu := RenderingServer.viewport_get_measured_render_time_cpu(rid)
+		var gpu := RenderingServer.viewport_get_measured_render_time_gpu(rid)
+		d["world_cpu_ms"] = cpu if cpu > 0.0 else null
+		d["world_gpu_ms"] = gpu if gpu > 0.0 else null
+	if context_source.is_valid():
+		var context: Dictionary = context_source.call()
+		for key in ["ships", "active_vfx", "chunks"]:
+			if context.get(key) is int:
+				d[key] = maxi(0, context[key])
+	diagnostics = d
+	return d
+
+static func metric(value: Variant) -> String:
+	return "N/A" if value == null else "%.2f" % float(value)
+
+## Fixed metadata schema. Never serialize snapshots or arbitrary dictionaries.
+func export_json(path: String, sha: String, scenario: int) -> Error:
+	if not path.begins_with("user://") or ".." in path or sha.length() != 40 or scenario < 0 or scenario > 13:
+		return ERR_INVALID_PARAMETER
+	for ch in sha:
+		if not ch in "0123456789abcdef":
+			return ERR_INVALID_PARAMETER
+	var size := get_viewport().get_visible_rect().size
+	var payload := {"schema": 1, "commit": sha, "scenario": scenario,
+		"godot": Engine.get_version_info()["string"], "resolution": [size.x, size.y],
+		"frame_ms": stats(), "metrics": sample_diagnostics(), "timing_enabled": timing_enabled}
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_string(JSON.stringify(payload, "\t"))
+	return file.get_error()
 
 var _panel: PanelContainer
 var _label: Label
@@ -107,6 +178,7 @@ func _process(_delta: float) -> void:
 	_accum += _delta
 	if visible and _accum >= REFRESH_SEC:
 		_accum = 0.0
+		diagnostic_page += 1
 		_refresh()
 
 
@@ -151,10 +223,11 @@ func stats() -> Dictionary:
 		if v > BIG_HITCH_MS:
 			h50 += 1
 	if vals.is_empty():
-		return {"n": 0, "fps": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0, "hitches25": 0, "hitches50": 0}
+		return {"n": 0, "mean_ms": 0.0, "fps": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0, "hitches25": 0, "hitches50": 0}
 	vals.sort()
 	return {
-		"n": vals.size(), "fps": 1000.0 / (sum / vals.size()),
+		"n": vals.size(), "mean_ms": sum / vals.size(),
+		"window_truncated": _count == RING and newest - _at[_head] < WINDOW_SEC, "fps": 1000.0 / (sum / vals.size()),
 		"p50": percentile(vals, 0.50), "p95": percentile(vals, 0.95), "p99": percentile(vals, 0.99),
 		"max": vals[vals.size() - 1], "hitches25": h25, "hitches50": h50,
 	}
@@ -163,7 +236,7 @@ func stats() -> Dictionary:
 func text() -> String:
 	var s := stats()
 	var lines: Array[String] = []
-	lines.append("FPS %.1f · кадр p50 %.1f / p95 %.1f / p99 %.1f / макс %.1f мс" % [s["fps"], s["p50"], s["p95"], s["p99"], s["max"]])
+	lines.append("FPS %.1f · ср %.1f мс · кадр p50 %.1f / p95 %.1f / p99 %.1f / макс %.1f мс" % [s["fps"], s["mean_ms"], s["p50"], s["p95"], s["p99"], s["max"]])
 	lines.append("За 10 с: кадров >25 мс — %d, >50 мс — %d" % [s["hitches25"], s["hitches50"]])
 	lines.append("Старт (%d с): >25 мс — %d, макс %.0f мс" % [int(STARTUP_SEC), startup_hitches, startup_max_ms])
 	if not startup_list.is_empty():
@@ -176,10 +249,19 @@ func text() -> String:
 		for k in marks:
 			parts.append("%s %.0f" % [k, marks[k]])
 		lines.append("Загрузка, мс: " + " · ".join(parts))
+	if context_source.is_valid():
+		var keys: Array = diagnostics.keys()
+		var first := (diagnostic_page % int(ceil(keys.size() / 3.0))) * 3
+		var parts: Array[String] = []
+		for i in range(first, mini(first + 3, keys.size())):
+			var key: String = keys[i]
+			parts.append(key + " " + (str(diagnostics[key]) if key == "profile" else metric(diagnostics[key])))
+		lines.append(" · ".join(parts))
 	return "\n".join(lines)
 
 
 func _refresh() -> void:
+	sample_diagnostics()
 	if _label != null:
 		_label.text = text()
 

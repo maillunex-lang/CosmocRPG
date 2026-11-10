@@ -9,6 +9,9 @@ const ShipVfx := preload("res://ui/ships/ship_vfx.gd")
 
 const POINT_NAMES := ["Engine_L", "Engine_R", "Weapon_L", "Weapon_R", "Missile_01", "Hit_Center", "Camera_Focus", "Dock_Point"]
 
+var build_count := 0
+var skin_instance_count := 0
+var _loaded_ship := ""
 var ship_id := ShipDef.DEFAULT_ID
 var skin_id := ""
 var bank: Node3D       # наклон при манёвре (крен)
@@ -36,6 +39,7 @@ var _skill_ring: MeshInstance3D
 var _skill_flash: MeshInstance3D
 var _skill_sparks: CPUParticles3D
 var _skill_bolt: MeshInstance3D
+var _channels: Dictionary = {}
 var _dock_tween: Tween
 
 
@@ -46,8 +50,13 @@ func _ready() -> void:
 
 ## Строит иерархию: Bank > Model (ориентация, масштаб) > GLB + точки + двигатели. Повторный вызов пересобирает.
 func build(sid: String, skin: String = "") -> void:
-	ship_id = sid
+	_reset_effects()
+	build_count += 1
+	ship_id = sid if ShipDef.PATHS.has(sid) else ShipDef.DEFAULT_ID
+	_skin_root = null
+	_loaded_ship = ""
 	for c in get_children():
+		remove_child(c)
 		c.queue_free()
 	points.clear()
 	flames.clear()
@@ -64,7 +73,7 @@ func build(sid: String, skin: String = "") -> void:
 	_skill_bolt = null
 	_boost_trail = null
 	_move_trail = null
-	var def := ShipDef.get_def(sid)
+	var def := ShipDef.get_def(ship_id)
 	bank = Node3D.new()
 	bank.name = "Bank"
 	add_child(bank)
@@ -81,7 +90,7 @@ func build(sid: String, skin: String = "") -> void:
 		m.position = Vector3(v[0], v[1], v[2])
 		model.add_child(m)
 		points[n] = m
-	set_skin(skin if skin != "" else str(ShipDef.skin_ids(sid)[0]))
+	set_skin(skin if skin != "" else str(ShipDef.skin_ids(ship_id)[0]))
 	for n in ["Engine_L", "Engine_R"]:
 		var f := ShipVfx.flame(_flame_color)
 		f.position = Vector3(0.2, 0, 0)
@@ -94,17 +103,30 @@ func build(sid: String, skin: String = "") -> void:
 func set_skin(skin: String) -> void:
 	if not (ShipDef.get_def(ship_id).get("skins", {}) as Dictionary).has(skin):
 		return   # неизвестный облик: выбор не меняется
+	if is_instance_valid(_skin_root) and not _skin_root.is_queued_for_deletion() and skin_id == skin and _loaded_ship == ship_id:
+		return
 	var sk := ShipDef.skin(ship_id, skin)
-	skin_id = skin
-	if _skin_root != null and is_instance_valid(_skin_root):
+	var path := str(sk.get("glb", ""))
+	if not ResourceLoader.exists(path):
+		return
+	var ps := load(path) as PackedScene
+	if ps == null:
+		return
+	var replacement := ps.instantiate()
+	if replacement == null:
+		return
+	_reset_effects()
+	if is_instance_valid(_skin_root):
+		model.remove_child(_skin_root)
 		_skin_root.queue_free()
-	var ps := load(str(sk.get("glb", ""))) as PackedScene
-	if ps != null:
-		_skin_root = ps.instantiate()
-		model.add_child(_skin_root)
-		var tint: Array = sk.get("tint", [])
-		if tint.size() >= 3:
-			_apply_tint(_skin_root, Color(float(tint[0]), float(tint[1]), float(tint[2])))
+	_skin_root = replacement
+	model.add_child(_skin_root)
+	skin_id = skin
+	_loaded_ship = ship_id
+	skin_instance_count += 1
+	var tint: Array = sk.get("tint", [])
+	if tint.size() >= 3:
+		_apply_tint(_skin_root, Color(float(tint[0]), float(tint[1]), float(tint[2])))
 	var fc: Array = sk.get("flame", [0.35, 0.9, 1.0])
 	_flame_color = Color(fc[0], fc[1], fc[2])
 	for f in flames:
@@ -180,7 +202,7 @@ func update_motion(delta: float, speed_frac: float, turn: float, boosting: bool)
 func _tween_flash(mi: MeshInstance3D, scale_to: float, seconds: float) -> void:
 	mi.visible = true
 	mi.scale = Vector3.ONE * 0.3
-	var tw := create_tween()
+	var tw := _channel("flash:%d" % mi.get_instance_id())
 	tw.tween_property(mi, "scale", Vector3.ONE * scale_to, seconds * 0.6)
 	tw.tween_callback(func() -> void: mi.visible = false).set_delay(seconds * 0.4)
 
@@ -206,7 +228,7 @@ func play_fire(target: Variant = null) -> void:
 			b.global_position = from
 			b.look_at(target, Vector3.UP) if from.distance_to(target) > 0.01 else null
 			b.visible = true
-			var tw := create_tween()
+			var tw := _channel("bolt:%d" % i)
 			tw.tween_property(b, "global_position", target, 0.14)
 			tw.tween_callback(func() -> void: b.visible = false)
 
@@ -220,7 +242,7 @@ func play_hit_shield() -> void:
 		(points["Hit_Center"] as Marker3D).add_child(_shell)
 	_shell.visible = true
 	_shell.scale = Vector3.ONE * 0.9
-	var tw := create_tween()
+	var tw := _channel("shield")
 	tw.tween_property(_shell, "scale", Vector3.ONE * 1.12, 0.22)
 	tw.tween_callback(func() -> void: _shell.visible = false)
 
@@ -234,7 +256,7 @@ func play_hit_hull() -> void:
 		(points["Hit_Center"] as Marker3D).add_child(_sparks)
 	_sparks.restart()
 	_sparks.emitting = true
-	var tw := create_tween()
+	var tw := _channel("shake")
 	tw.tween_property(bank, "position:x", 0.04, 0.03)
 	tw.tween_property(bank, "position:x", -0.04, 0.05)
 	tw.tween_property(bank, "position:x", 0.0, 0.04)
@@ -244,6 +266,7 @@ func play_hit_hull() -> void:
 func play_death() -> void:
 	if not alive:
 		return
+	_reset_effects()
 	alive = false
 	anim_state = "Death"
 	if _boom == null:
@@ -256,12 +279,13 @@ func play_death() -> void:
 	_tween_flash(_boom_flash, 2.2, 0.5)
 	for f in flames:
 		(f as MeshInstance3D).visible = false
-	var tw := create_tween()
+	var tw := _channel("bank")
 	tw.tween_property(bank, "scale", Vector3.ONE * 0.01, 0.35)
 	tw.tween_callback(func() -> void: bank.visible = false)
 
 
 func respawn() -> void:
+	_reset_effects()
 	alive = true
 	anim_state = "Idle"
 	bank.visible = true
@@ -287,13 +311,16 @@ func play_dock() -> void:
 		(points["Hit_Center"] as Marker3D).add_child(_scan_ring)
 	_scan_ring.visible = true
 	_scan_ring.scale = Vector3.ONE * 1.6
-	_dock_tween = create_tween().set_parallel(true)
+	_cancel_channel("scan")
+	_dock_tween = _channel("bank").set_parallel(true)
 	_dock_tween.tween_property(bank, "scale", Vector3.ONE * 0.35, 1.0)
 	_dock_tween.tween_property(bank, "position:z", -0.6, 1.0)
 	_dock_tween.tween_property(_scan_ring, "scale", Vector3.ONE * 0.5, 1.0)
 
 
 func undock() -> void:
+	_cancel_channel("bank")
+	_cancel_channel("scan")
 	if _dock_tween != null and _dock_tween.is_valid():
 		_dock_tween.kill()
 	bank.scale = Vector3.ONE
@@ -305,13 +332,16 @@ func undock() -> void:
 
 ## Кольцо сканера (радиус в мировых единицах).
 func play_scan(radius: float) -> void:
+	if not alive:
+		return
+	_cancel_channel("bank")
 	if _scan_ring == null:
 		_scan_ring = ShipVfx.ring(Color(0.5, 0.9, 1.0))
 		_scan_ring.rotation_degrees.x = 90
 		(points["Hit_Center"] as Marker3D).add_child(_scan_ring)
 	_scan_ring.visible = true
 	_scan_ring.scale = Vector3.ONE * 0.5
-	var tw := create_tween()
+	var tw := _channel("scan")
 	tw.tween_property(_scan_ring, "scale", Vector3.ONE * radius * 0.5, 0.8)
 	tw.tween_callback(func() -> void: _scan_ring.visible = false)
 
@@ -321,7 +351,7 @@ func play_burst(color: Color, radius: float) -> void:
 
 
 func _skill_fx() -> bool:
-	if points.is_empty() or not points.has("Hit_Center"):
+	if not alive or points.is_empty() or not points.has("Hit_Center"):
 		return false
 	var center := points["Hit_Center"] as Marker3D
 	if _skill_ring == null:
@@ -343,7 +373,7 @@ func _pulse_ring(color: Color, radius: float, seconds: float) -> void:
 	_skill_ring.material_override = ShipVfx.glow(Color(color, 0.9), 1.8)
 	_skill_ring.visible = true
 	_skill_ring.scale = Vector3.ONE * 0.35
-	var tw := create_tween()
+	var tw := _channel("skill_ring")
 	tw.tween_property(_skill_ring, "scale", Vector3.ONE * maxf(radius, 0.8), seconds)
 	tw.tween_callback(func() -> void: _skill_ring.visible = false)
 
@@ -377,7 +407,7 @@ func play_strike(target: Variant) -> void:
 		if from.distance_to(target) > 0.01:
 			b.look_at(target, Vector3.UP)
 		b.visible = true
-		var tw := create_tween()
+		var tw := _channel("skill_bolt")
 		tw.tween_property(b, "global_position", target, 0.1)
 		tw.tween_callback(func() -> void: b.visible = false)
 
@@ -438,3 +468,75 @@ func play(name: String, arg: Variant = null) -> void:
 		"Drone": play_drone_fx()
 		"Fortify": play_fortify()
 		"Vent": play_vent()
+
+
+func _cancel_channel(key: String) -> void:
+	var tw: Tween = _channels.get(key)
+	if tw != null and tw.is_valid():
+		tw.kill()
+	_channels.erase(key)
+
+func _channel(key: String) -> Tween:
+	_cancel_channel(key)
+	var tw := create_tween()
+	_channels[key] = tw
+	return tw
+
+func active_tween_count() -> int:
+	var count := 0
+	for tw in _channels.values():
+		if tw.is_valid() and tw.is_running():
+			count += 1
+	return count
+
+func _effect_nodes() -> Array:
+	var nodes: Array = []
+	nodes.append_array(_flash)
+	nodes.append_array(_bolts)
+	nodes.append_array([_boost_trail, _move_trail, _shell, _sparks, _boom,
+		_boom_flash, _scan_ring, _skill_ring, _skill_flash, _skill_sparks, _skill_bolt])
+	return nodes
+
+func active_effect_count() -> int:
+	var count := 0
+	for node in _effect_nodes():
+		if is_instance_valid(node) and not node.is_queued_for_deletion():
+			if node is CPUParticles3D:
+				count += int(node.emitting)
+			elif node is Node3D:
+				count += int(node.is_visible_in_tree())
+	return count
+
+## Local reset: detach first so queued nodes cannot render/emitting after rebinding.
+func _reset_effects() -> void:
+	for key in _channels.keys():
+		_cancel_channel(key)
+	_dock_tween = null
+	for node in _effect_nodes():
+		if is_instance_valid(node) and not node.is_queued_for_deletion():
+			if node is CPUParticles3D:
+				node.emitting = false
+			if node is Node3D:
+				node.visible = false
+			if node.get_parent() != null:
+				node.get_parent().remove_child(node)
+			node.queue_free()
+	_flash.clear()
+	_bolts.clear()
+	_boost_trail = null
+	_move_trail = null
+	_shell = null
+	_sparks = null
+	_boom = null
+	_boom_flash = null
+	_scan_ring = null
+	_skill_ring = null
+	_skill_flash = null
+	_skill_sparks = null
+	_skill_bolt = null
+	if is_instance_valid(bank):
+		bank.position.x = 0.0
+
+func _exit_tree() -> void:
+	for key in _channels.keys():
+		_cancel_channel(key)

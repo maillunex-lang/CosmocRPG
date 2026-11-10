@@ -84,3 +84,15 @@ static func reduce_motion() -> bool:
 ## Показывать ли виртуальный джойстик (по умолчанию да, опционален).
 static func joystick_enabled() -> bool:
 	return get_bool("joystick", true)
+
+
+static func render_scale() -> float:
+	var value := get_float("render_scale", 1.0)
+	return clampf(value, 0.5, 1.0) if is_finite(value) else 1.0
+
+static func fps_limit() -> int:
+	return 30 if get_float("fps_limit", 60.0) == 30.0 else 60
+
+static func ship_limit() -> int:
+	var value := get_float("ship_limit", 20.0)
+	return clampi(int(round(value / 5.0)) * 5, 5, 50) if is_finite(value) else 20

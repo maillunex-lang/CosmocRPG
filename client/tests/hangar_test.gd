@@ -39,6 +39,10 @@ func _run() -> void:
 	_c(h._stats.text.contains("Корпус") and h._stats.text.contains("щит"), "характеристики показаны")
 	_c(h._skin_buttons.size() == 2 and h._spec_buttons.size() == 2, "два облика и две специализации")
 	_c(h._visual != null and h._visual.point("Dock_Point") != null, "3D-предпросмотр корабля создан")
+	var preview_id: int = h._visual._skin_root.get_instance_id()
+	for i in 100:
+		h.set_data(gw.snapshot().ship)
+	_c(h._visual.build_count == 1 and h._visual._skin_root.get_instance_id() == preview_id, "100 snapshot ангара не пересоздают GLB")
 	h._skin_buttons["b"].pressed.emit()
 	await process_frame
 	_c(h.skin == "b" and h._visual.skin_id == "b", "в ангаре выбран облик «b»")

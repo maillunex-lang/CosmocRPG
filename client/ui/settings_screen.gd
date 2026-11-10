@@ -10,6 +10,7 @@ const FrameStats := preload("res://ui/debug/frame_stats.gd")
 const AutoBattle := preload("res://ui/auto_battle.gd")
 
 signal option_changed(name: String, value: bool)
+signal graphics_changed
 signal closed
 
 ## Описание переключателей: ключ, подпись, пояснение, значение по умолчанию.
@@ -65,6 +66,7 @@ func _ready() -> void:
 		box.add_child(_row(o))
 		if o["key"] == "auto_retaliate":
 			box.add_child(_auto_target_row())
+	box.add_child(_graphics_section())
 	box.add_child(_music_section())
 	var close := ActionButton.new()
 	close.text = "Закрыть"
@@ -252,3 +254,59 @@ func _volume(key: String, title: String, default: float) -> Control:
 		_apply_music())
 	col.add_child(s)
 	return col
+
+
+func _graphics_section() -> Control:
+	var box := VBoxContainer.new()
+	box.name = "GraphicsSettings"
+	box.add_theme_constant_override("separation", 10)
+	var title := Label.new()
+	title.text = "Графика и производительность"
+	title.theme_type_variation = &"TitleLabel"
+	box.add_child(title)
+	box.add_child(_graphics_choice("Качество графики", "graphics_preset",
+		["Низкое", "Среднее", "Высокое"], ["low", "medium", "high"], UiSettings.graphics_preset()))
+	box.add_child(_graphics_choice("Разрешение 3D", "render_scale",
+		["50%", "67%", "75%", "85%", "100%"], [0.5, 0.67, 0.75, 0.85, 1.0], UiSettings.render_scale()))
+	box.add_child(_graphics_choice("Ограничение FPS", "fps_limit", ["30 FPS", "60 FPS"], [30.0, 60.0], float(UiSettings.fps_limit())))
+	var label := Label.new()
+	label.text = "Полноценных чужих 3D-кораблей: %d" % UiSettings.ship_limit()
+	box.add_child(label)
+	var slider := HSlider.new()
+	slider.name = "ShipLimit"
+	slider.min_value = 5
+	slider.max_value = 50
+	slider.step = 5
+	slider.custom_minimum_size.y = 48
+	slider.value = UiSettings.ship_limit()
+	slider.value_changed.connect(func(value: float) -> void:
+		UiSettings.set_float("ship_limit", value)
+		label.text = "Полноценных чужих 3D-кораблей: %d" % int(value)
+		graphics_changed.emit())
+	box.add_child(slider)
+	var note := Label.new()
+	note.text = "Свой корабль не входит в лимит. Цель имеет приоритет. Остальные корабли доступны для выбора по маркерам. Разрешение интерфейса сохраняется."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	return box
+
+func _graphics_choice(title: String, key: String, labels: Array, values: Array, current: Variant) -> Control:
+	var box := VBoxContainer.new()
+	var label := Label.new()
+	label.text = title
+	box.add_child(label)
+	var choice := OptionButton.new()
+	choice.name = key
+	choice.custom_minimum_size.y = Tokens.TOUCH_MIN
+	for i in labels.size():
+		choice.add_item(labels[i])
+		if values[i] == current:
+			choice.select(i)
+	choice.item_selected.connect(func(index: int) -> void:
+		if key == "graphics_preset":
+			UiSettings.set_string(key, str(values[index]))
+		else:
+			UiSettings.set_float(key, float(values[index]))
+		graphics_changed.emit())
+	box.add_child(choice)
+	return box

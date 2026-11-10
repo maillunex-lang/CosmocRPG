@@ -52,6 +52,11 @@ var gestures: RefCounted
 var time_source: Callable = Callable()
 var stats: CanvasLayer   # отладочная панель производительности
 
+var _graphics_elapsed := 0.0
+var _full_ship_limit := 20
+var _applied_quality := ""
+var _priority_target := ""
+
 var _ships: Dictionary = {}       # id -> ShipView
 var _bg_id := ""
 var _last_sim_time := -1.0
@@ -91,6 +96,8 @@ func _ready() -> void:
 	stats = FrameStats.new()
 	add_child(stats)
 	stats.attach_to(_hud.get_node("%DebugSlot"))
+	stats.configure_diagnostics(_ships_root.get_viewport(), _diagnostic_counts)
+	_apply_graphics()
 	var show_loading := Session.opened_msec >= 0   # только при настоящем входе в мир (в тестах экрана загрузки нет)
 	if Session.opened_msec >= 0:
 		# от нажатия кнопки до начала _ready: загрузка и создание сцены, HUD и текстур
@@ -182,6 +189,10 @@ func _process(delta: float) -> void:
 		_rig.update(delta, Vector3(p.x, 0.0, p.y), me.heading, _ship_speed)
 		if _decor != null:
 			_decor.update(p, delta)
+	_graphics_elapsed += delta
+	if _graphics_elapsed >= 0.25:
+		_graphics_elapsed = 0.0
+		_update_ship_budget()
 	_update_ship_labels(delta, me)
 	_update_compass()
 	# фон: сдвиг только от перемещения корабля в экранных осях; вращение, наклон и масштаб камеры фон не трогают
@@ -396,8 +407,12 @@ func _on_state(state: Dictionary) -> void:
 			_ships[id].queue_free()
 			_ships.erase(id)
 	var target := str(state.get("target_id", ""))
+	var target_changed := target != _priority_target
+	_priority_target = target
 	for id in _ships:
 		_ships[id].set_selected(id == target)
+	if target_changed or _ships.size() > _full_ship_limit:
+		_update_ship_budget()
 
 
 func _sync_ship(id: String, kind: String, stance: String, display_name: String, pos: Vector2, dir: Vector2,
@@ -706,6 +721,7 @@ func open_settings() -> Control:
 	add_child(layer)
 	layer.add_child(st)
 	st.theme = theme
+	st.graphics_changed.connect(_apply_graphics)
 	st.option_changed.connect(func(opt: String, v: bool) -> void:
 		if opt == "auto_retaliate":
 			gateway.set_option(opt, v)
@@ -1141,3 +1157,64 @@ func close_corporation() -> bool:
 		return false
 	screen._close_screen()
 	return true
+
+
+## Called only at the diagnostic refresh cadence (0.5 s).
+func _diagnostic_counts() -> Dictionary:
+	var ships := 0
+	var effects := 0
+	for view in _ships.values():
+		if view.visual != null:
+			ships += 1
+			if view.visual.has_method("active_effect_count"):
+				effects += view.visual.active_effect_count()
+	return {"ships": ships, "active_vfx": effects,
+		"chunks": _decor.visible_chunk_count() if _decor != null else 0}
+
+
+func _apply_graphics() -> void:
+	_full_ship_limit = UiSettings.ship_limit()
+	Engine.max_fps = UiSettings.fps_limit()
+	var viewport := _ships_root.get_viewport()
+	viewport.scaling_3d_scale = UiSettings.render_scale()
+	var quality := UiSettings.graphics_preset()
+	viewport.msaa_3d = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}[quality]
+	if _applied_quality != quality:
+		_applied_quality = quality
+		if _decor != null:
+			_rebuild_decor()
+		if _bg.profile != null:
+			_bg.apply_profile(_bg.profile)
+	_update_ship_budget()
+
+## Stable order with a retention distance bias; selected target always ranks first.
+func _update_ship_budget() -> void:
+	var me: Node3D = _ships.get(ME)
+	var origin: Vector2 = me.world_pos if me != null else Vector2.ZERO
+	var candidates: Array = []
+	var area := Rect2(Vector2.ZERO, _camera.get_viewport().get_visible_rect().size).grow(24)
+	for id in _ships:
+		var view = _ships[id]
+		if view.visual == null or id == ME:
+			continue
+		var visible_on_screen: bool = not _camera.is_position_behind(view.global_position) and area.has_point(_camera.unproject_position(view.global_position))
+		var selected: bool = id == _priority_target
+		var score: float = view.world_pos.distance_squared_to(origin)
+		if view.visual.visible:
+			score *= 0.8
+		candidates.append({"id": str(id), "score": score, "selected": selected, "onscreen": visible_on_screen})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a.selected != b.selected:
+			return a.selected
+		if a.onscreen != b.onscreen:
+			return a.onscreen
+		return a.id < b.id if a.score == b.score else a.score < b.score)
+	var allowed := {}
+	for i in mini(_full_ship_limit, candidates.size()):
+		allowed[candidates[i].id] = true
+	# Demote before promoting: do not temporarily exceed the cap.
+	for candidate in candidates:
+		if not allowed.has(candidate.id):
+			_ships[candidate.id].set_full_visual(false)
+	for id in allowed:
+		_ships[id].set_full_visual(true)

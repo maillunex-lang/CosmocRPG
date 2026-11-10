@@ -11,7 +11,7 @@ APK="${1:?укажите APK}"
 NOTES="${2:-}"
 DIR="${APK_DIR:-$HOME/apk-share}"
 KEY="${MANIFEST_KEY:-$HOME/keys/cosmoc/manifest_private.pem}"
-PUB="$ROOT/client/assets/update_public.pem"
+PUB="${PUB:-$ROOT/client/assets/update_public.pem}"
 BASE_URL="https://rikagro.ru/download"
 PROJECT="$ROOT/client/project.godot"
 PRESET="$ROOT/client/export_presets.cfg"
@@ -103,6 +103,14 @@ if [[ -e "$DIR/$FILE" ]]; then
 fi
 [[ -f "$KEY" ]] || fail "нет ключа подписи манифеста"
 
+rollback() {
+	rm -f "$DIR/$FILE"
+	if [[ -f "$DIR/latest.json.prev" ]]; then
+		mv -f "$DIR/latest.json.prev" "$DIR/latest.json"
+		[[ -f "$DIR/latest.json.sig.prev" ]] && mv -f "$DIR/latest.json.sig.prev" "$DIR/latest.json.sig"
+	fi
+}
+
 STAGE="$(mktemp -d)"
 cp "$APK" "$STAGE/$FILE"
 SHA="$(sha256sum "$STAGE/$FILE" | cut -d' ' -f1)"
@@ -127,4 +135,16 @@ fi
 mv "$STAGE/$FILE" "$DIR/$FILE"
 mv "$STAGE/latest.json" "$DIR/latest.json"
 mv "$STAGE/latest.json.sig" "$DIR/latest.json.sig"
+
+# пост-проверка доступности по HTTPS; при недоступности — откат на прежний манифест
+if [[ "${PUBLISH_SKIP_HTTPS_CHECK:-0}" != "1" ]]; then
+	if ! curl -fsSI --max-time 15 "$BASE_URL/latest.json" >/dev/null 2>&1; then
+		rollback
+		fail "latest.json недоступен по HTTPS, выполнен откат"
+	fi
+	if ! curl -fsSI --max-time 30 --range 0-0 "$BASE_URL/$FILE" >/dev/null 2>&1; then
+		rollback
+		fail "APK недоступен по HTTPS, выполнен откат"
+	fi
+fi
 echo "опубликовано: версия $NAME ($CODE), $SIZE байт, sha256 ${SHA:0:16}…, файл $FILE"

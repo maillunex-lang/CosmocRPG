@@ -229,6 +229,7 @@ func (w *World) stepLiving(dt float64) {
 			w.stepEnemy(n, dt)
 		}
 	}
+	w.advanceLane()
 	ids := make([]string, 0, len(w.players))
 	for id := range w.players {
 		ids = append(ids, id)
@@ -256,6 +257,9 @@ func moveToward(from, to Vec, step float64) Vec {
 }
 
 func (w *World) stepEnemy(n *npc, dt float64) {
+	if w.lane != nil && n.room > w.lane.open {
+		return
+	}
 	a := n.ai
 	cfg := a.cfg
 	var tgt *Player

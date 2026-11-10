@@ -86,12 +86,6 @@ func _ready() -> void:
 	screen_title.theme_type_variation = &"TitleLabel"
 	screen_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(screen_title)
-	var close := ActionButton.new()
-	close.text = "Закрыть"
-	close.variant = ActionButton.Variant.PRIMARY
-	close.custom_minimum_size = Vector2(150, 54)
-	close.pressed.connect(func() -> void: closed.emit())
-	head.add_child(close)
 
 	var filter_scroll := ScrollContainer.new()
 	filter_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -256,6 +250,32 @@ func _ready() -> void:
 
 	TouchScroll.fix_tree(self)
 	_refresh()
+	_add_exit()
+
+
+func _add_exit() -> void:
+	var close := ActionButton.new()
+	close.name = "HangarExit"
+	close.text = "Выйти"
+	close.tooltip_text = "Закрыть ангар и вернуться в космос"
+	close.variant = ActionButton.Variant.PRIMARY
+	close.z_index = 40
+	close.mouse_filter = Control.MOUSE_FILTER_STOP
+	close.custom_minimum_size = Vector2(168, 56)
+	close.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	close.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	close.offset_left = -184.0
+	close.offset_top = 12.0
+	close.offset_right = -16.0
+	close.offset_bottom = 68.0
+	close.pressed.connect(func() -> void: closed.emit())
+	add_child(close)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		closed.emit()
+		get_viewport().set_input_as_handled()
 
 
 func _caption(t: String) -> Label:
@@ -554,14 +574,12 @@ func _refresh_fitting() -> void:
 		var item: Dictionary = slot.get("item", {}) if slot.get("item") is Dictionary else {}
 		var title := _slot_title(str(slot.get("id", "")))
 		label.text = title + ": " + (str(item.get("name", "")) if not item.is_empty() else "пусто")
+		if bool(slot.get("locked", false)):
+			label.text += " · закрыт"
 		slot_box.add_child(label)
 		var actions := HBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)
-		if bool(slot.get("locked", false)):
-			var note := Label.new()
-			note.text = "кнопка выше"
-			actions.add_child(note)
-		elif not item.is_empty():
+		if not bool(slot.get("locked", false)) and not item.is_empty():
 			var off := ActionButton.new()
 			off.text = "Снять"
 			off.disabled = not can

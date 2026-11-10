@@ -96,6 +96,7 @@ type session struct {
 	events          chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
 	pid             string
 	name            string       // игровое имя (для чата)
+	seenSystem      string       // последняя система, о которой клиент уже знает
 	chat            chan Message // сообщения чата: отдельная очередь, чтобы не мешать снимкам состояния
 }
 
@@ -166,7 +167,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -332,7 +333,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.pilotMsg(ctx, c, ss, m)
 	case "talk":
 		h.talkMsg(ctx, c, ss, m)
-	case "party_invite", "party_join", "party_leave", "party_start":
+	case "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready":
 		h.partyMsg(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
@@ -822,6 +823,7 @@ func (h *Handler) Tick(n int, now time.Time) {
 				h.evaluateQuests(t.s, t.pid, st)
 			}
 		}
+		h.noteSystem(t.s, t.pid)
 		h.pushState(t.s, st)
 	}
 }
@@ -1096,6 +1098,11 @@ func (h *Handler) grantRewards(rs []world.Reward) {
 		if !granted {
 			continue
 		}
+		if r.Kind == "gear" && r.Ref != "" && h.opts.Shop != nil {
+			if _, gerr := h.opts.Shop.Grant(ctx, r.Player, r.Ref, "raid:"+r.Key); gerr != nil && gerr != shop.ErrOwned && gerr != shop.ErrNoItem {
+				h.log.Error("награда арсенала", "player", r.Player, "ref", r.Ref, "err", gerr)
+			}
+		}
 		h.log.Info("награда выдана", "player", r.Player, "kind", r.Kind, "ref", r.Ref, "credits", r.Credits, "total", total)
 		h.grantXP(ctx, r.Player, "xp:"+r.Key, r.Kind, pilot.XPFor(r.Kind, r.Credits))
 		if r.Kind == "kill" {
@@ -1261,6 +1268,9 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 	h.applyCosmetics(ctx, rec.ID)
 	hw := w.For(rec.ID)
 	sys := hw.System()
+	h.mu.Lock()
+	ss.seenSystem = sys.ID
+	h.mu.Unlock()
 	welcome := map[string]any{
 		"player_id": rec.ID, "name": rec.Name, "system": sys,
 		"character": map[string]any{"gender": rec.Gender, "pilot_spec": rec.PilotSpec, "ship_type": rec.ShipType},

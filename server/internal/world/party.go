@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -32,19 +33,24 @@ var (
 	ErrPartyBusy    = errors.New("party_busy")
 	ErrPartyNobody  = errors.New("party_no_one")
 	ErrPartyAlready = errors.New("party_already")
+	ErrPartyPick    = errors.New("party_pick")
 )
 
 // PartyView — пати в снимке. Pending: вас позвали, вы ещё не приняли.
 type PartyView struct {
-	ID       string            `json:"id"`
-	Leader   string            `json:"leader"`
-	Title    string            `json:"title,omitempty"`
-	Instance bool              `json:"instance"`
-	Goal     string            `json:"goal,omitempty"`
-	Progress int               `json:"progress"`
-	Need     int               `json:"need"`
-	Pending  bool              `json:"pending,omitempty"`
-	Members  []PartyMemberView `json:"members"`
+	ID        string            `json:"id"`
+	Leader    string            `json:"leader"`
+	Title     string            `json:"title,omitempty"`
+	Instance  bool              `json:"instance"`
+	Op        string            `json:"op,omitempty"`
+	Goal      string            `json:"goal,omitempty"`
+	Progress  int               `json:"progress"`
+	Need      int               `json:"need"`
+	Ready     int               `json:"ready,omitempty"`
+	ReadyNeed int               `json:"ready_need,omitempty"`
+	YouReady  bool              `json:"you_ready,omitempty"`
+	Pending   bool              `json:"pending,omitempty"`
+	Members   []PartyMemberView `json:"members"`
 }
 
 // PartyMemberView — один пилот пати.
@@ -53,6 +59,7 @@ type PartyMemberView struct {
 	Name    string `json:"name"`
 	AI      bool   `json:"ai"`
 	Leader  bool   `json:"leader"`
+	Ready   bool   `json:"ready,omitempty"`
 	Pending bool   `json:"pending,omitempty"`
 }
 
@@ -60,6 +67,7 @@ type partyMember struct {
 	id, shipID, name string
 	ai, wing         bool
 	pending          bool
+	ready            bool
 	ship, skin       string
 	profession       string
 	behavior         string
@@ -73,6 +81,7 @@ type party struct {
 	id       string
 	leader   string
 	inst     string
+	op       string
 	run      int
 	need     int
 	progress int
@@ -162,7 +171,7 @@ func (r *Router) PartyLeave(id string) error {
 	return nil
 }
 
-// PartyStart уводит принятую пати в отдельную стычку.
+// PartyStart уводит принятую пати в коридор. Согласие не спрашивает: это прямой старт ведущего.
 func (r *Router) PartyStart(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -171,8 +180,85 @@ func (r *Router) PartyStart(id string) error {
 	if p == nil || p.leader != id {
 		return ErrPartyLeader
 	}
+	if p.op == "" {
+		p.op = "credits"
+	}
+	return r.beginCorridorLocked(p, id)
+}
+
+// PartyArm выбирает коридор. Согласия сбрасываются: прыжок только после нового «да» от всех.
+func (r *Router) PartyArm(id, kind string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ensureParty()
+	if _, ok := corridorOps[kind]; !ok {
+		return ErrPartyPick
+	}
+	p := r.parties[r.byMember[id]]
+	if p == nil || p.leader != id {
+		return ErrPartyLeader
+	}
 	if p.inst != "" {
 		return ErrPartyBusy
+	}
+	for _, m := range p.members {
+		if m.pending {
+			return ErrPartyNeed
+		}
+	}
+	p.op = kind
+	for _, m := range p.members {
+		m.ready = m.ai || m.wing
+	}
+	return nil
+}
+
+// PartyReady — согласие на прыжок. Когда согласились все принятые, коридор открывается сам.
+func (r *Router) PartyReady(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ensureParty()
+	p := r.parties[r.byMember[id]]
+	if p == nil {
+		return ErrPartyNone
+	}
+	if p.inst != "" {
+		return ErrPartyBusy
+	}
+	if _, ok := corridorOps[p.op]; !ok {
+		return ErrPartyPick
+	}
+	m := memberOf(p, id)
+	if m == nil || m.pending {
+		return ErrPartyNone
+	}
+	m.ready = true
+	if !r.allReadyLocked(p) {
+		return nil
+	}
+	return r.beginCorridorLocked(p, p.leader)
+}
+
+func (r *Router) allReadyLocked(p *party) bool {
+	n := 0
+	for _, m := range p.members {
+		if m.pending {
+			return false
+		}
+		if !m.ready && !m.ai && !m.wing {
+			return false
+		}
+		n++
+	}
+	return n >= 2
+}
+
+func (r *Router) beginCorridorLocked(p *party, leaderID string) error {
+	if p.inst != "" {
+		return ErrPartyBusy
+	}
+	if _, ok := corridorOps[p.op]; !ok {
+		p.op = "credits"
 	}
 	ready := 0
 	for _, m := range p.members {
@@ -183,11 +269,11 @@ func (r *Router) PartyStart(id string) error {
 	if ready < 2 {
 		return ErrPartyNeed
 	}
-	leader := r.byPlayer[id]
+	leader := r.byPlayer[leaderID]
 	if leader == nil {
 		return ErrNoPlayer
 	}
-	if leader.IsDead(id) {
+	if leader.IsDead(leaderID) {
 		return ErrDead
 	}
 	for _, m := range p.members {
@@ -198,12 +284,12 @@ func (r *Router) PartyStart(id string) error {
 			return err
 		}
 	}
-	lpos, lok := leader.ActorPos(id)
+	lpos, lok := leader.ActorPos(leaderID)
 	if !lok {
 		return ErrNoPlayer
 	}
 	for _, m := range p.members {
-		if m.pending || m.id == id {
+		if m.pending || m.id == leaderID {
 			continue
 		}
 		pos, ok := r.memberPosLocked(m)
@@ -215,7 +301,7 @@ func (r *Router) PartyStart(id string) error {
 		}
 	}
 	instID := newPartyID("inst-")
-	inst := newSkirmish(instID)
+	inst := newCorridor(instID, p.op)
 	r.worlds[instID] = inst
 	r.order = append(r.order, instID)
 	p.inst = instID
@@ -228,7 +314,7 @@ func (r *Router) PartyStart(id string) error {
 		if m.pending {
 			continue
 		}
-		spawn := Vec{X: float64(slot*8 - 8), Y: -24}
+		spawn := Vec{X: float64(slot * 6), Y: -8}
 		slot++
 		if m.wing {
 			if err := r.liftWingLocked(p, m, inst, spawn); err != nil {
@@ -304,11 +390,13 @@ func (r *Router) partyInviteLocked(from, target string, now time.Time) error {
 	if actor.kind == "ai_ship" {
 		m.wing = true
 		m.id = actor.id
+		m.ready = true
 		p.members = append(p.members, m)
 		r.byMember[m.id] = p.id
 		return nil
 	}
 	if actor.ai {
+		m.ready = true
 		p.members = append(p.members, m)
 		r.byMember[m.id] = p.id
 		return nil
@@ -338,16 +426,37 @@ func (r *Router) partyViewLocked(id string, now time.Time) (PartyView, bool) {
 	if p == nil {
 		return PartyView{}, false
 	}
-	v := PartyView{ID: p.id, Leader: p.leader, Instance: p.inst != "", Progress: p.progress, Need: p.need, Pending: pending}
-	if p.inst != "" {
-		v.Title = "Стычка у маяка"
-		v.Goal = "Уничтожьте пиратов у маяка"
-		if p.need > 0 {
-			v.Progress = p.progress
+	v := PartyView{ID: p.id, Leader: p.leader, Op: p.op, Instance: p.inst != "", Progress: p.progress, Need: p.need, Pending: pending}
+	readyN, needN := 0, 0
+	you := false
+	for _, m := range p.members {
+		if m.pending {
+			continue
+		}
+		needN++
+		agreed := m.ready || m.ai || m.wing
+		if agreed {
+			readyN++
+		}
+		if m.id == id {
+			you = agreed
 		}
 	}
+	v.Ready, v.ReadyNeed, v.YouReady = readyN, needN, you
+	if spec, ok := corridorOps[p.op]; ok {
+		v.Title = spec.title
+		if p.inst != "" {
+			v.Goal = spec.goal
+		} else if needN > 0 {
+			v.Goal = fmt.Sprintf("Согласие %d/%d. Прыжок, когда согласны все.", readyN, needN)
+		}
+	}
+	if p.inst != "" && v.Title == "" {
+		v.Title = "Стычка у маяка"
+		v.Goal = "Уничтожьте пиратов у маяка"
+	}
 	for _, m := range p.members {
-		v.Members = append(v.Members, PartyMemberView{ID: m.id, Name: m.name, AI: m.ai, Leader: m.id == p.leader, Pending: m.pending})
+		v.Members = append(v.Members, PartyMemberView{ID: m.id, Name: m.name, AI: m.ai, Leader: m.id == p.leader, Ready: m.ready || m.ai || m.wing, Pending: m.pending})
 	}
 	return v, true
 }
@@ -387,11 +496,26 @@ func (r *Router) tickPartiesLocked() {
 }
 
 func (r *Router) payLocked(p *party, w *World) {
+	spec := corridorOps[p.op]
+	if spec.pay == 0 && spec.title == "" {
+		spec = corridorOps["credits"]
+	}
 	for _, m := range p.members {
 		if m.pending || m.ai || m.wing {
 			continue
 		}
-		w.pushReward(Reward{Player: m.id, Key: "party:" + p.id + ":" + itoa(p.run) + ":" + m.id, Kind: "party", Ref: p.inst, Credits: instancePay})
+		key := "party:" + p.id + ":" + itoa(p.run) + ":" + m.id
+		kind := "party"
+		ref := p.inst
+		if spec.gear != "" {
+			kind = "gear"
+			ref = spec.gear
+		} else if spec.ore > 0 || spec.crystals > 0 {
+			ref = "iron_ore"
+			w.grantHold(m.id, "iron_ore", spec.ore)
+			w.grantHold(m.id, "crystals", spec.crystals)
+		}
+		w.pushReward(Reward{Player: m.id, Key: key, Kind: kind, Ref: ref, Credits: spec.pay})
 	}
 }
 
@@ -703,22 +827,135 @@ type actorInfo struct {
 	seed                                             uint32
 }
 
-func newSkirmish(id string) *World {
+func newSkirmish(id string) *World { return newCorridor(id, "credits") }
+
+type corridorOp struct {
+	title, goal, bg string
+	pay             int64
+	gear            string
+	ore, crystals   float64
+}
+
+type corridorLane struct {
+	open  int
+	doors []float64
+	halfY float64
+}
+
+var corridorOps = map[string]corridorOp{
+	"credits": {title: "Казначейский коридор", goal: "Три зала по очереди. В конце — кредиты.", bg: "xi", pay: instancePay},
+	"gear":    {title: "Арсенальный коридор", goal: "Три зала по очереди. В конце — обшивка «Сталь».", bg: "omega", pay: 100, gear: "frame_steel"},
+	"loot":    {title: "Трюмный коридор", goal: "Три зала по очереди. В конце — руда и кристаллы.", bg: "deep", pay: 100, ore: 8, crystals: 4},
+}
+
+func newCorridor(id, kind string) *World {
+	spec, ok := corridorOps[kind]
+	if !ok {
+		spec = corridorOps["credits"]
+	}
 	w := New()
-	w.system = System{ID: id, Name: "Стычка у маяка", Background: "xi"}
-	w.radius = 220
-	w.station.Pos = [2]float64{160, 0}
+	w.system = System{ID: id, Name: spec.title, Background: spec.bg}
+	w.radius = 260
+	w.station.Name = "Вход коридора"
+	w.station.Pos = [2]float64{0, 0}
 	w.safe = nil
 	w.npcs = nil
 	w.deposits = nil
-	cfg := worldgen.EnemyCfg{Speed: 8, ChaseSpeed: 14, Aggro: 180, Leash: 240, AttackRange: 28, Damage: 8, Period: 1.4}
-	spots := []Vec{{X: 48, Y: 16}, {X: 70, Y: -12}, {X: 36, Y: 42}}
-	for i, spot := range spots {
-		n := &npc{ID: "op-" + itoa(i+1), Name: "Пират маяка", Kind: "hostile", Stance: "hostile", Pos: spot, Hull: 70, HullMax: 70, respawn: 1e9, ephemeral: true}
-		n.ai = &aiState{cfg: cfg, tier: "normal", home: spot, patrolR: 12}
+	w.lane = &corridorLane{doors: []float64{52, 118}, halfY: 24}
+	w.layout = worldgen.Layout{
+		System: id, Name: spec.title, Radius: 260, Hub: [2]float64{0, 0},
+		Stations: []worldgen.Station{{ID: "beacon", Name: "Вход", Pos: [2]float64{0, 0}}},
+		Zones: []worldgen.Zone{
+			{ID: "hall-1", Type: "pve", Name: "Первый зал", Pos: [2]float64{28, 0}, Radius: 26, Danger: 1},
+			{ID: "hall-2", Type: "pve", Name: "Второй зал", Pos: [2]float64{86, 0}, Radius: 26, Danger: 1},
+			{ID: "hall-3", Type: "pve", Name: "Зал награды", Pos: [2]float64{168, 0}, Radius: 30, Danger: 2},
+		},
+	}
+	cfg := worldgen.EnemyCfg{Speed: 8, ChaseSpeed: 22, Aggro: 400, Leash: 500, AttackRange: 26, Damage: 6, Period: 1.4}
+	type spot struct {
+		room int
+		pos  Vec
+		name string
+		hull float64
+	}
+	spots := []spot{
+		{0, Vec{X: 28}, "Дозорный зала", 40},
+		{1, Vec{X: 86}, "Страж створа", 40},
+		{2, Vec{X: 168}, "Хранитель награды", 55},
+	}
+	if kind == "loot" {
+		spots[1].name = "Грузчик-мародёр"
+	}
+	if kind == "gear" {
+		spots[2].name = "Смотритель арсенала"
+	}
+	for i, s := range spots {
+		n := &npc{ID: "op-" + itoa(i+1), Name: s.name, Kind: "hostile", Stance: "hostile", Pos: s.pos, Hull: s.hull, HullMax: s.hull, respawn: 1e9, ephemeral: true, room: s.room}
+		n.ai = &aiState{cfg: cfg, tier: "normal", home: s.pos, patrolR: 6}
 		w.npcs = append(w.npcs, n)
 	}
 	return w
+}
+
+func (w *World) advanceLane() {
+	if w.lane == nil {
+		return
+	}
+	for w.lane.open < len(w.lane.doors) {
+		alive := false
+		for _, n := range w.npcs {
+			if n.Kind == "hostile" && n.room == w.lane.open && n.deadUntil <= w.t {
+				alive = true
+			}
+		}
+		if alive {
+			return
+		}
+		w.lane.open++
+	}
+}
+
+func (w *World) clampLane(p Vec) Vec {
+	if w.lane == nil {
+		return p
+	}
+	if p.Y > w.lane.halfY {
+		p.Y = w.lane.halfY
+	}
+	if p.Y < -w.lane.halfY {
+		p.Y = -w.lane.halfY
+	}
+	if p.X < -12 {
+		p.X = -12
+	}
+	if w.lane.open < len(w.lane.doors) && p.X > w.lane.doors[w.lane.open] {
+		p.X = w.lane.doors[w.lane.open]
+	}
+	return p
+}
+
+func (w *World) grantHold(id, res string, n float64) {
+	if n <= 0 {
+		return
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p := w.players[id]
+	if p == nil {
+		return
+	}
+	room := p.spec.Cargo - holdUsed(p.hold)
+	if room <= 0 {
+		return
+	}
+	if n > room {
+		n = room
+	}
+	if p.hold == nil {
+		p.hold = map[string]float64{}
+	}
+	p.hold[res] += n
+	p.cargoRevision++
 }
 
 // IsDead сообщает, уничтожен ли корабль.

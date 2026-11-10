@@ -611,7 +611,7 @@ func _dock_skills() -> void:
 	var fan := Control.new()
 	fan.name = "SkillFan"
 	fan.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fan.custom_minimum_size = Vector2(262, 232)
+	fan.custom_minimum_size = Vector2(312, 280)
 	fan.size_flags_horizontal = Control.SIZE_SHRINK_END
 	right.add_child(fan)
 	right.move_child(fan, _attack.get_index())
@@ -633,11 +633,11 @@ func _dock_skills() -> void:
 	_skills_grid.visible = false
 
 
-## Дуга большого пальца: форсаж и перехват сверху, удар — крупный круг справа снизу, ульта чуть больше.
+## Дуга большого пальца: умения крупными кругами, удар — самый большой справа снизу.
 func _place_fan() -> void:
-	var spots := [Vector2(0, 0), Vector2(64, 0), Vector2(8, 68), Vector2(78, 58)]
-	var sides := [56.0, 56.0, 58.0, 68.0]
-	var extra_spots := [Vector2(148, 62), Vector2(198, 24)]
+	var spots := [Vector2(0, 0), Vector2(88, 0), Vector2(0, 88), Vector2(88, 92)]
+	var sides := [78.0, 84.0, 78.0, 78.0]
+	var extra_spots := [Vector2(0, 176), Vector2(168, 88)]
 	for i in _skill_buttons.size():
 		var b := _skill_buttons[i] as Control
 		if i < spots.size():
@@ -646,16 +646,16 @@ func _place_fan() -> void:
 			_round_button(b, sides[i])
 		else:
 			b.position = extra_spots[i - spots.size()]
-			b.set_meta("fan_side", 46.0)
-			_round_button(b, 46.0)
+			b.set_meta("fan_side", 64.0)
+			_round_button(b, 64.0)
 			b.visible = false
-	_attack.position = Vector2(164, 138)
-	_auto_skills.position = Vector2(96, 176)
-	_round_button(_auto_skills, 48)
+	_attack.position = Vector2(188, 152)
+	_auto_skills.position = Vector2(100, 204)
+	_round_button(_auto_skills, 56)
 	if _cycle_target != null:
-		_cycle_target.position = Vector2(200, 36)
-		_round_button(_cycle_target, 52, Color(Tokens.SURFACE, 0.82), Color(Tokens.ACCENT, 0.8))
-		Icons.apply(_cycle_target, "maximize-2", Tokens.ACCENT, 20)
+		_cycle_target.position = Vector2(232, 22)
+		_round_button(_cycle_target, 62, Color(Tokens.SURFACE, 0.82), Color(Tokens.ACCENT, 0.8))
+		Icons.apply(_cycle_target, "maximize-2", Tokens.ACCENT, 32)
 		_cycle_target.text = ""
 		_cycle_target.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_cycle_target.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -665,7 +665,7 @@ func _round_button(b: Button, side: float, fill: Variant = null, edge: Variant =
 	b.custom_minimum_size = Vector2(side, side)
 	b.clip_text = true
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	b.add_theme_font_size_override("font_size", 13 if side < 60 else 15)
+	b.add_theme_font_size_override("font_size", 26 if side >= 100.0 else (20 if side >= 72.0 else 14))
 	var bg := Color(Tokens.SURFACE, 0.78)
 	var border := Color(Tokens.ACCENT, 0.55)
 	if fill is Color:
@@ -698,8 +698,8 @@ func _round_button(b: Button, side: float, fill: Variant = null, edge: Variant =
 func _style_attack(attacking: bool) -> void:
 	var fill := Color(Tokens.DANGER, 0.95) if attacking else Color(Tokens.DANGER, 0.72)
 	var edge := Color(1, 1, 1, 0.9) if attacking else Color(Tokens.DANGER.lightened(0.2), 0.85)
-	_round_button(_attack, 84, fill, edge)
-	Icons.apply(_attack, "zap", Color.WHITE, 28)
+	_round_button(_attack, 108, fill, edge)
+	Icons.apply(_attack, "zap", Color.WHITE, 58)
 	_attack.text = ""
 	_attack.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_attack.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -710,7 +710,7 @@ func _paint_auto() -> void:
 		return
 	var on := _auto_skills.button_pressed
 	var sb := StyleBoxFlat.new()
-	sb.set_corner_radius_all(26)
+	sb.set_corner_radius_all(int(_auto_skills.custom_minimum_size.x * 0.5))
 	sb.set_border_width_all(2)
 	sb.content_margin_left = 2
 	sb.content_margin_right = 2
@@ -882,6 +882,9 @@ func _apply_party(state: Dictionary) -> void:
 	if title == "":
 		title = "Пати"
 	var lines: String = title
+	var goal: String = str(party.get("goal", ""))
+	if goal != "":
+		lines += "\n" + goal
 	var need: int = int(party.get("need", 0))
 	if need > 0:
 		lines += "  %d/%d" % [int(party.get("progress", 0)), need]
@@ -899,8 +902,9 @@ func _apply_party(state: Dictionary) -> void:
 	var alone: bool = members.is_empty()
 	_party_invite.visible = can_invite and (alone or am_leader)
 	_party_join.visible = pending
-	_party_start.visible = am_leader and not pending and not in_inst
+	_party_start.visible = false
 	_party_leave.visible = members.size() > 0
+	_party_leave.text = "Покинуть стычку" if in_inst else "Выйти"
 
 
 # --- отображение состояния ---
@@ -1086,7 +1090,10 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 					tint = Color(0.95, 0.78, 0.35)
 				elif str(s.get("role", "")) == "module":
 					tint = Color(0.65, 0.9, 1.0)
-				Icons.apply(b, icon, tint, 22)
+				var icon_px := 46
+				if b.has_meta("fan_side"):
+					icon_px = int(round(float(b.get_meta("fan_side")) * 0.58))
+				Icons.apply(b, icon, tint, icon_px)
 				b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 		if b.has_meta("fan_side"):
@@ -1342,14 +1349,14 @@ func _layout_has(id: String, key: String) -> bool:
 func _layout_skill_spots(skills: Array) -> void:
 	if _editing or skills.is_empty():
 		return
-	# Все точки внутри веера 262×232, справа от них крупная атака. За край экрана не выходят.
+	# Все точки внутри веера 312×280, справа от них крупная атака. За край экрана не выходят.
 	var pool: Array = [
-		[Vector2(58, 0), 56.0],
-		[Vector2(0, 56), 64.0],
-		[Vector2(0, 126), 56.0],
-		[Vector2(70, 66), 56.0],
-		[Vector2(128, 0), 52.0],
-		[Vector2(128, 60), 52.0],
+		[Vector2(0, 0), 78.0],
+		[Vector2(88, 0), 84.0],
+		[Vector2(0, 88), 78.0],
+		[Vector2(88, 92), 78.0],
+		[Vector2(0, 176), 70.0],
+		[Vector2(168, 88), 62.0],
 	]
 	var used: Array = []
 	for i in mini(skills.size(), _skill_buttons.size()):
@@ -1377,9 +1384,11 @@ func _layout_skill_spots(skills: Array) -> void:
 		used.append(slot)
 		var spot: Array = pool[slot]
 		var b := _skill_buttons[i] as Control
+		var side := float(spot[1])
 		b.position = spot[0]
-		b.set_meta("fan_side", float(spot[1]))
-		_round_button(b, float(spot[1]))
+		b.set_meta("fan_side", side)
+		b.size = Vector2(side, side)
+		_round_button(b, side)
 
 
 func _cycle_target_pressed() -> void:

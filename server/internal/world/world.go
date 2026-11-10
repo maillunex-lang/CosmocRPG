@@ -253,6 +253,7 @@ type World struct {
 	layout      worldgen.Layout
 	wcfg        worldgen.Config
 	radius      float64 // радиус системы: из раскладки, иначе Radius
+	lane        *corridorLane
 	live        *liveEvent
 	eventRNG    *rand.Rand
 	lastEventID string
@@ -633,6 +634,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 			}
 		}
 		np := p.Pos.add(step)
+		np = w.clampLane(np)
 		if np.length() > w.radius {
 			np = np.normalized().mul(w.radius)
 		}

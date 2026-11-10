@@ -359,6 +359,9 @@ func (w *World) stepCombat(p *Player, dt float64) {
 	if dist(p.Pos, n.Pos) > pl.Range || p.Energy < pl.Energy || w.t < p.attackAt {
 		return
 	}
+	if w.lane != nil && n.room > w.lane.open {
+		return
+	}
 	p.attackAt = w.t + pl.Period
 	p.Energy -= pl.Energy
 	w.emit(Event{Type: "fire", From: p.ID, To: n.ID})

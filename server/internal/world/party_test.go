@@ -43,6 +43,12 @@ func TestPartySkirmishWithAIShip(t *testing.T) {
 	if err := r.PartyStart("human"); err != nil {
 		t.Fatal(err)
 	}
+	if w := r.For("human"); w != nil {
+		lay, _ := w.Layout()
+		if lay.Radius < 200 || lay.Name == "" {
+			t.Fatalf("раскладка коридора: %+v", lay.Name)
+		}
+	}
 	if !strings.HasPrefix(r.SystemID("human"), "inst-") {
 		t.Fatalf("система %s", r.SystemID("human"))
 	}
@@ -211,4 +217,69 @@ func TestPartyDisconnectExtracts(t *testing.T) {
 	if rec.Pos != (Vec{}) {
 		t.Fatalf("позиция %+v", rec.Pos)
 	}
+}
+
+func TestCorridorConsentAndDoor(t *testing.T) {
+	r, _ := partyHome(t)
+	if _, ok := r.Join(Record{ID: "human", Name: "Пилот", Created: true, Pos: Vec{}, Dir: Vec{X: 1}, ShipType: DefaultShip, PilotSpec: "interceptor"}); !ok {
+		t.Fatal("join")
+	}
+	if _, ok := r.Join(Record{ID: "mate", Name: "Напарник", Created: true, Pos: Vec{X: 6}, Dir: Vec{X: 1}, ShipType: DefaultShip}); !ok {
+		t.Fatal("mate")
+	}
+	if err := r.PartyInvite("human", "mate"); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.PartyArm("human", "loot"); err != ErrPartyNeed {
+		t.Fatalf("пока напарник не принял: %v", err)
+	}
+	if err := r.PartyJoin("mate"); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.PartyArm("human", "loot"); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.PartyReady("human"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.HasPrefix(r.SystemID("human"), "inst-") {
+		t.Fatal("прыжок до согласия всех")
+	}
+	if err := r.PartyReady("mate"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(r.SystemID("human"), "inst-") || !strings.HasPrefix(r.SystemID("mate"), "inst-") {
+		t.Fatal("после согласия нет прыжка")
+	}
+	w := r.For("human")
+	if w.System().Name != "Трюмный коридор" {
+		t.Fatalf("коридор %s", w.System().Name)
+	}
+	w.mu.Lock()
+	w.players["human"].Pos = Vec{X: 200, Y: 80}
+	w.mu.Unlock()
+	w.Step(0.05, time.Now())
+	st, ok := w.Snapshot("human")
+	if !ok || st.Ship.Pos[0] > 52.1 || st.Ship.Pos[1] > 24.1 {
+		t.Fatalf("дверь не держит: %+v", st.Ship.Pos)
+	}
+	_ = w.SetTarget("human", "op-2")
+	_ = w.SetAttack("human", true)
+	hull := 0.0
+	w.mu.Lock()
+	for _, n := range w.npcs {
+		if n.ID == "op-2" {
+			n.Pos.X = 60
+			hull = n.Hull
+		}
+	}
+	w.mu.Unlock()
+	w.Step(1, time.Now())
+	w.mu.Lock()
+	for _, n := range w.npcs {
+		if n.ID == "op-2" && n.Hull < hull {
+			t.Fatal("урон через закрытую дверь")
+		}
+	}
+	w.mu.Unlock()
 }

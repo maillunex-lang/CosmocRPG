@@ -245,7 +245,9 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			dialogue_opened.emit(payload)
 		"reward":
 			var credits := int(payload.get("credits", 0))
-			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан", "party": "Стычка у маяка"}.get(str(payload.get("kind", "")), "Награда")
+			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан", "party": "Коридор рубежа", "gear": "Арсенал: обшивка «Сталь»"}.get(str(payload.get("kind", "")), "Награда")
+			if str(payload.get("kind", "")) == "party" and str(payload.get("ref", "")) == "iron_ore":
+				what = "Трюм: руда и кристаллы"
 			notification.emit("%s: +%d кредитов" % [what, credits])
 		"xp":
 			if payload.get("pilot") is Dictionary:   # сообщение может нести только опыт корабля
@@ -583,6 +585,16 @@ func party_leave() -> void:
 func party_start() -> void:
 	if _joined:
 		_client.send_message("party_start", {})
+
+
+func party_arm(kind: String) -> void:
+	if _joined and kind != "":
+		_client.send_message("party_arm", {"kind": kind})
+
+
+func party_ready() -> void:
+	if _joined:
+		_client.send_message("party_ready", {})
 
 
 ## Создание персонажа: ник, пол ("m"/"f"), направление пилота (interceptor, scout, trader, miner).

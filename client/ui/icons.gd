@@ -30,7 +30,7 @@ static func tex(icon: String) -> Texture2D:
 ## Иконка на кнопке (слева от текста).
 static func apply(button: Button, icon: String, color: Color = Color.WHITE, size: int = 24) -> void:
 	button.icon = tex(icon)
-	button.expand_icon = false
+	button.expand_icon = true
 	button.add_theme_constant_override("icon_max_width", size)
 	button.add_theme_color_override("icon_normal_color", color)
 	button.add_theme_color_override("icon_hover_color", color)

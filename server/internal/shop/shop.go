@@ -179,6 +179,22 @@ func (s *Service) Buy(ctx context.Context, pid, itemID, requestID string) (State
 	return st, err
 }
 
+// Grant выдаёт уже существующий товар без оплаты. Повтор той же заявки и уже купленный товар не дублируются.
+func (s *Service) Grant(ctx context.Context, pid, itemID, requestID string) (State, error) {
+	if len(requestID) < 8 || len(requestID) > 64 {
+		return State{}, ErrBadReq
+	}
+	it, ok := s.items[itemID]
+	if !ok || it.Kind == "vip" || it.Kind == "subscription" {
+		return State{}, ErrNoItem
+	}
+	st, _, err := s.store.Buy(ctx, pid, it, requestID, 0, s.now())
+	if err == ErrOwned {
+		return s.store.Load(ctx, pid, s.now())
+	}
+	return st, err
+}
+
 // Equip надевает купленный товар в слот; VIP-товары требуют действующего уровня.
 func (s *Service) Equip(ctx context.Context, pid, slot, itemID string) (State, error) {
 	now := s.now()

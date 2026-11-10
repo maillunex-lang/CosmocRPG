@@ -25,6 +25,7 @@ const MapScreen := preload("res://ui/map_screen.gd")
 const QuestLog := preload("res://ui/quest_log.gd")
 const QuestHints := preload("res://ui/quest_hints.gd")
 const SettingsScreen := preload("res://ui/settings_screen.gd")
+const RaidsScreen := preload("res://ui/raids_screen.gd")
 const DialogueCard := preload("res://ui/dialogue_card.gd")
 const Nameplates := preload("res://ui/nameplates.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
@@ -141,6 +142,8 @@ func _ready() -> void:
 	gateway.state_updated.connect(_on_state)
 	gateway.combat_event.connect(_on_combat_event)
 	gateway.state_updated.connect(_on_state_for_overlays)
+	if gateway.has_signal("system_changed"):
+		gateway.system_changed.connect(_on_system_changed)
 	var talk := DialogueCard.new()
 	talk.name = "DialogueCard"
 	add_child(talk)
@@ -321,6 +324,26 @@ func ship_view(id: String) -> Node3D:
 
 
 ## Декор строится один раз, когда сервер прислал раскладку системы (в демо раскладки нет: остаётся прежний космос).
+func _on_system_changed(_info: Dictionary) -> void:
+	_rebuild_decor()
+
+
+func _rebuild_decor() -> void:
+	if gateway == null or not ("layout" in gateway):
+		return
+	var lay: Dictionary = gateway.layout
+	if lay.is_empty() or float(lay.get("radius", 0.0)) <= 0.0:
+		if _decor != null:
+			_decor.clear()
+		return
+	if _decor == null:
+		_ensure_decor()
+		return
+	var vis: Variant = gateway.get("visual")
+	var vis_d: Dictionary = vis if vis is Dictionary else {}
+	_decor.build(lay, vis_d, UiSettings.graphics_preset())
+
+
 func _ensure_decor() -> void:
 	if _decor != null or not ("layout" in gateway):
 		return
@@ -590,6 +613,15 @@ func open_chat(m: int = ChatOverlay.Mode.HALF) -> Control:
 	return ov
 
 
+func close_hangar() -> bool:
+	var layer := get_node_or_null("HangarLayer")
+	if layer == null:
+		return false
+	_hangar_wait_ship = ""
+	layer.queue_free()
+	return true
+
+
 func close_chat() -> bool:
 	var ov := get_node_or_null("ChatLayer/ChatOverlay")
 	if ov == null:
@@ -618,16 +650,35 @@ func open_settings() -> Control:
 		elif opt == FrameStats.SETTING_KEY:
 			stats.set_shown(v))
 	st.closed.connect(func() -> void: layer.queue_free())
-	st.hud_editor_requested.connect(func() -> void:
+	st.raids_requested.connect(func() -> void:
 		layer.queue_free()
-		_hud.open_hud_editor())
+		open_raids())
 	return st
 
 
 var _hangar_wait_ship := ""   # корабль, смену на который мы ждём от сервера (ангар откроется заново с ним)
 
 
-## Магазин поверх сцены. Каталог и результат покупок приходят от сервера; в демо магазин недоступен.
+## Коридоры Рубежа: выбор вылета и согласие отряда.
+func open_raids() -> Control:
+	var existing := get_node_or_null("RaidsLayer/RaidsOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var raid: Control = RaidsScreen.new()
+	raid.name = "RaidsOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 41
+	layer.name = "RaidsLayer"
+	add_child(layer)
+	layer.add_child(raid)
+	raid.theme = theme
+	if raid.has_method("bind"):
+		raid.bind(gateway)
+	raid.closed.connect(func() -> void: layer.queue_free())
+	return raid
+
+
 func open_shop() -> Control:
 	var existing := get_node_or_null("ShopLayer/ShopOverlay")
 	if existing != null:
@@ -951,7 +1002,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if event.pressed:
 					gestures.wheel(-1, camera_config.wheel_zoom_step)
 	elif event.is_action_pressed("ui_cancel"):
-		if not close_corporation() and not close_chat():
+		if not close_corporation() and not close_chat() and not close_hangar():
 			_on_exit()
 
 
@@ -990,7 +1041,7 @@ func select_at(pos: Vector2) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:  # кнопка «Назад» на Android
-		if not close_corporation() and not close_chat():   # сначала закрываем открытый экран корпорации или чат
+		if not close_corporation() and not close_chat() and not close_hangar():
 			_on_exit()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		if gestures != null:

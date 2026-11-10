@@ -174,6 +174,7 @@ type Object struct {
 	AmountMax *float64 `json:"amount_max,omitempty"`
 	Zone      string   `json:"zone,omitempty"`
 	Temporary bool     `json:"temporary,omitempty"`
+	Level     int      `json:"level,omitempty"`
 }
 
 // Ship — собственный корабль в снимке.

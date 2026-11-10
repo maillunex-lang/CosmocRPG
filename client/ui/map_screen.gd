@@ -318,7 +318,7 @@ func _draw() -> void:
 		var oid := str(o.get("id", ""))
 		var marked := QuestHints.marked(state, oid, kind, str(o.get("resource", "")))
 		var crowded := false
-		if _zoom < 1.8 and kind in ["hostile", "deposit", "player", "ai"] and oid != selected and not marked:
+		if _zoom < 1.8 and kind in ["hostile", "deposit", "player"] and oid != selected and not marked:
 			if cluster_at.has(kind):
 				var prev: Vector2 = cluster_at[kind]
 				if sc.distance_to(prev) < 18.0:

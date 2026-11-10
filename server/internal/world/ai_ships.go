@@ -1,8 +1,10 @@
 package world
 
 import (
+	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 // ИИ-капитаны (R-42, этап ИИ-1). Это корабли мира, а не игроки: у них нет сессии и записи в базе, они не добывают и не продают
@@ -49,6 +51,9 @@ type aiShip struct {
 	phase                          int // чередование работы и «сдачи» у станции
 	workUntil                      float64
 	rng                            uint32
+	home                           Vec
+	homeR                          float64
+	level                          int
 }
 
 func (a *aiShip) rand() float64 {
@@ -173,19 +178,13 @@ func (w *World) SetAIViewRadius(r float64) {
 	w.aiView = r
 }
 
-// aiObjects возвращает ИИ-корабли в радиусе видимости от точки (под блокировкой).
-func (w *World) aiObjects(from Vec) []Object {
-	r := w.aiView
-	if r <= 0 {
-		r = AIViewRadius
-	}
+// aiObjects возвращает всех ИИ-пилотов системы. Раньше дальние пропадали из снимка
+// и на карте мигали: то есть, то нет.
+func (w *World) aiObjects(_ Vec) []Object {
 	var out []Object
 	for _, a := range w.ais {
-		if dist(a.Pos, from) > r {
-			continue
-		}
 		out = append(out, Object{ID: a.ID, Kind: "ai", Stance: "neutral", Name: a.Name, Pos: [2]float64{a.Pos.X, a.Pos.Y},
-			Dir: [2]float64{a.Dir.X, a.Dir.Y}, Ship: a.ShipType, Skin: a.Skin, AI: true})
+			Dir: [2]float64{a.Dir.X, a.Dir.Y}, Ship: a.ShipType, Skin: a.Skin, AI: true, Level: a.level})
 	}
 	return out
 }
@@ -261,31 +260,146 @@ func (w *World) aiPickDest(a *aiShip) {
 		return c.add(Vec{math.Cos(ang), math.Sin(ang)}.mul(r * (0.4 + 0.6*a.rand())))
 	}
 	var dest Vec
-	switch a.Behavior {
-	case AIMiner:
-		if a.phase%2 == 1 || len(deps) == 0 { // после работы — на станцию
-			dest = around(nearest(a.Pos, stations), 12)
-		} else {
-			dest = around(pick(deps), 5)
+	if a.homeR > 0 {
+		dest = around(a.home, a.homeR*0.72)
+	} else {
+		switch a.Behavior {
+		case AIMiner:
+			if a.phase%2 == 1 || len(deps) == 0 { // после работы — на станцию
+				dest = around(nearest(a.Pos, stations), 12)
+			} else {
+				dest = around(pick(deps), 5)
+			}
+		case AITrader:
+			dest = around(pick(stations), 12)
+			if len(stations) == 1 && len(points) > 0 && a.phase%2 == 1 {
+				dest = around(pick(points), 15)
+			}
+		case AIScout:
+			pool := append(append([]Vec{}, points...), deps...)
+			if len(pool) == 0 {
+				pool = stations
+			}
+			dest = around(pick(pool), 10)
+		case AIPatrol:
+			dest = around(pick(stations), 70+a.rand()*60)
+		default: // support и неизвестные
+			dest = around(pick(stations), 45)
 		}
-	case AITrader:
-		dest = around(pick(stations), 12)
-		if len(stations) == 1 && len(points) > 0 && a.phase%2 == 1 {
-			dest = around(pick(points), 15)
-		}
-	case AIScout:
-		pool := append(append([]Vec{}, points...), deps...)
-		if len(pool) == 0 {
-			pool = stations
-		}
-		dest = around(pick(pool), 10)
-	case AIPatrol:
-		dest = around(pick(stations), 70+a.rand()*60)
-	default: // support и неизвестные
-		dest = around(pick(stations), 45)
 	}
 	if dest.length() > w.radius {
 		dest = dest.normalized().mul(w.radius * 0.95)
 	}
 	a.dest, a.state = dest, aiTravel
+}
+
+var localPilotNames = []string{
+	"Север", "Иней", "Волна", "Кедр", "Искра", "Буран", "Ласточка", "Гранит",
+	"Огонёк", "Туман", "Янтарь", "Сокол", "Нива", "Прибой", "Кварц", "Заря",
+}
+
+func hullForLevel(level, role int) string {
+	low := []string{"FTR-001", "SCT-001", "TMP-MINE", "SUP-001"}
+	mid := []string{"FTR-002", "COR-001", "SCT-001", "TMP-MINE"}
+	high := []string{"COR-002", "FRG-001", "COR-001", "TMP-HAUL"}
+	top := []string{"DST-001", "FRG-002", "CRU-001", "COR-002"}
+	table := low
+	switch {
+	case level >= 16:
+		table = top
+	case level >= 10:
+		table = high
+	case level >= 5:
+		table = mid
+	}
+	return table[role%len(table)]
+}
+
+// seedLocalPilotsLocked ставит по два пилота в каждую зону. Уровень растёт с опасностью зоны
+// и сложностью системы. Повторный вызов заменяет прежний состав, не трогая капитанов студии.
+func (w *World) seedLocalPilotsLocked() {
+	if w.aiByID == nil {
+		w.aiByID = map[string]*aiShip{}
+	}
+	var kept []*aiShip
+	for _, a := range w.ais {
+		if strings.HasPrefix(a.ID, "loc-") {
+			delete(w.aiByID, a.ID)
+			continue
+		}
+		kept = append(kept, a)
+	}
+	w.ais = kept
+	if w.lane != nil || len(w.layout.Zones) == 0 {
+		return
+	}
+	diff := 1
+	for _, sp := range w.wcfg.Systems {
+		if sp.ID == w.system.ID && sp.Difficulty > 0 {
+			diff = sp.Difficulty
+		}
+	}
+	sys := w.system.ID
+	if sys == "" {
+		sys = "sys"
+	}
+	n := 0
+	for zi, z := range w.layout.Zones {
+		if z.Radius <= 1 {
+			continue
+		}
+		for k := 0; k < 2; k++ {
+			danger := z.Danger
+			if danger < 0 {
+				danger = 0
+			}
+			level := 1 + danger*3 + (diff-1)*4
+			if level > 30 {
+				level = 30
+			}
+			behavior := AIPatrol
+			if k == 0 {
+				switch z.Type {
+				case "mining":
+					behavior = AIMiner
+				case "explore":
+					behavior = AIScout
+				case "trade":
+					behavior = AITrader
+				default:
+					behavior = AIPatrol
+				}
+			} else {
+				behavior = AISupport
+			}
+			ang := float64((zi*37+k*113)%360) * math.Pi / 180
+			rad := z.Radius * (0.28 + 0.22*float64(k))
+			pos := Vec{z.Pos[0] + math.Cos(ang)*rad, z.Pos[1] + math.Sin(ang)*rad}
+			name := fmt.Sprintf("%s · ур. %d", localPilotNames[(zi*2+k)%len(localPilotNames)], level)
+			w.placeLocalPilotLocked(fmt.Sprintf("loc-%s-%d", sys, n), name, behavior, hullForLevel(level, k), pos, Vec{z.Pos[0], z.Pos[1]}, z.Radius, level, uint32(n+1))
+			n++
+		}
+	}
+}
+
+func (w *World) placeLocalPilotLocked(id, name, behavior, ship string, pos, home Vec, homeR float64, level int, seed uint32) {
+	if id == "" || w.aiByID[id] != nil || w.players[id] != nil {
+		return
+	}
+	sp, ok := w.catalog.Spec(ship)
+	if !ok {
+		sp, _ = w.catalog.Spec(DefaultShip)
+	}
+	a := &aiShip{ID: id, Name: name, Profession: behavior, Behavior: behavior, ShipType: sp.ID, speed: sp.Speed, rng: seed*2654435761 + 12345, home: home, homeR: homeR, level: level}
+	if len(sp.Skins) > 0 {
+		a.Skin = sp.Skins[int(a.rand()*float64(len(sp.Skins)))%len(sp.Skins)]
+	}
+	if w.radius > 0 && pos.length() > w.radius*0.96 {
+		pos = pos.normalized().mul(w.radius * 0.96)
+	}
+	a.Pos = pos
+	a.Dir = Vec{1, 0}
+	a.state, a.workUntil = aiWork, w.t+1+a.rand()*4
+	w.aiByID[a.ID] = a
+	w.ais = append(w.ais, a)
 }

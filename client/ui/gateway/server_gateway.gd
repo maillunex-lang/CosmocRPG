@@ -414,6 +414,8 @@ func _apply_state(p: Dictionary) -> void:
 		for k in ["amount", "amount_max", "vip"]:
 			if o.has(k):
 				obj[k] = float(o[k])
+		if o.has("level"):
+			obj["level"] = int(o["level"])
 		objects.append(obj)
 	_target_id = str(p.get("target_id", ""))
 	_autopilot = bool(p.get("autopilot", false))

@@ -164,6 +164,7 @@ func (w *World) ApplyLayout(l worldgen.Layout, cfg worldgen.Config) error {
 		w.deposits = append(w.deposits, &deposit{ID: d.ID, Name: d.Name, Zone: d.Zone, Resource: d.Resource, Rarity: d.Rarity,
 			Module: d.Module, Pos: Vec{d.Pos[0], d.Pos[1]}, Amount: d.Amount, Max: d.Max, Regen: d.Regen})
 	}
+	w.seedLocalPilotsLocked()
 	return nil
 }
 

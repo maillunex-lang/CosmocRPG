@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -127,17 +128,8 @@ func TestAIVisibilityRadiusAndTargeting(t *testing.T) {
 	if near == nil || !near.AI || near.Kind != "ai" || near.Name != "Рядом" || near.Ship == "" {
 		t.Fatalf("ближний ИИ в состоянии: %+v", near)
 	}
-	if far != nil {
-		t.Fatal("дальний ИИ не должен попадать в состояние (область интереса)")
-	}
-	w.SetAIViewRadius(2000)
-	st, _ = w.Snapshot("p1")
-	found := false
-	for _, o := range st.Objects {
-		found = found || o.ID == "far"
-	}
-	if !found {
-		t.Fatal("радиус видимости не расширился")
+	if far == nil || !far.AI {
+		t.Fatal("пилот той же системы должен оставаться на карте, даже далеко от игрока")
 	}
 	// ИИ можно выбрать целью и лететь к нему, но атаковать нельзя
 	if !w.SetTarget("p1", "near") {
@@ -170,6 +162,50 @@ func TestAIDeterministic(t *testing.T) {
 	for i := range a {
 		if a[i] != b[i] {
 			t.Fatalf("одинаковое зерно дало разные маршруты: %v и %v", a[i], b[i])
+		}
+	}
+}
+
+func TestLocalPilotsFillEveryZone(t *testing.T) {
+	w := aiWorld(t)
+	w.mu.Lock()
+	zones := append([]worldgen.Zone(nil), w.layout.Zones...)
+	pilots := append([]*aiShip(nil), w.ais...)
+	w.mu.Unlock()
+	if len(zones) == 0 {
+		t.Fatal("нет зон")
+	}
+	for _, z := range zones {
+		n := 0
+		var level int
+		for _, a := range pilots {
+			if !strings.HasPrefix(a.ID, "loc-") {
+				continue
+			}
+			if dist(a.home, Vec{z.Pos[0], z.Pos[1]}) < 1 {
+				n++
+				level = a.level
+			}
+		}
+		if n < 2 {
+			t.Fatalf("в зоне %s пилотов %d", z.Name, n)
+		}
+		want := 1 + z.Danger*3 + 4 // Аврора: сложность 2
+		if level != want {
+			t.Fatalf("зона %s опасность %d: уровень %d, ожидался %d", z.Name, z.Danger, level, want)
+		}
+	}
+	for i := 0; i < 400; i++ {
+		w.Step(0.05, time.Now())
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, a := range w.ais {
+		if !strings.HasPrefix(a.ID, "loc-") {
+			continue
+		}
+		if dist(a.Pos, a.home) > a.homeR+1 {
+			t.Fatalf("%s ушёл из своей зоны: %.0f > %.0f", a.Name, dist(a.Pos, a.home), a.homeR)
 		}
 	}
 }

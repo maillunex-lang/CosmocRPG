@@ -409,7 +409,7 @@ func run() error {
 			}
 		}()
 		if cfg.FeatureAICivilizationGateway {
-			dir := aiciv.NewDirector(reservation, 8, log)
+			dir := aiciv.NewDirector(reservation, 500, log)
 			// candidatesFn: real captain IDs from active AI Studio version.
 			// Director reserves them so old Manager does not spawn them as FSM.
 			go dir.Run(ctx, 15*time.Second, func() []string {

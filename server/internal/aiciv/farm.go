@@ -4,13 +4,10 @@ import (
 	"context"
 	"log/slog"
 	"time"
-
-	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
-	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
 // FarmController joins one reserved captain as a real player and issues a simple PvE attack.
-// It is intentionally minimal: one agent, one known training target, no planner yet.
+// Minimal on purpose: one agent, one known training target, no planner yet.
 type FarmController struct {
 	Bootstrap *Bootstrapper
 	Store     *Store
@@ -20,7 +17,7 @@ type FarmController struct {
 }
 
 // JoinAndFarm ensures the captain has a player, opens a Gateway, and starts attacking TargetID.
-// Returns the open Gateway (caller must Close it). Safe to call only for a reserved captain.
+// Returns the open Gateway (caller must Close it). Call only for a captain already reserved by the Director.
 func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Gateway, error) {
 	if f == nil || f.Bootstrap == nil || f.Store == nil || f.Endpoint == "" || captainID == "" {
 		return nil, ErrInput
@@ -29,7 +26,6 @@ func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Ga
 	if target == "" {
 		target = "dr1"
 	}
-	// Ensure persistent player exists (uses Studio profile check inside Bootstrapper).
 	_, err := f.Bootstrap.EnsurePlayer(ctx, CharacterRequest{
 		CaptainID: captainID,
 		Nick:      "AI-" + captainID,
@@ -46,7 +42,6 @@ func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Ga
 	if f.Log != nil {
 		f.Log.Info("AI civilization: agent joined", "captain", captainID, "target", target)
 	}
-	// Start farming the known training drone. Real world rules apply.
 	err = IssueCombat(ctx, g, "farm-1", CombatIntent{TargetID: target, Attack: true})
 	if err != nil {
 		g.Close()
@@ -58,28 +53,29 @@ func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Ga
 	return g, nil
 }
 
-// RunOnce is a convenience for a single tick: pick the first candidate, reserve is expected already done by Director.
+// Hold keeps the gateway open until the context is cancelled, then closes it.
+func Hold(ctx context.Context, g *Gateway) {
+	if g == nil {
+		return
+	}
+	<-ctx.Done()
+	g.Close()
+}
+
+// RunOnce tries to join the first candidate and farm for the lifetime of ctx.
 func (f *FarmController) RunOnce(ctx context.Context, candidates []string) {
 	if len(candidates) == 0 {
 		return
 	}
-	// Only try the first one for the minimal version.
 	id := candidates[0]
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	joinCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	g, err := f.JoinAndFarm(ctx, id)
+	g, err := f.JoinAndFarm(joinCtx, id)
 	if err != nil {
 		if f.Log != nil {
 			f.Log.Error("AI farm join failed", "captain", id, "err", err)
 		}
 		return
 	}
-	// Keep the gateway open for a while so the agent stays in the world and farms.
-	// Caller (Director) should manage lifetime; here we just leave it open until context ends.
-	go func() {
-		<-ctx.Done()
-		g.Close()
-	}()
-	_ = world.DefaultShip // keep import if needed later
-	_ = aiagent.StudioSource{}
+	Hold(ctx, g)
 }

@@ -260,7 +260,7 @@ func _run() -> void:
 	var au := _n(c, "%AutoSkillsButton") as ActionButton
 	au.button_pressed = true
 	await _tick(c, 0.1)
-	_check(gw.snapshot()["auto_skills"] and au.text == "Авто · вкл", "автонавыки включены")
+	_check(gw.snapshot()["auto_skills"] and au.button_pressed and au.text == "Авто", "автонавыки включены")
 	_free(c)
 
 	# ============ бой: панели сворачиваются, тревоги остаются ============

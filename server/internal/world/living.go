@@ -453,7 +453,10 @@ func (w *World) AtKind(id, kind string) bool {
 		return true
 	}
 	for _, n := range w.npcs {
-		if n.Kind != kind || n.deadUntil > w.t {
+		if n.deadUntil > w.t {
+			continue
+		}
+		if n.Kind != kind && n.ID != kind {
 			continue
 		}
 		if n.Hidden && p.revealed[n.ID] <= w.t {

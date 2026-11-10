@@ -511,6 +511,16 @@ type storyPin struct {
 func (g *gen) addStoryPins(l *Layout) {
 	var pins []storyPin
 	switch g.p.ID {
+	case "aurora":
+		// Глава 1. Стартовый док — уже существующая станция «Рубеж», её не дублируем.
+		pins = []storyPin{
+			{"aur-beacon", "signal", "Контрольный учебный маяк"},
+			{"aur-az01", "anomaly", "Порог учебного коридора"},
+			{"aur-az02", "anomaly", "Сектор слабых помех"},
+			{"aur-az03", "signal", "Поисковый сектор"},
+			{"aur-az04", "derelict", "Повреждённый буфер рейса"},
+			{"aur-az05", "signal", "Безопасный выход"},
+		}
 	case "redstorm":
 		// Главы 3–4. Форпост, контейнер dr-1 и контур an-1 уже есть и здесь не дублируются.
 		pins = []storyPin{

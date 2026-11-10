@@ -15,6 +15,7 @@ import (
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 )
 
 func gameServer(t *testing.T) (*Handler, *world.MemStore, string) {
@@ -262,20 +263,35 @@ func TestDoubleJoinRejected(t *testing.T) {
 	}
 }
 
-func questServer(t *testing.T) (*quest.MemStore, string) {
+func questServer(t *testing.T) (*quest.MemStore, *world.MemStore, worldgen.Layout, string) {
 	t.Helper()
+	cfg := worldgen.DefaultConfig()
+	var aurora worldgen.SystemParams
+	for _, p := range cfg.Systems {
+		if p.ID == "aurora" {
+			aurora = p
+		}
+	}
+	if aurora.ID == "" {
+		t.Fatal("нет Авроры")
+	}
+	lay := worldgen.Generate(aurora, cfg)
 	w := world.New()
+	if err := w.ApplyLayout(lay, cfg); err != nil {
+		t.Fatal(err)
+	}
 	qs := quest.NewMemStore()
 	svc := quest.NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), qs, w.ObjectPos)
+	store := world.NewMemStore()
 	r := world.NewRouter(w)
 	r.Add(w)
-	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: r, Store: world.NewMemStore(), Quests: svc}
+	opts := Options{MaxMessage: 4096, RatePerSec: 200, Version: "t", World: r, Store: store, Quests: svc}
 	srv, h := newServer(t, opts)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { h.Run(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done })
-	return qs, srv.URL
+	return qs, store, lay, srv.URL
 }
 
 type questState struct {
@@ -296,15 +312,26 @@ func (cl *client) questState() questState {
 }
 
 func TestQuestFlowThroughProtocol(t *testing.T) {
-	_, url := questServer(t)
+	_, store, lay, url := questServer(t)
+	const token = "questaaaaaaaaaaaaa"
+	id := world.PublicID(world.TokenHash(token))
+	if err := store.Save(context.Background(), world.Record{ID: id, Name: "Кадет", Pos: world.Vec{X: lay.Hub[0], Y: lay.Hub[1]}, Dir: world.Vec{X: 1}, Created: true}); err != nil {
+		t.Fatal(err)
+	}
 	a := connect(t, url)
-	a.join("questaaaaaaaaaaaaa")
+	a.join(token)
 	s := a.questState()
-	if s.Credits == nil || *s.Credits != 0 || len(s.Quests) != 1 || s.Quests[0].ID != "first_flight" {
+	if s.Credits == nil || *s.Credits != 0 || len(s.Quests) != 1 || s.Quests[0].ID != "ch01_q01" {
 		t.Fatalf("начальное состояние: %+v", s)
 	}
-	a.send("target", map[string]any{"id": world.StationID})
-	a.send("autopilot", map[string]any{"on": true})
+	a.send("talk", map[string]any{"choice": ""})
+	open := a.next("dialogue")
+	if !strings.Contains(string(open.Payload), "Ирина Ларс") {
+		t.Fatalf("допуск: %s", open.Payload)
+	}
+	a.send("talk", map[string]any{"choice": "ready"})
+	a.next("dialogue")
+	a.send("talk", map[string]any{"choice": "go"})
 	done := a.next("quest_completed")
 	var p struct {
 		ID      string
@@ -312,32 +339,33 @@ func TestQuestFlowThroughProtocol(t *testing.T) {
 		Credits int64
 	}
 	_ = json.Unmarshal(done.Payload, &p)
-	if p.ID != "first_flight" || p.Reward["credits"] != 500 || p.Credits != 500 {
+	if p.ID != "ch01_q01" || p.Reward["credits"] != 200 || p.Credits != 200 {
 		t.Fatalf("событие: %s", done.Payload)
 	}
 	var s2 questState
 	for i := 0; i < 20; i++ {
 		s2 = a.questState()
-		if s2.Credits != nil && *s2.Credits == 500 {
+		if s2.Credits != nil && *s2.Credits == 200 && len(s2.Quests) == 1 && s2.Quests[0].ID == "ch01_q02" {
 			break
 		}
 	}
-	if s2.Credits == nil || *s2.Credits != 500 || len(s2.Quests) != 1 {
+	if s2.Credits == nil || *s2.Credits != 200 || len(s2.Quests) != 1 || s2.Quests[0].ID != "ch01_q02" {
 		t.Fatalf("после выполнения: %+v", s2)
 	}
-	// повторный вход тем же токеном: контракт и награда не повторяются, кредиты сохранены
 	b := connect(t, url)
-	b.join("questaaaaaaaaaaaaa")
+	b.join(token)
+	var s3 questState
 	for i := 0; i < 15; i++ {
-		s3 := b.questState()
-		if s3.Credits != nil && (*s3.Credits != 500 || len(s3.Quests) != 1) {
-			t.Fatalf("после перезахода: %+v", s3)
+		s3 = b.questState()
+		if s3.Credits != nil && *s3.Credits == 200 && len(s3.Quests) == 1 && s3.Quests[0].ID == "ch01_q02" {
+			return
 		}
 	}
+	t.Fatalf("после перезахода: %+v", s3)
 }
 
 func TestClientCannotClaimReward(t *testing.T) {
-	_, url := questServer(t)
+	_, _, _, url := questServer(t)
 	a := connect(t, url)
 	a.join("questbbbbbbbbbbbbb")
 	// выдуманные клиентом сообщения не принимаются
@@ -490,9 +518,20 @@ func TestSkinChoiceVisibleToOthers(t *testing.T) {
 	}
 }
 
-func accountServer(t *testing.T) (*quest.MemStore, string) {
+func accountServer(t *testing.T) (*world.MemStore, worldgen.Layout, string) {
 	t.Helper()
+	cfg := worldgen.DefaultConfig()
+	var aurora worldgen.SystemParams
+	for _, p := range cfg.Systems {
+		if p.ID == "aurora" {
+			aurora = p
+		}
+	}
+	lay := worldgen.Generate(aurora, cfg)
 	w := world.New()
+	if err := w.ApplyLayout(lay, cfg); err != nil {
+		t.Fatal(err)
+	}
 	qs := quest.NewMemStore()
 	store := world.NewMemStore()
 	svc := quest.NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), qs, w.ObjectPos)
@@ -504,22 +543,32 @@ func accountServer(t *testing.T) (*quest.MemStore, string) {
 	done := make(chan struct{})
 	go func() { h.Run(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done })
-	return qs, srv.URL
+	return store, lay, srv.URL
 }
 
 func TestAccountSurvivesReinstall(t *testing.T) {
-	_, url := accountServer(t)
+	store, lay, url := accountServer(t)
+	const token = "devicetokenaaaaaaaaaaaa"
+	if err := store.Save(context.Background(), world.Record{
+		ID: world.PublicID(world.TokenHash(token)), Name: "Captain_X",
+		Pos: world.Vec{X: lay.Hub[0], Y: lay.Hub[1]}, Dir: world.Vec{X: 1}, Created: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
 	// устройство A: играем, получаем награду, сохраняем аккаунт
 	a := connect(t, url)
-	a.send("register", map[string]any{"token": "devicetokenaaaaaaaaaaaa", "login": "Captain_X", "password": "hunter2-hunter2"})
+	a.send("register", map[string]any{"token": token, "login": "Captain_X", "password": "hunter2-hunter2"})
 	m := a.next("account")
 	if !strings.Contains(string(m.Payload), `"captain_x"`) {
 		t.Fatalf("регистрация: %s", m.Payload)
 	}
-	pj := a.join("devicetokenaaaaaaaaaaaa")
+	pj := a.join(token)
 	pid := pj["player_id"].(string)
-	a.send("target", map[string]any{"id": world.StationID})
-	a.send("autopilot", map[string]any{"on": true})
+	a.send("talk", map[string]any{"choice": ""})
+	a.next("dialogue")
+	a.send("talk", map[string]any{"choice": "ready"})
+	a.next("dialogue")
+	a.send("talk", map[string]any{"choice": "go"})
 	a.next("quest_completed")
 	a.c.CloseNow()
 	// «приложение удалено»: новое устройство, новый токен, вход по логину и паролю
@@ -539,11 +588,11 @@ func TestAccountSurvivesReinstall(t *testing.T) {
 	var s questState
 	for i := 0; i < 20; i++ {
 		s = b.questState()
-		if s.Credits != nil && *s.Credits == 500 {
+		if s.Credits != nil && *s.Credits == 200 && len(s.Quests) == 1 && s.Quests[0].ID == "ch01_q02" {
 			break
 		}
 	}
-	if s.Credits == nil || *s.Credits != 500 || len(s.Quests) != 1 {
+	if s.Credits == nil || *s.Credits != 200 || len(s.Quests) != 1 || s.Quests[0].ID != "ch01_q02" {
 		t.Fatalf("прогресс не перенесён: %+v", s)
 	}
 	// без аккаунта токен без привязки создаёт нового игрока
@@ -555,7 +604,7 @@ func TestAccountSurvivesReinstall(t *testing.T) {
 }
 
 func TestAccountProtocolErrors(t *testing.T) {
-	_, url := accountServer(t)
+	_, _, url := accountServer(t)
 	a := connect(t, url)
 	for _, tc := range []struct {
 		typ  string

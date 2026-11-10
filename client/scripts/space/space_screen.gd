@@ -432,7 +432,7 @@ func _quest_object_id(q: Dictionary, snap: Dictionary) -> String:
 			hit = true
 		elif kind == "mine" and okind == "deposit" and (target == "" or str(o.get("resource", "")) == target):
 			hit = true
-		elif kind == "visit" and (okind == target or (marker != "" and okind == marker)):
+		elif kind == "visit" and (okind == target or (marker != "" and okind == marker and (target == "" or target == okind or target == id))):
 			hit = true
 		elif kind in ["sell", "deliver", "talk", "report"] and okind == "station":
 			hit = true

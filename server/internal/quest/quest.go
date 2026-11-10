@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
@@ -29,6 +30,7 @@ type Def struct {
 	Goal    int
 	Reward  Reward
 	After   string // цепочка: выдаётся только после завершения этого контракта (сюжет, Э-3)
+	OrAfter string // альтернативный предшественник: достаточно одного из двух
 }
 
 // Reward — награда (пока только кредиты; остальные виды добавятся расширением).
@@ -155,8 +157,21 @@ func (s *Service) Join(ctx context.Context, pid string) error {
 			done[q.QuestID] = true
 		}
 	}
+	startedLegacy := false
+	for _, id := range []string{"first_flight", "first_blood", "first_ore", "first_deal", "first_jump", "meridian_delivery"} {
+		if have[id] {
+			startedLegacy = true
+			break
+		}
+	}
 	for _, d := range s.defs {
-		if d.Version != latestVersion(s.defs, d.ID) || have[d.ID] || (d.After != "" && !done[d.After]) {
+		if d.Version != latestVersion(s.defs, d.ID) || have[d.ID] || !questReady(d, done) {
+			continue
+		}
+		if d.ID == "first_flight" {
+			continue
+		}
+		if startedLegacy && (strings.HasPrefix(d.ID, "ch01_") || strings.HasPrefix(d.ID, "aur_side_")) {
 			continue
 		}
 		created, err := s.store.Assign(ctx, pid, d)
@@ -182,6 +197,17 @@ func (s *Service) Join(ctx context.Context, pid string) error {
 		}
 	}
 	return nil
+}
+
+// questReady: пустая цепочка выдаётся сразу, иначе достаточно одного предшественника.
+func questReady(d Def, done map[string]bool) bool {
+	if d.After == "" && d.OrAfter == "" {
+		return true
+	}
+	if d.After != "" && done[d.After] {
+		return true
+	}
+	return d.OrAfter != "" && done[d.OrAfter]
 }
 
 func latestVersion(defs []Def, id string) int {
@@ -257,7 +283,7 @@ func (s *Service) completeOne(ctx context.Context, pid string, d Def) (Completio
 func (s *Service) activateFollowers(ctx context.Context, pid, doneID string) string {
 	next := ""
 	for _, d := range s.defs {
-		if d.After != doneID || d.Version != latestVersion(s.defs, d.ID) {
+		if (d.After != doneID && d.OrAfter != doneID) || d.Version != latestVersion(s.defs, d.ID) {
 			continue
 		}
 		created, err := s.store.Assign(ctx, pid, d)

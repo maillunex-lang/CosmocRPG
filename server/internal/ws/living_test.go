@@ -407,7 +407,20 @@ func TestMiningWithoutCreditsAdvancesQuestOnce(t *testing.T) {
 	r := world.NewRouter(w)
 	r.Add(w)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	q := quest.NewService(log, quest.NewMemStore(), w.ObjectPos)
+	qstore := quest.NewMemStore()
+	q := quest.NewService(log, qstore, w.ObjectPos)
+	var legacy quest.Def
+	for _, d := range quest.Catalog() {
+		if d.ID == "first_flight" {
+			legacy = d
+		}
+	}
+	if legacy.ID == "" {
+		t.Fatal("нет старого допуска")
+	}
+	if _, err := qstore.Assign(ctx, "miner", legacy); err != nil {
+		t.Fatal(err)
+	}
 	if err := q.Join(ctx, "miner"); err != nil {
 		t.Fatal(err)
 	}

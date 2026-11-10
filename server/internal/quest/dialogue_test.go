@@ -17,7 +17,7 @@ func TestMeridianDialogue(t *testing.T) {
 	if _, ok := Dialogue("first_flight"); ok {
 		t.Fatal("у полёта не должно быть диалога")
 	}
-	for _, id := range []string{"storm_dispatch", "storm_report"} {
+	for _, id := range []string{"storm_dispatch", "storm_report", "ch01_q01", "ch01_q05", "ch01_q06", "ch01_q07"} {
 		sc, ok := Dialogue(id)
 		if !ok {
 			t.Fatal("нет сцены", id)

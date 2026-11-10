@@ -55,7 +55,9 @@ static func marked(state: Dictionary, id: String, kind: String, extra: String = 
 				if kind == "station" and (target == "" or target == id or target == "station" or mark == "station" or mark == ""):
 					return true
 			"visit":
-				if kind == target or (mark != "" and kind == mark):
+				if kind == target:
+					return true
+				if mark != "" and kind == mark and (target == "" or target == kind or target == id):
 					return true
 			"jump":
 				if kind == "gate" and (target == "" or target == extra):

@@ -38,6 +38,8 @@ func _run() -> void:
 	_c(Hints.marked(jump, "", "gate", "meridian") and not Hints.marked(jump, "", "gate", "redstorm"), "прыжок отмечает нужные ворота")
 	var other := {"system": {"id": "aurora"}, "quests": [{"kind": "visit", "target": "anomaly", "marker": "anomaly", "system": "meridian"}]}
 	_c(not Hints.marked(other, "an-1", "anomaly"), "задание другой системы не отмечается")
+	var pin := {"system": {"id": "aurora"}, "quests": [{"kind": "visit", "target": "aur-az02", "marker": "anomaly", "system": "aurora"}]}
+	_c(Hints.marked(pin, "aur-az02", "anomaly") and not Hints.marked(pin, "aur-az01", "anomaly"), "визит отмечает конкретную точку, не все аномалии")
 	var holder := SubViewport.new()
 	holder.size = Vector2i(1280, 720)
 	root.add_child(holder)

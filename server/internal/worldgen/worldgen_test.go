@@ -222,6 +222,31 @@ func TestRedStormNamesStayOnExistingObjects(t *testing.T) {
 	if home.Stations[0].Name != "Станция «Рубеж»" {
 		t.Fatalf("Аврора потеряла свою станцию: %s", home.Stations[0].Name)
 	}
+	auroraWant := map[string]string{
+		"aur-beacon": "Контрольный учебный маяк",
+		"aur-az01":   "Порог учебного коридора",
+		"aur-az02":   "Сектор слабых помех",
+		"aur-az03":   "Поисковый сектор",
+		"aur-az04":   "Повреждённый буфер рейса",
+		"aur-az05":   "Безопасный выход",
+	}
+	gotAurora := map[string]Point{}
+	for _, p := range home.Points {
+		if _, ok := auroraWant[p.ID]; ok {
+			gotAurora[p.ID] = p
+			if p.Hidden || p.Reward != 0 {
+				t.Fatalf("учебная точка Авроры скрыта или платная: %+v", p)
+			}
+		}
+	}
+	if len(gotAurora) != len(auroraWant) {
+		t.Fatalf("в Авроре нет всех точек главы 1: %v", gotAurora)
+	}
+	for id, name := range auroraWant {
+		if gotAurora[id].Name != name {
+			t.Fatalf("%s: %q", id, gotAurora[id].Name)
+		}
+	}
 }
 
 func TestMeridianStoryLocations(t *testing.T) {

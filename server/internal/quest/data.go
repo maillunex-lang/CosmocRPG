@@ -22,6 +22,7 @@ type rawDef struct {
 	Radius  float64 `json:"radius"`
 	Goal    int     `json:"goal"`
 	After   string  `json:"after"`
+	OrAfter string  `json:"or_after"`
 	Reward  struct {
 		Credits int64 `json:"credits"`
 	} `json:"reward"`
@@ -79,7 +80,7 @@ func loadData() {
 			defs = append(defs, Def{
 				ID: r.ID, Version: r.Version, Title: r.Title, Text: r.Text,
 				Kind: r.Kind, Target: r.Target, System: r.System, Marker: r.Marker,
-				Radius: r.Radius, Goal: r.Goal, After: r.After,
+				Radius: r.Radius, Goal: r.Goal, After: r.After, OrAfter: r.OrAfter,
 				Reward: Reward{Credits: r.Reward.Credits},
 			})
 		}
@@ -90,6 +91,10 @@ func loadData() {
 		for _, d := range defs {
 			if d.After != "" && !ids[d.After] {
 				loadErr = fmt.Errorf("quest %s after unknown %s", d.ID, d.After)
+				return
+			}
+			if d.OrAfter != "" && !ids[d.OrAfter] {
+				loadErr = fmt.Errorf("quest %s or_after unknown %s", d.ID, d.OrAfter)
 				return
 			}
 		}
@@ -118,6 +123,14 @@ func loadData() {
 			scenes[qid] = Scene{Start: rs.Start, Closing: rs.Closing, Nodes: nodes}
 		}
 		loadedScenes = scenes
+		for _, d := range defs {
+			if d.Kind == "talk" {
+				if _, ok := scenes[d.ID]; !ok {
+					loadErr = fmt.Errorf("talk quest %s has no dialogue", d.ID)
+					return
+				}
+			}
+		}
 	})
 }
 

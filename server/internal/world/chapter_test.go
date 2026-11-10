@@ -102,3 +102,37 @@ func TestArrivalAndVisit(t *testing.T) {
 		t.Fatal("прибытие на станцию Меридиана не засчитано")
 	}
 }
+
+func TestAtKindMatchesPointID(t *testing.T) {
+	cfg := worldgen.DefaultConfig()
+	var spec worldgen.SystemParams
+	for _, s := range cfg.Systems {
+		if s.ID == "aurora" {
+			spec = s
+		}
+	}
+	lay := worldgen.Generate(spec, cfg)
+	w := New()
+	if err := w.ApplyLayout(lay, cfg); err != nil {
+		t.Fatal(err)
+	}
+	var beacon *npc
+	for _, n := range w.npcs {
+		if n.ID == "aur-beacon" {
+			beacon = n
+		}
+	}
+	if beacon == nil {
+		t.Fatal("нет контрольного маяка")
+	}
+	joinAt(w, "cadet", "FTR-001", beacon.Pos)
+	if !w.AtKind("cadet", "aur-beacon") {
+		t.Fatal("точка по идентификатору не засчитана")
+	}
+	if w.AtKind("cadet", "aur-az02") {
+		t.Fatal("другая точка главы засчиталась рядом с маяком")
+	}
+	if !w.AtKind("cadet", "signal") {
+		t.Fatal("вид точки тоже должен совпадать")
+	}
+}

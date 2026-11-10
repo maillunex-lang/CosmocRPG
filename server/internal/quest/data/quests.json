@@ -1,5 +1,146 @@
 [
   {
+    "id": "ch01_q01",
+    "version": 1,
+    "title": "Допуск к вылету",
+    "text": "У станции «Рубеж» поговорите с диспетчером Ириной Ларс и инструктором Марком Деном. Это учебный допуск, не геройский контракт.",
+    "kind": "talk",
+    "target": "irina",
+    "system": "aurora",
+    "marker": "station",
+    "goal": 1,
+    "reward": {
+      "credits": 200
+    }
+  },
+  {
+    "id": "ch01_q02",
+    "version": 1,
+    "title": "Первый маршрут",
+    "text": "Вылетите к контрольному учебному маяку. Автопилот удобен, но смотрите, куда он ведёт. За коридором сегодня не летаем.",
+    "kind": "visit",
+    "target": "aur-beacon",
+    "system": "aurora",
+    "marker": "signal",
+    "goal": 1,
+    "after": "ch01_q01",
+    "reward": {
+      "credits": 300
+    }
+  },
+  {
+    "id": "ch01_q03",
+    "version": 1,
+    "title": "Сигнал вне маршрута",
+    "text": "Долетите до сектора слабых помех и снимите сырой сигнал. Не угадывайте источник: это измерение, не послание.",
+    "kind": "visit",
+    "target": "aur-az02",
+    "system": "aurora",
+    "marker": "anomaly",
+    "goal": 1,
+    "after": "ch01_q02",
+    "reward": {
+      "credits": 400
+    }
+  },
+  {
+    "id": "ch01_q04",
+    "version": 1,
+    "title": "След пропавшего корабля",
+    "text": "В поисковом секторе лежит повреждённый буфер. Снимите метаданные и не принимайте буфер за сам корабль «Арго». Затем можно выйти через безопасный коридор.",
+    "kind": "visit",
+    "target": "aur-az04",
+    "system": "aurora",
+    "marker": "derelict",
+    "goal": 1,
+    "after": "ch01_q03",
+    "reward": {
+      "credits": 500
+    }
+  },
+  {
+    "id": "ch01_q05",
+    "version": 1,
+    "title": "Несовпадающие записи",
+    "text": "На станции сдайте пакет Тее Норд. Она сверит метки. Связь с рейсом «Арго» не доказывает, что корабль был здесь.",
+    "kind": "talk",
+    "target": "teya",
+    "system": "aurora",
+    "marker": "station",
+    "goal": 1,
+    "after": "ch01_q04",
+    "reward": {
+      "credits": 400
+    }
+  },
+  {
+    "id": "ch01_q06",
+    "version": 1,
+    "title": "Чужой интерес",
+    "text": "Ирина Ларс зарегистрирует находку. Кто-то запросил сведения раньше сверки. Можно промолчать или отдать только открытые метаданные. Оригинал останется в архиве.",
+    "kind": "talk",
+    "target": "irina",
+    "system": "aurora",
+    "marker": "station",
+    "goal": 1,
+    "after": "ch01_q05",
+    "reward": {
+      "credits": 300
+    }
+  },
+  {
+    "id": "ch01_q07",
+    "version": 1,
+    "title": "Первый рубеж",
+    "text": "Сверьте отчёт с Теей и Ириной. Пакет адресован через узел Меридиана, получатель не установлен. «Арго» по-прежнему пропал.",
+    "kind": "talk",
+    "target": "irina",
+    "system": "aurora",
+    "marker": "station",
+    "goal": 1,
+    "after": "ch01_q06",
+    "reward": {
+      "credits": 800
+    }
+  },
+  {
+    "id": "aur_side_pirate",
+    "version": 1,
+    "title": "Чужой в коридоре",
+    "text": "Побочное, сюжет не ждёт. Марк Ден просит убрать одного пирата, если он мешает учебному маршруту.",
+    "kind": "kill",
+    "goal": 1,
+    "after": "ch01_q02",
+    "reward": {
+      "credits": 400
+    }
+  },
+  {
+    "id": "aur_side_ore",
+    "version": 1,
+    "title": "Руда для дока",
+    "text": "Побочное. Добудьте 5 единиц железной руды. Допуск к расследованию от этого не зависит.",
+    "kind": "mine",
+    "target": "iron_ore",
+    "goal": 5,
+    "after": "ch01_q02",
+    "reward": {
+      "credits": 400
+    }
+  },
+  {
+    "id": "aur_side_sell",
+    "version": 1,
+    "title": "Сдача на Рубеже",
+    "text": "Побочное. Продайте добытую руду на станции «Рубеж».",
+    "kind": "sell",
+    "goal": 1,
+    "after": "aur_side_ore",
+    "reward": {
+      "credits": 300
+    }
+  },
+  {
     "id": "first_flight",
     "version": 1,
     "title": "Первый полёт",
@@ -8,7 +149,9 @@
     "target": "st1",
     "radius": 12,
     "goal": 1,
-    "reward": { "credits": 500 }
+    "reward": {
+      "credits": 500
+    }
   },
   {
     "id": "first_blood",
@@ -18,7 +161,9 @@
     "kind": "kill",
     "goal": 1,
     "after": "first_flight",
-    "reward": { "credits": 700 }
+    "reward": {
+      "credits": 700
+    }
   },
   {
     "id": "first_ore",
@@ -29,7 +174,9 @@
     "target": "iron_ore",
     "goal": 5,
     "after": "first_blood",
-    "reward": { "credits": 800 }
+    "reward": {
+      "credits": 800
+    }
   },
   {
     "id": "first_deal",
@@ -39,7 +186,9 @@
     "kind": "sell",
     "goal": 1,
     "after": "first_ore",
-    "reward": { "credits": 600 }
+    "reward": {
+      "credits": 600
+    }
   },
   {
     "id": "first_jump",
@@ -50,7 +199,10 @@
     "target": "meridian",
     "goal": 1,
     "after": "first_deal",
-    "reward": { "credits": 1000 }
+    "reward": {
+      "credits": 1000
+    },
+    "or_after": "ch01_q07"
   },
   {
     "id": "meridian_delivery",
@@ -63,7 +215,9 @@
     "marker": "station",
     "goal": 5,
     "after": "first_jump",
-    "reward": { "credits": 1200 }
+    "reward": {
+      "credits": 1200
+    }
   },
   {
     "id": "meridian_trace",
@@ -76,7 +230,9 @@
     "marker": "anomaly",
     "goal": 1,
     "after": "meridian_delivery",
-    "reward": { "credits": 900 }
+    "reward": {
+      "credits": 900
+    }
   },
   {
     "id": "meridian_report",
@@ -89,7 +245,9 @@
     "marker": "station",
     "goal": 1,
     "after": "meridian_trace",
-    "reward": { "credits": 700 }
+    "reward": {
+      "credits": 700
+    }
   },
   {
     "id": "meridian_voice",
@@ -102,7 +260,9 @@
     "marker": "station",
     "goal": 1,
     "after": "meridian_report",
-    "reward": { "credits": 400 }
+    "reward": {
+      "credits": 400
+    }
   },
   {
     "id": "storm_jump",
@@ -113,7 +273,9 @@
     "target": "redstorm",
     "goal": 1,
     "after": "meridian_voice",
-    "reward": { "credits": 1000 }
+    "reward": {
+      "credits": 1000
+    }
   },
   {
     "id": "storm_wreck",
@@ -126,7 +288,9 @@
     "marker": "derelict",
     "goal": 1,
     "after": "storm_jump",
-    "reward": { "credits": 1100 }
+    "reward": {
+      "credits": 1100
+    }
   },
   {
     "id": "storm_dispatch",
@@ -139,7 +303,9 @@
     "marker": "station",
     "goal": 1,
     "after": "storm_wreck",
-    "reward": { "credits": 500 }
+    "reward": {
+      "credits": 500
+    }
   },
   {
     "id": "storm_contour",
@@ -152,7 +318,9 @@
     "marker": "anomaly",
     "goal": 1,
     "after": "storm_dispatch",
-    "reward": { "credits": 1000 }
+    "reward": {
+      "credits": 1000
+    }
   },
   {
     "id": "storm_report",
@@ -165,6 +333,8 @@
     "marker": "station",
     "goal": 1,
     "after": "storm_contour",
-    "reward": { "credits": 800 }
+    "reward": {
+      "credits": 800
+    }
   }
 ]

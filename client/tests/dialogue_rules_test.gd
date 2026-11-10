@@ -40,5 +40,12 @@ func _run() -> void:
 	_c(Rules.talk_quest(state).get("id") == "storm_dispatch", "у форпоста Шторма можно говорить")
 	state["system"] = {"id": "meridian"}
 	_c(Rules.talk_quest(state).is_empty(), "Кира не отвечает из Меридиана")
+	state["system"] = {"id": "aurora"}
+	state["ship"] = {"in_safe": true}
+	state["quests"] = [
+		{"id": "aur_side_pirate", "kind": "kill", "title": "Чужой в коридоре"},
+		{"id": "ch01_q01", "kind": "talk", "system": "aurora", "title": "Допуск к вылету"},
+	]
+	_c(Rules.talk_quest(state).get("id") == "ch01_q01", "побочное убийство не прячет разговор")
 	print("Итого: проверок %d, провалов %d" % [_n, _f])
 	quit(1 if _f > 0 else 0)

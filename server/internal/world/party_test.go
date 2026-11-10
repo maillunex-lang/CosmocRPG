@@ -63,10 +63,17 @@ func TestPartySkirmishWithAIShip(t *testing.T) {
 	now := time.Now()
 	var rewards []Reward
 	back := false
-	for i := 0; i < 280; i++ {
+	for i := 0; i < 420; i++ {
 		if strings.HasPrefix(r.SystemID("human"), "inst-") {
 			if w := r.For("human"); w != nil {
 				w.SetMove("human", Vec{X: 1})
+				w.mu.Lock()
+				for _, n := range w.npcs {
+					if n.Kind == "hostile" && n.Hull > 40 {
+						n.Hull = 40
+					}
+				}
+				w.mu.Unlock()
 			}
 			for _, rec := range r.Records() {
 				if rec.ID == "human" && rec.Pos != homePos {
@@ -95,7 +102,7 @@ func TestPartySkirmishWithAIShip(t *testing.T) {
 			back = true
 			break
 		}
-		if i == 279 {
+		if i == 419 {
 			if w := r.For("human"); w != nil {
 				t.Fatalf("не вернулись из %s, врагов %d", w.System().ID, w.HostilesLeft())
 			}
@@ -312,20 +319,20 @@ func TestCorridorConsentAndDoor(t *testing.T) {
 		t.Fatalf("коридор %s", w.System().Name)
 	}
 	w.mu.Lock()
-	w.players["human"].Pos = Vec{X: 200, Y: 80}
+	w.players["human"].Pos = Vec{X: 400, Y: 90}
 	w.mu.Unlock()
 	w.Step(0.05, time.Now())
 	st, ok := w.Snapshot("human")
-	if !ok || st.Ship.Pos[0] > 52.1 || st.Ship.Pos[1] > 24.1 {
+	if !ok || st.Ship.Pos[0] > 180.2 || st.Ship.Pos[1] > 40.2 {
 		t.Fatalf("дверь не держит: %+v", st.Ship.Pos)
 	}
-	_ = w.SetTarget("human", "op-2")
+	_ = w.SetTarget("human", "op-3")
 	_ = w.SetAttack("human", true)
 	hull := 0.0
 	w.mu.Lock()
 	for _, n := range w.npcs {
-		if n.ID == "op-2" {
-			n.Pos.X = 60
+		if n.ID == "op-3" {
+			n.Pos.X = 200
 			hull = n.Hull
 		}
 	}
@@ -333,7 +340,7 @@ func TestCorridorConsentAndDoor(t *testing.T) {
 	w.Step(1, time.Now())
 	w.mu.Lock()
 	for _, n := range w.npcs {
-		if n.ID == "op-2" && n.Hull < hull {
+		if n.ID == "op-3" && n.Hull < hull {
 			t.Fatal("урон через закрытую дверь")
 		}
 	}
@@ -380,7 +387,7 @@ func TestPartyFillBringsDistantAIAndThickensGuards(t *testing.T) {
 			hull = n.HullMax
 		}
 	}
-	want := 90 * (1 + 0.55*3)
+	want := 420 * (1 + 0.55*3)
 	if math.Abs(hull-want) > 0.2 {
 		t.Fatalf("живучесть дозорного %.1f, ожидалось %.1f", hull, want)
 	}

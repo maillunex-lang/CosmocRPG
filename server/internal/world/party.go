@@ -20,8 +20,8 @@ const (
 	partyMax     = 4
 	partyRange   = 90.0
 	partyStart   = 120.0
-	instanceLife = 12 * 60.0
-	instancePay  = int64(500)
+	instanceLife = 20 * 60.0
+	instancePay  = int64(800)
 	inviteFor    = 45 * time.Second
 )
 
@@ -413,7 +413,7 @@ func (r *Router) beginCorridorLocked(p *party, leaderID string) error {
 	p.inst = instID
 	p.run++
 	p.settled = false
-	p.need = 3
+	p.need = inst.HostilesLeft()
 	p.progress = 0
 	slot := 0
 	for _, m := range p.members {
@@ -975,9 +975,9 @@ type corridorLane struct {
 }
 
 var corridorOps = map[string]corridorOp{
-	"credits": {title: "Казначейский коридор", goal: "Три зала по очереди. В конце — кредиты.", bg: "xi", pay: instancePay},
-	"gear":    {title: "Арсенальный коридор", goal: "Три зала по очереди. В конце — обшивка «Сталь».", bg: "omega", pay: 100, gear: "frame_steel"},
-	"loot":    {title: "Трюмный коридор", goal: "Три зала по очереди. В конце — руда и кристаллы.", bg: "deep", pay: 100, ore: 8, crystals: 4},
+	"credits": {title: "Казначейский коридор", goal: "Пять залов метеоритного ствола. В конце — кредиты.", bg: "xi", pay: instancePay},
+	"gear":    {title: "Арсенальный коридор", goal: "Пять залов метеоритного ствола. В конце — обшивка «Сталь».", bg: "omega", pay: 200, gear: "frame_steel"},
+	"loot":    {title: "Трюмный коридор", goal: "Пять залов метеоритного ствола. В конце — руда и кристаллы.", bg: "deep", pay: 200, ore: 16, crystals: 8},
 }
 
 func newCorridor(id, kind string) *World {
@@ -985,25 +985,32 @@ func newCorridor(id, kind string) *World {
 	if !ok {
 		spec = corridorOps["credits"]
 	}
+	const length = 1120.0
+	const halfY = 40.0
+	doors := []float64{180, 400, 640, 880}
 	w := New()
 	w.system = System{ID: id, Name: spec.title, Background: spec.bg}
-	w.radius = 260
-	w.station.Name = "Вход коридора"
+	w.radius = length + 80
+	w.station.Name = "Вход в рой"
 	w.station.Pos = [2]float64{0, 0}
 	w.safe = nil
 	w.npcs = nil
 	w.deposits = nil
-	w.lane = &corridorLane{doors: []float64{52, 118}, halfY: 24}
-	w.layout = worldgen.Layout{
-		System: id, Name: spec.title, Radius: 260, Hub: [2]float64{0, 0},
-		Stations: []worldgen.Station{{ID: "beacon", Name: "Вход", Pos: [2]float64{0, 0}}},
-		Zones: []worldgen.Zone{
-			{ID: "hall-1", Type: "pve", Name: "Первый зал", Pos: [2]float64{28, 0}, Radius: 26, Danger: 1},
-			{ID: "hall-2", Type: "pve", Name: "Второй зал", Pos: [2]float64{86, 0}, Radius: 26, Danger: 1},
-			{ID: "hall-3", Type: "pve", Name: "Зал награды", Pos: [2]float64{168, 0}, Radius: 30, Danger: 2},
-		},
+	w.lane = &corridorLane{doors: doors, halfY: halfY}
+	halls := []worldgen.Zone{
+		{ID: "hall-1", Type: "pve", Name: "Порог роя", Pos: [2]float64{90, 0}, Radius: 70, Danger: 1},
+		{ID: "hall-2", Type: "pve", Name: "Узкий ствол", Pos: [2]float64{290, 0}, Radius: 80, Danger: 1},
+		{ID: "hall-3", Type: "pve", Name: "Карман", Pos: [2]float64{520, 0}, Radius: 80, Danger: 2},
+		{ID: "hall-4", Type: "pve", Name: "Плотная осыпь", Pos: [2]float64{760, 0}, Radius: 80, Danger: 2},
+		{ID: "hall-5", Type: "pve", Name: "Сердце роя", Pos: [2]float64{1000, 0}, Radius: 90, Danger: 3},
 	}
-	cfg := worldgen.EnemyCfg{Speed: 8, ChaseSpeed: 22, Aggro: 400, Leash: 500, AttackRange: 26, Damage: 6, Period: 1.4}
+	w.layout = worldgen.Layout{
+		System: id, Name: spec.title, Radius: w.radius, Hub: [2]float64{0, 0}, Seed: 77,
+		Stations: []worldgen.Station{{ID: "beacon", Name: "Вход", Pos: [2]float64{0, 0}}},
+		Zones:    halls,
+		Bodies:   meteorWalls(length, halfY),
+	}
+	cfg := worldgen.EnemyCfg{Speed: 4, ChaseSpeed: 11, Aggro: 160, Leash: 220, AttackRange: 24, Damage: 9, Period: 1.5}
 	type spot struct {
 		room int
 		pos  Vec
@@ -1011,22 +1018,52 @@ func newCorridor(id, kind string) *World {
 		hull float64
 	}
 	spots := []spot{
-		{0, Vec{X: 28}, "Дозорный зала", 90},
-		{1, Vec{X: 86}, "Страж створа", 110},
-		{2, Vec{X: 168}, "Хранитель награды", 150},
+		{0, Vec{X: 70, Y: -12}, "Дозорный роя", 420},
+		{0, Vec{X: 110, Y: 14}, "Дозорный роя", 420},
+		{1, Vec{X: 250, Y: -10}, "Страж осыпи", 640},
+		{1, Vec{X: 310, Y: 12}, "Страж осыпи", 640},
+		{2, Vec{X: 470, Y: -16}, "Резак", 560},
+		{2, Vec{X: 520, Y: 0}, "Резак", 620},
+		{2, Vec{X: 570, Y: 16}, "Резак", 560},
+		{3, Vec{X: 720, Y: -8}, "Тяжёлый лом", 900},
+		{3, Vec{X: 790, Y: 10}, "Тяжёлый лом", 900},
+		{4, Vec{X: 960, Y: -14}, "Эскорт хранителя", 700},
+		{4, Vec{X: 1040, Y: 0}, "Хранитель награды", 1400},
 	}
 	if kind == "loot" {
-		spots[1].name = "Грузчик-мародёр"
+		spots[3].name = "Грузчик-мародёр"
+		spots[10].name = "Хранитель трюма"
 	}
 	if kind == "gear" {
-		spots[2].name = "Смотритель арсенала"
+		spots[10].name = "Смотритель арсенала"
 	}
 	for i, s := range spots {
 		n := &npc{ID: "op-" + itoa(i+1), Name: s.name, Kind: "hostile", Stance: "hostile", Pos: s.pos, Hull: s.hull, HullMax: s.hull, respawn: 1e9, ephemeral: true, room: s.room}
-		n.ai = &aiState{cfg: cfg, tier: "normal", home: s.pos, patrolR: 6}
+		n.ai = &aiState{cfg: cfg, tier: "normal", home: s.pos, patrolR: 8}
 		w.npcs = append(w.npcs, n)
 	}
 	return w
+}
+
+func meteorWalls(length, half float64) []worldgen.Body {
+	var out []worldgen.Body
+	n := 0
+	for x := 24.0; x < length; x += 26 {
+		for s := 0; s < 2; s++ {
+			side := 1.0
+			if s == 0 {
+				side = -1
+			}
+			y := side * (half + 14 + float64(n%3)*6)
+			out = append(out, worldgen.Body{
+				ID: fmt.Sprintf("rock-%d", n), Kind: "rock", Style: "rocky",
+				Pos: [2]float64{x, y}, Radius: 6 + float64(n%4),
+				Color: [3]float64{0.45, 0.4, 0.36},
+			})
+			n++
+		}
+	}
+	return out
 }
 
 // scaleCorridor делает охрану живучее с каждым лишним пилотом. Вдвоём уже заметно толще, вчетвером — больше чем вдвое.

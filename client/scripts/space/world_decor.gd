@@ -50,7 +50,10 @@ func build(lay: Dictionary, vis: Dictionary, preset_id: String) -> void:
 	var decor: Dictionary = vis.get("decor", {})
 	if bool(decor.get("planets", true)):
 		for b in lay.get("bodies", []):
-			_add_body(b)
+			if str(b.get("kind", "")) == "rock":
+				_add_rock(b)
+			else:
+				_add_body(b)
 	for z in lay.get("zones", []):
 		_add_zone(z)
 	for b in lay.get("bodies", []):
@@ -103,6 +106,22 @@ func _make_assets() -> void:
 	_debris_mat.metallic = 0.6
 	_debris_mat.roughness = 0.5
 	_debris_mat.vertex_color_use_as_albedo = true
+
+
+func _add_rock(b: Dictionary) -> void:
+	var r := float(b.get("radius", 6.0))
+	var p := _pos(b)
+	var mi := MeshInstance3D.new()
+	var rock := SphereMesh.new()
+	rock.radius = r
+	rock.height = r * 2.2
+	rock.radial_segments = 7
+	rock.rings = 4
+	mi.mesh = rock
+	mi.material_override = _rock_mat
+	mi.position = Vector3(p[0], PLANE_Y + r * 0.25, p[1])
+	mi.rotation = Vector3(0.35, float(hash(str(b.get("id", ""))) % 628) / 100.0, 0.2)
+	_statics.add_child(mi)
 
 
 func _add_body(b: Dictionary) -> void:

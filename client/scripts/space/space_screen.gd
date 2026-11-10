@@ -91,6 +91,7 @@ func _ready() -> void:
 	stats = FrameStats.new()
 	add_child(stats)
 	stats.attach_to(_hud.get_node("%DebugSlot"))
+	stats.configure_diagnostics(_ships_root.get_viewport(), _diagnostic_counts)
 	var show_loading := Session.opened_msec >= 0   # только при настоящем входе в мир (в тестах экрана загрузки нет)
 	if Session.opened_msec >= 0:
 		# от нажатия кнопки до начала _ready: загрузка и создание сцены, HUD и текстур
@@ -1141,3 +1142,16 @@ func close_corporation() -> bool:
 		return false
 	screen._close_screen()
 	return true
+
+
+## Called only at the diagnostic refresh cadence (0.5 s).
+func _diagnostic_counts() -> Dictionary:
+	var ships := 0
+	var effects := 0
+	for view in _ships.values():
+		if view.visual != null:
+			ships += 1
+			if view.visual.has_method("active_effect_count"):
+				effects += view.visual.active_effect_count()
+	return {"ships": ships, "active_vfx": effects,
+		"chunks": _decor.visible_chunk_count() if _decor != null else 0}

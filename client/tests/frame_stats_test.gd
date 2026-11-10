@@ -40,6 +40,16 @@ func _feed(n: CanvasLayer, count: int, ms: float, t0: float = 10.0) -> void:
 
 
 func _run() -> void:
+	var fast := _stats_node()
+	for i in 1441:
+		fast.record(1000.0 / 120.0, 10.0 + i / 120.0)
+	var fast_stats: Dictionary = fast.stats()
+	_check(fast_stats.n >= 1200 and not fast_stats.window_truncated, "120 FPS: полное десятисекундное окно")
+	_check(absf(fast_stats.mean_ms - 1000.0 / 120.0) < 0.01, "среднее время в миллисекундах")
+	_check(fast.metric(null) == "N/A", "недоступное значение N/A")
+	_check(fast.export_json("user://bad.json", "token", 0) == ERR_INVALID_PARAMETER, "экспорт отвергает произвольные метаданные")
+	fast.queue_free()
+
 	# ============ процентили ============
 	var arr := PackedFloat32Array()
 	for i in range(1, 101):

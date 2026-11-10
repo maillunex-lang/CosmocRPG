@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
@@ -29,6 +30,7 @@ type FarmController struct {
 	Fallback  []string
 	LowHull   float64
 	Log       *slog.Logger
+	Clans     *corp.Service
 }
 
 // CastMember is one captain to put in the world and in the chat.
@@ -119,7 +121,7 @@ func (f *FarmController) RunCast(ctx context.Context, members []CastMember) {
 		if f.Log != nil {
 			f.Log.Info("AI civilization: agent joined", "captain", m.ID, "name", name, "goal", string(goal), "player", playerID)
 		}
-		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name}
+		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name, Clans: f.Clans}
 		go runner.RunGoal(ctx, g, m.ID, playerID, goal)
 		open = append(open, g)
 	}

@@ -67,10 +67,42 @@ func run() -> void:
 	check(Settings.ship_limit() == 5, "некорректный нижний лимит зажат")
 	Settings.override("ship_limit", 500.0)
 	check(Settings.ship_limit() == 50, "некорректный верхний лимит зажат")
+	Settings.override("ship_limit", 5.0)
+	Settings.override("limit_hidden_model_cache", true)
+	screen._apply_graphics()
+	await process_frame
+	var retained := 0
+	var evicted_id := ""
+	for id in screen._ships:
+		var view = screen._ships[id]
+		if id != "me" and view.ship_type != "":
+			if view.visual != null:
+				retained += 1
+			else:
+				evicted_id = id
+	check(retained <= 10 and evicted_id != "", "5 видимых плюс не больше 5 скрытых моделей в RAM")
+	check(screen._ships.size() == 61 and gateway.snapshot().objects.size() == 60, "освобождение кеша сохраняет сущности")
+	gateway._objects[evicted_id].ship = "FTR-002"
+	gateway._objects[evicted_id].skin = "b"
+	gateway._objects[evicted_id].dead = true
+	gateway.state_updated.emit(gateway.snapshot())
+	check(screen.ship_view(evicted_id).visual == null, "snapshot не пересоздаёт вытесненную модель")
+	check(screen.ship_view(evicted_id).skin == "b", "скин обновляется без модели")
+	gateway.set_target(evicted_id)
+	var restored = screen.ship_view(evicted_id).visual
+	check(restored != null and restored.ship_id == "FTR-002" and restored.skin_id == "b", "цель восстанавливает актуальный корпус и скин")
+	check(not restored.alive and not restored.bank.visible, "состояние смерти сохранено после восстановления")
+	gateway._objects[evicted_id].dead = false
+	gateway.state_updated.emit(gateway.snapshot())
+	check(restored.alive, "snapshot respawn восстанавливает корабль")
+	Settings.override("limit_hidden_model_cache", false)
+	screen._apply_graphics()
+	check(screen.ship_view("me").visual != null, "свой корабль не вытесняется")
+	check(settings_ui._toggles.has("limit_hidden_model_cache"), "переключатель кеша в существующих настройках")
 	screen.queue_free()
 	await process_frame
 	Session.gateway = null
-	for key in ["ship_limit", "fps_limit", "render_scale", "graphics_preset"]:
+	for key in ["ship_limit", "fps_limit", "render_scale", "graphics_preset", "limit_hidden_model_cache"]:
 		Settings.override(key, null)
 	Engine.max_fps = old_cap
 	print("Итого: проверок %d, провалов %d" % [checks, failures])

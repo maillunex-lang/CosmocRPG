@@ -67,6 +67,9 @@ func clear_alert(id: String) -> void:
 ## Кратковременное уведомление.
 func toast(text: String) -> void:
 	var toasts := get_children().filter(func(c: Node) -> bool: return c.has_meta("toast"))
+	for c in toasts:
+		if c.get_child_count() > 0 and str((c.get_child(0) as Label).text) == text:
+			return
 	while toasts.size() >= MAX_TOASTS:
 		toasts.pop_front().queue_free()
 	var p := _make_panel(text, false)

@@ -65,11 +65,12 @@ export function AiPlayers({ username, onBack, onLoggedOut }: { username: string;
       </header>
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
+      {data.civ_error && <p className="error">Не удалось выпустить: {data.civ_error}</p>}
 
       <section className="cards">
         <div className="card">
           <b>{data.status.online}</b>
-          <span>онлайн (цель {data.status.target})</span>
+          <span>в мире сейчас (цель {data.status.target})</span>
         </div>
         <div className="card">
           <b>{data.status.players}</b>
@@ -160,8 +161,8 @@ function SettingsForm({ settings, onSave }: { settings: AiSettings; onSave: (s: 
     <section>
       <h2>Настройки</h2>
       <p className="muted">Старые простые корабли и их шаблонные реплики выключены. В мире только цивилизация.</p>
-      <h3>Цивилизация (шлюз)</h3>
-      <p className="muted">Настоящие капитаны в мире. Меняется сразу, перезапуск сервера не нужен.</p>
+      <h3>Выпустить капитанов в мир</h3>
+      <p className="muted">Это и есть переключатель. Поставьте число и нажмите «Сохранить настройки» — капитаны зайдут как обычные игроки. Старые простые боты больше не считаются.</p>
       <div className="row wrap">
         <label>
           <input type="checkbox" checked={s.civ_enabled} onChange={(e) => setS({ ...s, civ_enabled: e.target.checked })} /> цивилизация включена

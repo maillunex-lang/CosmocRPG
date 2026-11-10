@@ -7,26 +7,31 @@ import (
 )
 
 // FarmController joins one reserved captain as a real player and issues a simple PvE attack.
-// Minimal on purpose: one agent, one known training target, no planner yet.
+// Target is chosen with memory (recent failures are skipped).
 type FarmController struct {
 	Bootstrap *Bootstrapper
 	Store     *Store
 	Endpoint  string // loopback WS, e.g. "ws://127.0.0.1:8080/ws"
-	TargetID  string // hostile NPC id to farm (default "dr1")
+	Targets   []string // candidate hostile NPC ids; default ["dr1","dr2"]
 	Log       *slog.Logger
 }
 
-// JoinAndFarm ensures the captain has a player, opens a Gateway, and starts attacking TargetID.
+// JoinAndFarm ensures the captain has a player, opens a Gateway, and starts attacking a memory-aware target.
 // Returns the open Gateway (caller must Close it). Call only for a captain already reserved by the Director.
 func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Gateway, error) {
 	if f == nil || f.Bootstrap == nil || f.Store == nil || f.Endpoint == "" || captainID == "" {
 		return nil, ErrInput
 	}
-	target := f.TargetID
-	if target == "" {
-		target = "dr1"
+	cands := f.Targets
+	if len(cands) == 0 {
+		cands = []string{"dr1", "dr2"}
 	}
-	_, err := f.Bootstrap.EnsurePlayer(ctx, CharacterRequest{
+	now := time.Now()
+	target, err := ChooseTarget(ctx, f.Store, captainID, cands, now)
+	if err != nil {
+		return nil, err
+	}
+	_, err = f.Bootstrap.EnsurePlayer(ctx, CharacterRequest{
 		CaptainID: captainID,
 		Nick:      "AI-" + captainID,
 		Gender:    "m",
@@ -44,9 +49,11 @@ func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Ga
 	}
 	err = IssueCombat(ctx, g, "farm-1", CombatIntent{TargetID: target, Attack: true})
 	if err != nil {
+		_ = RecordFailure(ctx, f.Store, captainID, target, now)
 		g.Close()
 		return nil, err
 	}
+	_ = RecordObserved(ctx, f.Store, captainID, target, now)
 	if f.Log != nil {
 		f.Log.Info("AI civilization: farming started", "captain", captainID, "target", target)
 	}

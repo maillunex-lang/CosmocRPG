@@ -37,6 +37,7 @@ services:
       COSMOC_LOG_LEVEL: ${LOG_LEVEL:-info}
       COSMOC_FEATURE_QUESTS: ${FEATURE_QUESTS:-true}   # контракты и награды (Этап С-01); false выключает
       COSMOC_FEATURE_AI: ${FEATURE_AI:-true}   # ИИ-игроки в мире (R-42); false выключает
+      COSMOC_AI_CIVILIZATION_GATEWAY: "true"   # капитаны цивилизации входят в мир как игроки
       COSMOC_FEATURE_LIVING: ${FEATURE_LIVING:-true}   # живые локации (враги, добыча, исследование, большая карта); false выключает
       COSMOC_ASSET_SIGN_KEY_FILE: /run/secrets/assets_sign_key   # ключ подписи ресурсов дизайна (R-53); нет ключа — публикация выключена
       COSMOC_MEDIA_DIR: /var/lib/cosmoc/media                 # файлы библиотеки музыки (R-37); off выключает

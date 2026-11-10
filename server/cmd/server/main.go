@@ -478,37 +478,30 @@ func run() error {
 
 // cleanupSessions периодически удаляет просроченные сессии администраторов.
 func cleanupSessions(ctx context.Context, log *slog.Logger, store *admin.Store) {
-	t := time.NewTicker(15 * time.Minute)
+	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			if n, err := store.CleanupSessions(cctx); err != nil {
-				log.Error("очистка сессий", "err", err)
+			if n, err := store.CleanupSessions(ctx); err != nil {
+				log.Error("очистка сессий администраторов", "err", err)
 			} else if n > 0 {
-				log.Info("удалены просроченные сессии", "count", n)
+				log.Info("удалены просроченные сессии администраторов", "count", n)
 			}
-			cancel()
 		}
 	}
 }
 
-func gameMux(pool interface{}, version string, wsHandler *ws.Handler, designSvc *design.Service, mediaSvc *media.Service) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ok","version":"%s"}`, version)
-	})
-	mux.Handle("/ws", wsHandler)
-	if designSvc != nil {
-		mux.Handle("/design/", designSvc.Routes())
+// gameMux — публичные маршруты игрового порта: здоровье, WebSocket, ресурсы дизайна (/assets/) и музыка (/media/).
+func gameMux(db httpapi.Pinger, version string, ws http.Handler, d *design.Service, m *media.Service) *http.ServeMux {
+	mux := httpapi.NewMux(db, version, ws)
+	if d != nil {
+		mux.Handle("/assets/", d.PublicHandler())
 	}
-	if mediaSvc != nil {
-		mux.Handle("/media/", mediaSvc.Routes())
+	if m != nil {
+		mux.Handle("/media/", m.PublicHandler())
 	}
 	return mux
 }

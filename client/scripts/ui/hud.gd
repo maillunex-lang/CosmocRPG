@@ -56,6 +56,7 @@ var _mine_button: ActionButton
 var _sell_button: ActionButton
 var _cargo_row: HBoxContainer
 var _cargo_label: Label
+var _clear_target: Button
 var _attack_expect: Variant = null  # ожидаемое значение attacking после нажатия (null: не ждём)
 var _peek_a: Label
 var _peek_b: Label
@@ -253,6 +254,7 @@ func _ready() -> void:
 	%SettingsMenuButton.pressed.connect(func() -> void: _set_menu_open(false); settings_requested.emit())
 	Icons.apply(%SettingsMenuButton, "settings", Tokens.ACCENT, 22)
 	_build_cargo_ui()
+	_dock_target()
 	_confirm.opened.connect(func() -> void: modal_opened.emit())
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())
@@ -497,9 +499,7 @@ func _build_cargo_ui() -> void:
 	_cargo_label.name = "CargoLabel"
 	_cargo_row.add_child(_cargo_label)
 	_cargo_row.visible = false
-	var sp := _speed_label.get_parent()
-	sp.add_child(_cargo_row)
-	sp.move_child(_cargo_row, _speed_label.get_index() + 1)
+	%BarsRow.add_child(_cargo_row)
 	var stack := _autopilot.get_parent()
 	_mine_button = ActionButton.new()
 	_mine_button.name = "MineButton"
@@ -552,37 +552,66 @@ func _apply_cargo(state: Dictionary, target: Dictionary, ship: Dictionary) -> vo
 
 
 
+func _dock_target() -> void:
+	var row := _speed_label.get_parent()
+	var card := %TargetCard as Control
+	card.reparent(row, false)
+	card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_target_info.custom_minimum_size.x = 200
+	var box := _target_name.get_parent()
+	var head := HBoxContainer.new()
+	head.name = "TargetHead"
+	head.add_theme_constant_override("separation", 8)
+	box.add_child(head)
+	box.move_child(head, 0)
+	_target_name.reparent(head, false)
+	_target_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_clear_target = Button.new()
+	_clear_target.name = "ClearTarget"
+	_clear_target.text = "×"
+	_clear_target.tooltip_text = "Снять цель"
+	_clear_target.focus_mode = Control.FOCUS_NONE
+	_clear_target.custom_minimum_size = Vector2(40, 40)
+	_clear_target.pressed.connect(func() -> void:
+		if gateway != null:
+			gateway.set_target(""))
+	head.add_child(_clear_target)
+	card.visible = false
+
+
 func _dock_skills() -> void:
 	var right := _attack.get_parent()
-	var cluster := VBoxContainer.new()
-	cluster.name = "SkillCluster"
-	cluster.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cluster.size_flags_horizontal = Control.SIZE_SHRINK_END
-	cluster.add_theme_constant_override("separation", 8)
-	right.add_child(cluster)
-	right.move_child(cluster, _attack.get_index())
-	_skills_grid.reparent(cluster, false)
-	_skills_grid.size_flags_horizontal = Control.SIZE_SHRINK_END
-	if _skills_grid is GridContainer:
-		(_skills_grid as GridContainer).columns = 2
-	var bottom := HBoxContainer.new()
-	bottom.name = "AttackRow"
-	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 10)
-	cluster.add_child(bottom)
-	_attack.reparent(bottom, false)
-	_attack.text = ""
-	_attack.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_attack.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
-	_style_attack(false)
-	_auto_skills.reparent(bottom, false)
-	_auto_skills.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_auto_skills.text = "Авто"
-	_round_button(_auto_skills, 52)
+	var fan := Control.new()
+	fan.name = "SkillFan"
+	fan.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fan.custom_minimum_size = Vector2(262, 232)
+	fan.size_flags_horizontal = Control.SIZE_SHRINK_END
+	right.add_child(fan)
+	right.move_child(fan, _attack.get_index())
 	for b in _skill_buttons:
-		_round_button(b, 74)
+		(b as Control).reparent(fan, false)
+	_attack.reparent(fan, false)
+	_attack.text = ""
+	_style_attack(false)
+	_auto_skills.reparent(fan, false)
+	_auto_skills.text = "Авто"
+	_place_fan()
 	_paint_auto()
+	_skills_grid.visible = false
+
+
+## Дуга большого пальца: форсаж и перехват сверху, удар — крупный круг справа снизу, ульта чуть больше.
+func _place_fan() -> void:
+	var spots := [Vector2(0, 0), Vector2(64, 0), Vector2(8, 68), Vector2(78, 58)]
+	var sides := [56.0, 56.0, 58.0, 68.0]
+	for i in _skill_buttons.size():
+		var b := _skill_buttons[i] as Control
+		b.position = spots[i]
+		b.set_meta("fan_side", sides[i])
+		_round_button(b, sides[i])
+	_attack.position = Vector2(164, 138)
+	_auto_skills.position = Vector2(100, 176)
+	_round_button(_auto_skills, 48)
 
 
 func _round_button(b: Button, side: float, fill: Variant = null, edge: Variant = null) -> void:
@@ -656,6 +685,7 @@ func _paint_auto() -> void:
 func _build_skills() -> void:
 	for i in 4:
 		var b := ActionButton.new()
+		b.name = "Skill%d" % i
 		b.text = "Навык %d" % (i + 1)
 		b.custom_minimum_size = SKILL_MIN_SIZE
 		b.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 2)
@@ -757,8 +787,7 @@ func _update_speed(state: Dictionary, ship: Dictionary) -> void:
 	if t != _speed_prev_time or _speed_prev_pos == Vector2.INF:
 		_speed_prev_pos = pos
 		_speed_prev_time = t
-	var mode := "Автопилот" if bool(state.get("autopilot", false)) else "Ручное управление"
-	_speed_label.text = "%d м/с · %s" % [int(round(_speed_mps)), mode]
+	_speed_label.text = "%d м/с" % int(round(_speed_mps))
 
 
 func _target_object(state: Dictionary) -> Dictionary:
@@ -809,12 +838,16 @@ func _set_target_empty() -> void:
 	_target_name.text = "Цель не выбрана"
 	_target_info.text = "Нажмите на объект в космосе"
 	_target_hull.visible = false
+	(%TargetCard as Control).visible = false
+	_speed_label.visible = true
 
 
 func _apply_target(state: Dictionary, target: Dictionary) -> void:
 	if target.is_empty():
 		_set_target_empty()
 		return
+	(%TargetCard as Control).visible = true
+	_speed_label.visible = false
 	_target_name.text = str(target["name"])
 	var dist := ((state["ship"]["pos"] as Vector2).distance_to(target["pos"])) / 10.0
 	var info := "%s · %s · %.1f км" % [kind_label(target), stance_label(str(target["stance"])), dist]
@@ -860,6 +893,10 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 			fill.offset_right = 0.0
 		var skill_name := str(s["name"])
 		b.text = str(int(ceil(cd))) if cd > 0.0 else skill_name
+		if b.has_meta("fan_side"):
+			var side := float(b.get_meta("fan_side"))
+			b.custom_minimum_size = Vector2(side, side)
+			b.size = Vector2(side, side)
 		b.tooltip_text = "%s · энергия %d · перезарядка %d с" % [skill_name, int(s["energy_cost"]), int(s["cooldown"])]
 		var blocked: bool = not bool(s.get("enabled", true)) or bool(ship.get("dead", false)) or cd > 0.0 or float(ship.get("energy", 0.0)) < float(s["energy_cost"])
 		if s["needs_target"]:

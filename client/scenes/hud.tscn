@@ -203,11 +203,12 @@ layout_mode = 2
 horizontal_alignment = 1
 text = "0 м/с"
 
-[node name="SkillsGrid" type="HBoxContainer" parent="SafeArea/Columns/CenterStack/CombatBlock/Box"]
+[node name="SkillsGrid" type="GridContainer" parent="SafeArea/Columns/CenterStack/CombatBlock/Box"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 8
-alignment = 1
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 2
 
 [node name="AutoSkillsButton" type="Button" parent="SafeArea/Columns/CenterStack/CombatBlock/Box/SkillsGrid"]
 unique_name_in_owner = true

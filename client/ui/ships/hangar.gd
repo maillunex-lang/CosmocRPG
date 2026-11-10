@@ -6,6 +6,7 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const ShipDef := preload("res://ui/ships/ship_def.gd")
 const ShipVisual := preload("res://ui/ships/ship_visual.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
+const TouchScroll := preload("res://ui/touch_scroll.gd")
 
 signal skin_selected(skin_id: String)
 signal spec_selected(spec_id: String)
@@ -37,28 +38,51 @@ var _data: Dictionary = {}   # характеристики корабля иг�
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP   # всё, что под ангаром, не получает касания
 	var bg := ColorRect.new()
-	bg.color = Color(Tokens.BG, 0.94)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Tokens.BG
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side_name in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side_name, 16)
 	add_child(margin)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
-	margin.add_child(row)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 12)
+	margin.add_child(col)
 
-	# 3D-предпросмотр
+	var head := HBoxContainer.new()
+	col.add_child(head)
+	var screen_title := Label.new()
+	screen_title.text = "Ангар"
+	screen_title.theme_type_variation = &"TitleLabel"
+	screen_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(screen_title)
+	var close := ActionButton.new()
+	close.text = "Закрыть"
+	close.variant = ActionButton.Variant.PRIMARY
+	close.custom_minimum_size = Vector2(150, 54)
+	close.pressed.connect(func() -> void: closed.emit())
+	head.add_child(close)
+
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 16)
+	col.add_child(row)
+
+	# 3D-предпросмотр на всю высоту колонки, а не маленьким чёрным прямоугольником.
 	var svc := SubViewportContainer.new()
 	svc.stretch = true
 	svc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	svc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	svc.custom_minimum_size = Vector2(420, 300)
+	svc.size_flags_stretch_ratio = 1.15
+	svc.custom_minimum_size = Vector2(240, 180)
 	row.add_child(svc)
 	var vp := SubViewport.new()
 	vp.own_world_3d = true
@@ -88,15 +112,22 @@ func _ready() -> void:
 	_turntable.add_child(_visual)
 	_visual.build(ship_id, skin)
 
-	# панель справа
+	# панель справа: заголовок снаружи, остальное в ограниченной прокрутке
 	var side := PanelContainer.new()
-	side.custom_minimum_size = Vector2(340, 0)
+	side.custom_minimum_size = Vector2(300, 0)
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side.size_flags_stretch_ratio = 0.9
+	side.clip_contents = true
 	row.add_child(side)
+	var side_scroll := ScrollContainer.new()
+	side_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	side.add_child(side_scroll)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
-	var side_scroll := ScrollContainer.new()
-	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	side.add_child(side_scroll)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side_scroll.add_child(box)
 	var def := ShipDef.get_def(ship_id)
@@ -105,6 +136,7 @@ func _ready() -> void:
 	if bool(def.get("temporary", false)):
 		title.text += " (временная модель)"
 	title.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 4)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(title)
 	_info = Label.new()
 	_info.theme_type_variation = &"MutedLabel"
@@ -172,11 +204,8 @@ func _ready() -> void:
 		_visual.undock()
 		_visual.play("Dock"))
 	box.add_child(dock)
-	var close := ActionButton.new()
-	close.text = "Закрыть"
-	close.variant = ActionButton.Variant.PRIMARY
-	close.pressed.connect(func() -> void: closed.emit())
-	box.add_child(close)
+	# Рамки и подписи внутри прокрутки не должны глотать жест пальца.
+	TouchScroll.fix_tree(self)
 	_refresh()
 
 

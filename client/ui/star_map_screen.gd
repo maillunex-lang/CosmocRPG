@@ -157,6 +157,10 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
+	# Непрозрачный фон: иначе карта рисуется поверх живого космоса и HUD и «сливается» с ними.
+	draw_rect(Rect2(Vector2.ZERO, size), Tokens.BG)
+	draw_rect(Rect2(0, 0, size.x, 92), Color(0, 0, 0, 0.28))
+	draw_rect(Rect2(0, size.y - 108, size.x, 108), Color(0, 0, 0, 0.40))
 	if _gateway == null:
 		return
 	var current := _current_id()

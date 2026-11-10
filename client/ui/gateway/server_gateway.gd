@@ -55,6 +55,13 @@ var _sent_move := Vector2.ZERO
 var _move_cd := 0.0
 var _move_dirty := false
 var _token := ""
+var _corp_data: Dictionary = {"known": false}
+var _corp_request_id := ""
+var _corp_action := ""
+var _corp_expired_ids: Array[String] = []
+var _corp_wait := 0.0
+const CORP_TIMEOUT := 10.0
+
 var _ability_ids: Array = []   # слот способности (кнопка HUD) -> идентификатор на сервере
 
 
@@ -114,6 +121,16 @@ func _join() -> void:
 
 
 func _process(delta: float) -> void:
+	if _corp_request_id != "":
+		_corp_wait += delta
+		if _corp_wait >= CORP_TIMEOUT:
+			_corp_expired_ids.append(_corp_request_id)
+			if _corp_expired_ids.size() > 16:
+				_corp_expired_ids.pop_front()
+			_corp_data = {"known": false}
+			corporation_updated.emit(corporation_snapshot())
+			_finish_corporation_request()
+			corporation_failed.emit("Ответ не получен. Обновите сведения перед повторной операцией: предыдущая могла выполниться.")
 	_move_cd -= delta
 	if _joined and _move_dirty and _move_cd <= 0.0:
 		_send_move()
@@ -126,6 +143,11 @@ func _process(delta: float) -> void:
 func _on_link_lost(reason: String) -> void:
 	if _closing:
 		return
+	_corp_data = {"known": false}
+	corporation_updated.emit(_corp_data)
+	if _corp_request_id != "":
+		_finish_corporation_request()
+		corporation_failed.emit("Связь потеряна. После подключения обновите сведения о корпорации.")
 	var was_joined := _joined
 	_joined = false
 	if not was_joined and _retry == 0 and _state.is_empty():
@@ -137,6 +159,11 @@ func _on_link_lost(reason: String) -> void:
 
 
 func _on_message(type: String, payload: Dictionary, _id: String) -> void:
+	if _id in _corp_expired_ids:
+		return
+	if _corp_request_id != "" and _id == _corp_request_id and type in ["corp", "corp_left", "error"]:
+		_on_corporation_reply(type, payload)
+		return
 	match type:
 		"welcome":
 			if payload.get("needs_character", false):
@@ -160,6 +187,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			_sent_move = Vector2.INF   # после входа заново сообщаем движение
 			joined.emit()
 			request_chat_history()
+			corporation_info()
 			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
 		"market":
 			station_market.emit(payload)
@@ -604,3 +632,77 @@ func set_starter_engine(equipped: bool, revision: int) -> void:
 func refresh_equipment() -> void:
 	if _joined and _client != null:
 		_client.send_message("equipment_get", {})
+
+
+func has_corporations() -> bool:
+	return true
+
+
+func corporation_snapshot() -> Dictionary:
+	return _corp_data.duplicate(true)
+
+
+func corporation_busy() -> bool:
+	return _corp_request_id != ""
+
+
+func corporation_info() -> void:
+	_send_corporation("corp_info", {})
+
+
+func corporation_create(corp_name: String, tag: String) -> void:
+	_send_corporation("corp_create", {"name": corp_name.strip_edges(), "tag": tag.strip_edges().to_upper()})
+
+
+func corporation_join(corp_name: String) -> void:
+	_send_corporation("corp_join", {"name": corp_name.strip_edges()})
+
+
+func corporation_leave() -> void:
+	_send_corporation("corp_leave", {})
+
+
+func _send_corporation(action: String, payload: Dictionary) -> void:
+	if corporation_busy():
+		return
+	if not _joined or _client == null:
+		corporation_failed.emit("Нет соединения с сервером")
+		return
+	_corp_action = action
+	_corp_wait = 0.0
+	_corp_request_id = _client.send_message(action, payload)
+	if _corp_request_id == "":
+		corporation_failed.emit("Не удалось отправить запрос. Проверьте соединение")
+		return
+	corporation_busy_changed.emit(true)
+
+
+func _finish_corporation_request() -> void:
+	_corp_request_id = ""
+	_corp_action = ""
+	_corp_wait = 0.0
+	corporation_busy_changed.emit(false)
+
+
+func _on_corporation_reply(type: String, payload: Dictionary) -> void:
+	var action := _corp_action
+	_finish_corporation_request()
+	if type == "error":
+		if action == "corp_info" and str(payload.get("code", "")) == "no_corp":
+			_corp_data = {"known": true}
+			corporation_updated.emit(corporation_snapshot())
+		else:
+			var text := str(payload.get("message", "Операция отклонена"))
+			if action == "corp_join" and str(payload.get("code", "")) == "no_corp":
+				text = "Корпорация не найдена. Проверьте имя или тег"
+			corporation_failed.emit(text)
+		return
+	if type == "corp_left":
+		_corp_data = {"known": true}
+	else:
+		_corp_data = payload.duplicate(true)
+		_corp_data["known"] = true
+	corporation_updated.emit(corporation_snapshot())
+	# Ответ вступления не содержит состав; после создания тоже читаем актуальные имена.
+	if action in ["corp_join", "corp_create"]:
+		corporation_info()

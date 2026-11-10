@@ -361,70 +361,82 @@ anchor_right = 1.0
 offset_left = -280.0
 offset_top = 76.0
 offset_right = -16.0
-offset_bottom = 456.0
+anchor_bottom = 1.0
+offset_bottom = -16.0
 grow_horizontal = 0
 
-[node name="Box" type="VBoxContainer" parent="MenuPopup/Panel"]
+[node name="Scroll" type="ScrollContainer" parent="MenuPopup/Panel"]
 layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Box" type="VBoxContainer" parent="MenuPopup/Panel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="ProfileMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="ProfileMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Профиль"
 script = ExtResource("5")
 
-[node name="ShopMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="ShopMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Магазин"
 script = ExtResource("5")
 
-[node name="ChatMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="ChatMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Чат"
 script = ExtResource("5")
 
-[node name="StationMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="StationMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Станция"
 script = ExtResource("5")
 
-[node name="StarMapMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="StarMapMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Звёздная карта"
 script = ExtResource("5")
 
-[node name="HangarMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="HangarMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Ангар"
 script = ExtResource("5")
 
-[node name="StorageMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="CorporationMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Корпорация"
+script = ExtResource("5")
+
+[node name="StorageMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Склад"
 script = ExtResource("5")
 soon = true
 
-[node name="MailMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="MailMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Почта"
 script = ExtResource("5")
 soon = true
 
-[node name="SettingsMenuButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="SettingsMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Настройки"
 script = ExtResource("5")
 
-[node name="ExitButton" type="Button" parent="MenuPopup/Panel/Box"]
+[node name="ExitButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Выйти"

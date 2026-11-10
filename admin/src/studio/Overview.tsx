@@ -5,7 +5,7 @@ export function Overview() {
   const [d, setD] = useState<Dashboard | null>(null);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
-  const [count, setCount] = useState(300);
+  const [count, setCount] = useState(500);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -59,7 +59,7 @@ export function Overview() {
         </dl>
         <div className="row wrap">
           <label className="inline">Всего капитанов в реестре
-            <input type="number" min={1} max={400} value={count} onChange={(e) => setCount(Number(e.target.value))} style={{ width: 90 }} />
+            <input type="number" min={1} max={500} value={count} onChange={(e) => setCount(Number(e.target.value))} style={{ width: 90 }} />
           </label>
           <button disabled={busy} onClick={() => void generate()}>{busy ? "Генерация…" : "Сгенерировать недостающих"}</button>
           <button className="secondary" disabled={busy} onClick={() => void nicknames()}>Применить игровые ники</button>

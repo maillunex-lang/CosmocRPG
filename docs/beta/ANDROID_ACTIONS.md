@@ -1,52 +1,75 @@
-# Ручная сборка APK через GitHub Actions
+# Android release APK: безопасная сборка и подпись (SECURITY-ANDROID-001)
 
-Workflow `.github/workflows/android-release.yml`, задание `android-apk`, запускается только вручную: Actions → Android release APK → Run workflow, ветка `main`. Собирает подписанный APK и прикладывает artifact на 14 дней. Не публикует GitHub Release, `latest.json` и не делает деплой.
+Обновлено: 2026-11-10 (Kimi Code). Workflow: `.github/workflows/android-release.yml`, успешный базовый прогон `42758272938`.
 
-Проверено запуском [42758272938](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42758272938) (коммит `f5728ec`): `apksigner` подтвердил схему v2, package `ru.cosmocrpg.game`, отпечаток SHA-256 совпал с `docs/SECURITY.md`. Схема v3 в этом APK не включена. Это не установка на телефон и не публикация в `/download/`. Предыдущий прогон [42756907822](https://github.com/maillunex-lang/CosmocRPG/actions/runs/42756907822) падал раньше, на удалённом пакете `tools` внутри `setup-android`.
+## Схема хранения секретов
 
-Задание не добавлено в `.github/workflows/ci.yml`: тот workflow запускается на `pull_request`. Подпись живёт отдельно и на запросы слияния не подписана.
-
-## Версии
-
-Берутся из репозитория, не из общих рекомендаций документации Godot:
-
-- Godot и экспортные шаблоны: `4.7.2-stable` (`client/android/.build_version` = `4.7.2.stable`)
-- Java: 17 (`JavaVersion.VERSION_17` в `client/android/build/config.gradle`)
-- Android Gradle Plugin: `8.6.1`
-- Gradle wrapper: `8.11.1`
-- compileSdk / targetSdk: `36`, minSdk: `24`
-- Build-Tools: `36.1.0`
-- NDK: `29.0.14206865`
-- Package: `ru.cosmocrpg.game`, preset `Android`, Gradle build включён
-
-## Ключи
-
-Использовать только существующий `~/keys/cosmoc/release.keystore` и соответствующий `release.env` на VPS. Не генерировать замену. Не путать с manifest_private.pem: это отдельный ключ подписи обновлений, он этой сборке не нужен.
-
-GitHub → репозиторий → Settings → Secrets and variables → Actions → Secrets → New repository secret:
-
-- `ANDROID_KEYSTORE_BASE64`: содержимое `base64 -w0 ~/keys/cosmoc/release.keystore`, выполненного локально на доверенном VPS/компьютере. Base64 не шифрование; не отправлять в чат и не коммитить.
-- `ANDROID_KEY_ALIAS`: существующий alias `cosmoc-release` (проверить по release.env).
-- `ANDROID_KEYSTORE_PASSWORD`: существующий пароль keystore из release.env. Gradle проекта использует один пароль хранилища и ключа; если они разные — остановиться и отдельно настроить сборку.
-
-На вкладке Variables можно добавить `ANDROID_CERT_SHA256` — тот же публичный SHA-256, что в `docs/SECURITY.md`. Workflow и без переменной сравнивает отпечаток APK с этим файлом.
-
-Если установлен gh CLI на доверенной машине, файл можно загрузить без копирования в чат:
-
-```bash
-base64 -w0 ~/keys/cosmoc/release.keystore | gh secret set ANDROID_KEYSTORE_BASE64 --repo maillunex-lang/CosmocRPG
+```
+~/keys/cosmoc/release.keystore + release.env (VPS, права 600/700, вне Git)
+        │  (источник истины, бэкап у владельца вне VPS — обязателен)
+        ▼
+GitHub Environment «android-signing» (Environment Secrets)
+  ├─ ANDROID_KEYSTORE_BASE64   (PKCS12, base64)
+  ├─ ANDROID_KEY_ALIAS         (cosmoc-release)
+  └─ ANDROID_KEYSTORE_PASSWORD
+        │  доступ: только ветка main + обязательное подтверждение владельцем
+        ▼
+workflow «Android release APK» (только workflow_dispatch из main)
 ```
 
-Пароль вводить через интерфейс GitHub или интерактивный `gh secret set`, не записывать в командную строку/историю. Перед загрузкой сохранить резервную копию ключа и паролей вне VPS.
+Repository Secrets с теми же именами пока дублируют значения — **удалить после подтверждения владельца**
+(пока они на уровне репозитория, любой workflow может к ним обратиться).
 
-Секреты репозитория GitHub не отдаёт workflow из форка. Этот файл не запускается на `pull_request` / `pull_request_target` и дополнительно требует `refs/heads/main`. Это не закрывает другой случай: участник с правом push может изменить workflow в запросе на слияние из ветки того же репозитория, и такой прогон получит секреты репозитория. Чтобы закрыть и его, секреты нужно перенести в Environment с разрешённой веткой только `main`.
+## Порядок запуска сборки
 
-## Где лежит APK
+1. Вкладка Actions → «Android release APK» → «Run workflow» → ветка `main` → Run.
+2. GitHub покажет статус `waiting`: job стоит на подтверждении окружения.
+3. Владелец открывает запуск → кнопка **«Approve and deploy»** (раздел Review pending deployments).
+4. Сборка: Godot 4.7.2 → Gradle → apksigner (проверки package ID `ru.cosmocrpg.game`,
+   подписи v2/v3, отпечатка SHA-256) → артефакты (APK + cert-sha256.txt + SHA256SUMS + отчёты).
+5. Публикации APK автоматически НЕТ: артефакт скачивается вручную; публикация в `/download/`
+   выполняется с VPS через `tools/publish_release.sh`.
 
-После зелёного прогона: вкладка запуска → Artifacts → `zvezdnye-rubezhi-release-apk`. Рядом `cert-sha256.txt`, `SHA256SUMS`, вывод `apksigner` и `aapt`. Хранится 14 дней. Это не страница загрузки игры.
+## Восстановление после ошибки
 
-Совместимость с уже установленной копией: SHA-256 сертификата в `cert-sha256.txt` должен совпасть с `docs/SECURITY.md` (`D1:26:00:89:…:24:9F`). Android принимает обновление только с тем же ключом и не меньшим `versionCode`. Текущие исходники остаются `0.3.12` / code `15`, как у уже опубликованного APK: поверх него эта сборка не встанет, пока version code не увеличат отдельно. Подпись при этом можно сверить.
+- «не задан секрет …» — проверить `gh secret list --env android-signing -R maillunex-lang/CosmocRPG`.
+- Падение экспорта — смотреть лог шага «Экспорт»; временный keystore удаляется всегда (`if: always`).
+- «расшифрованный файл не похож на Java keystore» — секрет BASE64 повреждён: перезалить из
+  `base64 -w0 ~/keys/cosmoc/release.keystore`.
+- Подпись не совпала — сверить `cert-sha256.txt` с отпечатком в `docs/SECURITY.md`.
 
-## До публикации
+## Резервное хранение keystore (критично)
 
-Версия в исходниках сейчас 0.3.12/code15 совпадает с опубликованной. Workflow собирает кандидат этой версии; для обновления перед выпуском согласованно повысить версии в project.godot/export_presets.cfg после сверки свежего latest.json и main. Проверить updater_test, сертификат, размер, установку поверх существующего APK. Подписанный artifact сам по себе не опубликованное обновление. Для публикации нужен отдельный VPS-доступ и прежний ключ подписи манифеста: `tools/publish_release.sh` сам сверяет сертификат и versionCode и не примет повтор code 15. GitHub Releases источником обновления для игры не используются.
+Потеря keystore или пароля = невозможность обновлять установленные копии. Обязательно:
+1. Копия `release.keystore` и `release.env` в менеджере паролей владельца и/или офлайн-носителе (вне VPS).
+2. Проверка восстановления: раз в квартал собрать APK из копии и сверить отпечаток сертификата.
+3. Секреты GitHub — не резервная копия: это рабочая копия для CI.
+
+## Правила доступа к релизной подписи
+
+- Keystore никогда не попадает в Git, логи, чаты и артефакты (workflow проверяет сигнатуру JKS/PKCS12
+  и не печатает содержимое).
+- Сборку запускает только владелец (workflow_dispatch + required reviewers).
+- Доступ к Environment имеет только владелец (`maillunex-lang`).
+- Локальная сборка на VPS — по `docs/SECURITY.md` (переменные из `release.env`, без вывода значений).
+
+## Безопасная смена GitHub-токена
+
+Токен используется `gh` на VPS (~/.config/gh). Смена: создать новый PAT (scopes: `repo`, `workflow`)
+→ `gh auth login` → `gh auth status` проверить → старый токен отозвать на github.com/settings/tokens.
+Токен не вводить в командную строку в виде аргументов (история shell); использовать интерактивный ввод.
+
+## Проверка сертификата APK
+
+```bash
+APKSIGNER=~/Android/Sdk/build-tools/35.0.1/apksigner
+$APKSIGNER verify --print-certs файл.apk | grep SHA-256
+# ожидается отпечаток из docs/SECURITY.md (D1:26:00:89:…:9F)
+aapt2 dump badging файл.apk | head -1   # package: name='ru.cosmocrpg.game'
+```
+
+## Защита ветки main (ruleset «защита-main»)
+
+Запрещены force-push и удаление main (админы могут обходить — владелец не блокируется).
+Обязательные status checks и обязательные ревью PR **не включены** (меняют процесс разработки):
+включаются только по решению владельца.

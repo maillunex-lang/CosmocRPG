@@ -64,7 +64,7 @@ func (w *World) PurchaseResource(id, key, resource string, amount float64, commi
 	if !isFinitePurchase(amount) || amount <= 0 || amount > 1000 {
 		return fail(economy.ErrInvalid)
 	}
-	if amount > p.spec.Cargo-holdUsed(p.hold)+1e-8 {
+	if amount > p.spec.Cargo-holdUsed(p.hold)+1e-8 || amount > cargoRoom(p, resource)+1e-8 {
 		return fail(ErrHoldFull)
 	}
 	request := economy.Request{Player: id, Key: key, Resource: resource, Amount: amount, UnitPrice: math.Max(resourceCfg.Price*1.5, 1), Capacity: p.spec.Cargo, Before: economy.Cargo{Hold: copyHold(p.hold), Revision: p.cargoRevision}}

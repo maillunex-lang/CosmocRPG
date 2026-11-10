@@ -333,7 +333,7 @@ func TestAutoRetaliateKeepsCurrentLiveTarget(t *testing.T) {
 
 func TestStationServicesRepairAndCargo(t *testing.T) {
 	w, lay := livingWorld(t)
-	p, _ := w.Join(Record{ID: "svc", Name: "S", Created: true, Pos: Vec{X: lay.Hub[0], Y: lay.Hub[1]}})
+	p, _ := w.Join(Record{ID: "svc", Name: "S", Created: true, ShipType: "TMP-HAUL", Pos: Vec{X: lay.Hub[0], Y: lay.Hub[1]}})
 	if err := w.AddCargo(p.ID, "iron_ore", 5); err != nil {
 		t.Fatalf("покупка: %v", err)
 	}

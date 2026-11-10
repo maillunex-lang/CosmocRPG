@@ -535,7 +535,15 @@ func _apply_cargo(state: Dictionary, target: Dictionary, ship: Dictionary) -> vo
 	var cap := float(ship.get("cargo", 0.0))
 	var used := float(ship.get("cargo_used", 0.0))
 	_cargo_row.visible = cap > 0.0 and state.get("mode", "") == "server"
-	_cargo_label.text = "Груз %d/%d" % [int(round(used)), int(round(cap))]
+	var bay_text := ""
+	var bays: Array = ship.get("bays", [])
+	if bays.size() > 0:
+		var bits: PackedStringArray = []
+		for bay in bays:
+			if bay is Dictionary and float(bay.get("cap", 0.0)) > 0.0:
+				bits.append("%s %d/%d" % [str(bay.get("name", "")), int(round(float(bay.get("used", 0.0)))), int(round(float(bay.get("cap", 0.0))))])
+		bay_text = " · ".join(bits)
+	_cargo_label.text = bay_text if bay_text != "" else "Груз %d/%d" % [int(round(used)), int(round(cap))]
 	_cargo_label.add_theme_color_override("font_color", Tokens.DANGER if cap > 0.0 and used >= cap - 0.01 else Tokens.TEXT)
 	var can_mine := bool(ship.get("can_mine", false))
 	_mine_button.visible = can_mine

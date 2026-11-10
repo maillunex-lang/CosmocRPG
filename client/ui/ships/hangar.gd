@@ -285,6 +285,13 @@ func _refresh() -> void:
 	if _data.has("hull_max"):
 		_stats.text = (("Уровень корабля %d" % int(_data["level"]) + (" из %d" % _max_level if _max_level > 0 else "") + "\n") if _data.has("level") else "") + "Корпус %d · щит %d · броня %d\nЭнергия %d · груз %d\nХарактеристики определяет сервер, значения балансируются." % [
 			int(_data.get("hull_max", 0)), int(_data.get("shield_max", 0)), int(_data.get("armor", 0)), int(_data.get("energy_max", 0)), int(_data.get("cargo", 0))]
+		var bays: Array = _data.get("bays", [])
+		if bays.size() > 0:
+			var bits: PackedStringArray = []
+			for bay in bays:
+				if bay is Dictionary:
+					bits.append("%s %d/%d" % [str(bay.get("name", "")), int(round(float(bay.get("used", 0.0)))), int(round(float(bay.get("cap", 0.0))))])
+			_stats.text += "\nОтсеки ресурсов: " + " · ".join(bits) + "\nМодули в эти отсеки не кладутся: их ставят в слоты корабля."
 	else:
 		_stats.text = "Характеристики недоступны: сервер их не прислал."
 	_module_info.text = ""

@@ -203,6 +203,7 @@ func (w *World) onNPCKilled(p *Player, n *npc) {
 	w.rewards = append(w.rewards, Reward{Player: p.ID, Key: fmt.Sprintf("kill:%s:%d:%d", n.ID, n.kills, time.Now().UnixNano()),
 		Kind: "kill", Ref: n.ID, Credits: int64(n.ai.cfg.Reward)})
 	w.emit(Event{Type: "loot", From: n.ID, To: p.ID, Amount: n.ai.cfg.Reward})
+	w.spawnWreck(n)
 	n.ai.target = ""
 }
 
@@ -242,6 +243,7 @@ func (w *World) stepLiving(dt float64) {
 		w.stepDiscovery(p)
 		w.stepStations(p)
 	}
+	w.collectWrecks()
 }
 
 func moveToward(from, to Vec, step float64) Vec {
@@ -343,7 +345,7 @@ func (w *World) StartMining(id, depID string) error {
 	if d.Amount < 1 {
 		return ErrEmpty
 	}
-	if holdUsed(p.hold) >= p.spec.Cargo {
+	if holdUsed(p.hold) >= p.spec.Cargo || cargoRoom(p, d.Resource) < 0.05 {
 		return ErrFull
 	}
 	p.mining, p.mineAt, p.mineSince = depID, w.t+cfg.Period, w.t
@@ -377,7 +379,7 @@ func (w *World) stepMining(p *Player) {
 		return
 	}
 	p.mineAt = w.t + cfg.Period
-	free := p.spec.Cargo - holdUsed(p.hold)
+	free := cargoRoom(p, d.Resource)
 	amt := math.Min(math.Min(cfg.Damage, d.Amount), free)
 	if amt > 0 {
 		d.Amount -= amt
@@ -623,7 +625,7 @@ func (w *World) AddCargo(id, res string, amt float64) error {
 	if _, ok := w.wcfg.Resources[res]; !ok {
 		return ErrNoResource
 	}
-	free := p.spec.Cargo - holdUsed(p.hold)
+	free := cargoRoom(p, res)
 	if amt > free+0.001 {
 		return ErrHoldFull
 	}

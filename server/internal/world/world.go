@@ -195,6 +195,7 @@ type Ship struct {
 
 	Hold      map[string]float64 `json:"hold"`
 	CargoUsed float64            `json:"cargo_used"`
+	Bays      []CargoBay         `json:"bays,omitempty"`
 	Mining    string             `json:"mining,omitempty"`
 	CanMine   bool               `json:"can_mine"`
 	MineRange float64            `json:"mine_range,omitempty"`
@@ -236,6 +237,7 @@ type World struct {
 
 	// живые локации
 	deposits    []*deposit
+	wrecks      []*wreck
 	safe        []safeZone
 	rewards     []Reward
 	ais         []*aiShip          // ИИ-капитаны (R-42): не игроки, не сохраняются, не влияют на экономику
@@ -636,7 +638,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
 			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
-			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Modules: me.moduleList(), Equipment: w.equipmentStatus(me), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Mining: me.mining, Cosmetics: me.cosmetics,
+			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Modules: me.moduleList(), Equipment: w.equipmentStatus(me), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Bays: me.cargoBays(), Mining: me.mining, Cosmetics: me.cosmetics,
 			CanMine: me.spec.Abilities["mine"].Range > 0, MineRange: me.spec.Abilities["mine"].Range, InSafe: w.inSafe(me.Pos)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,
@@ -659,6 +661,7 @@ func (w *World) Snapshot(id string) (State, bool) {
 		st.Objects = append(st.Objects, o)
 	}
 	st.Objects = append(st.Objects, w.depositObjects()...)
+	st.Objects = append(st.Objects, w.wreckObjects()...)
 	ids := make([]string, 0, len(w.players))
 	for pid := range w.players {
 		if pid != id {

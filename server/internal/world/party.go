@@ -71,6 +71,7 @@ type partyMember struct {
 	pending          bool
 	ready            bool
 	followOff        bool
+	summon           bool // автоподбор: можно прыгнуть из любой точки системы
 	ship, skin       string
 	profession       string
 	behavior         string
@@ -197,8 +198,25 @@ func (r *Router) PartyArm(id, kind string) error {
 	if _, ok := corridorOps[kind]; !ok {
 		return ErrPartyPick
 	}
+	w := r.byPlayer[id]
 	p := r.parties[r.byMember[id]]
-	if p == nil || p.leader != id {
+	if p == nil {
+		if w == nil {
+			return ErrNoPlayer
+		}
+		if w.IsDead(id) {
+			return ErrDead
+		}
+		me, ok := w.Actor(id)
+		if !ok {
+			return ErrNoPlayer
+		}
+		p = &party{id: newPartyID("pty-"), leader: id}
+		p.members = []*partyMember{{id: id, name: me.name, ai: me.ai}}
+		r.parties[p.id] = p
+		r.byMember[id] = p.id
+	}
+	if p.leader != id {
 		return ErrPartyLeader
 	}
 	if p.inst != "" {
@@ -212,6 +230,73 @@ func (r *Router) PartyArm(id, kind string) error {
 	p.op = kind
 	for _, m := range p.members {
 		m.ready = m.ai || m.wing
+	}
+	return nil
+}
+
+// PartyFill добирает ИИ-пилотов этой системы в отряд. Они согласны сразу и прыгают откуда угодно.
+func (r *Router) PartyFill(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ensureParty()
+	w := r.byPlayer[id]
+	if w == nil {
+		return ErrNoPlayer
+	}
+	if w.IsDead(id) {
+		return ErrDead
+	}
+	p := r.parties[r.byMember[id]]
+	if p == nil {
+		me, ok := w.Actor(id)
+		if !ok {
+			return ErrNoPlayer
+		}
+		p = &party{id: newPartyID("pty-"), leader: id, op: "credits"}
+		p.members = []*partyMember{{id: id, name: me.name, ai: me.ai}}
+		r.parties[p.id] = p
+		r.byMember[id] = p.id
+	}
+	if p.leader != id {
+		return ErrPartyLeader
+	}
+	if p.inst != "" {
+		return ErrPartyBusy
+	}
+	lpos, lok := w.ActorPos(id)
+	if !lok {
+		return ErrNoPlayer
+	}
+	type spot struct {
+		card AICard
+		d    float64
+	}
+	var spots []spot
+	for _, c := range w.AICards() {
+		if c.ID == "" || r.byMember[c.ID] != "" {
+			continue
+		}
+		spots = append(spots, spot{c, dist(lpos, c.Pos)})
+	}
+	sort.Slice(spots, func(i, j int) bool {
+		if spots[i].d == spots[j].d {
+			return spots[i].card.ID < spots[j].card.ID
+		}
+		return spots[i].d < spots[j].d
+	})
+	added := 0
+	for _, s := range spots {
+		if len(p.members) >= partyMax {
+			break
+		}
+		c := s.card
+		m := &partyMember{id: c.ID, shipID: c.ID, name: c.Name, ai: true, wing: true, ready: true, summon: true, ship: c.Ship, skin: c.Skin, profession: c.Profession, behavior: c.Behavior, seed: c.Seed}
+		p.members = append(p.members, m)
+		r.byMember[c.ID] = p.id
+		added++
+	}
+	if added == 0 && len(p.members) < 2 {
+		return ErrPartyNobody
 	}
 	return nil
 }
@@ -313,12 +398,16 @@ func (r *Router) beginCorridorLocked(p *party, leaderID string) error {
 		if !ok {
 			return ErrPartyNobody
 		}
+		if m.summon || m.wing || m.ai {
+			continue
+		}
 		if dist(lpos, pos) > partyStart {
 			return ErrPartyFar
 		}
 	}
 	instID := newPartyID("inst-")
 	inst := newCorridor(instID, p.op)
+	scaleCorridor(inst, ready)
 	r.worlds[instID] = inst
 	r.order = append(r.order, instID)
 	p.inst = instID
@@ -670,7 +759,7 @@ func (r *Router) liftWingLocked(p *party, m *partyMember, inst *World, spawn Vec
 		return ErrPartyNobody
 	}
 	leader := r.byPlayer[p.leader]
-	if leader != nil {
+	if leader != nil && !m.summon {
 		if lp, ok := leader.ActorPos(p.leader); ok && dist(lp, pos) > partyStart {
 			return ErrPartyFar
 		}
@@ -938,6 +1027,28 @@ func newCorridor(id, kind string) *World {
 		w.npcs = append(w.npcs, n)
 	}
 	return w
+}
+
+// scaleCorridor делает охрану живучее с каждым лишним пилотом. Вдвоём уже заметно толще, вчетвером — больше чем вдвое.
+func scaleCorridor(w *World, members int) {
+	if w == nil {
+		return
+	}
+	if members < 1 {
+		members = 1
+	}
+	hull := 1 + 0.55*float64(members-1)
+	dmg := 1 + 0.12*float64(members-1)
+	for _, n := range w.npcs {
+		if n.Kind != "hostile" {
+			continue
+		}
+		n.Hull *= hull
+		n.HullMax *= hull
+		if n.ai != nil {
+			n.ai.cfg.Damage *= dmg
+		}
+	}
 }
 
 func (w *World) advanceLane() {

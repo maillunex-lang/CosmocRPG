@@ -122,6 +122,24 @@ func (w *World) SpawnAI(s AISpawn) bool {
 	return true
 }
 
+// AICard — пилот системы, которого можно взять в отряд.
+type AICard struct {
+	ID, Name, Ship, Skin, Profession, Behavior string
+	Seed                                       uint32
+	Pos                                        Vec
+}
+
+// AICards — все ИИ-пилоты мира, ближайшие к началу списка не обещаны.
+func (w *World) AICards() []AICard {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	out := make([]AICard, 0, len(w.ais))
+	for _, a := range w.ais {
+		out = append(out, AICard{ID: a.ID, Name: a.Name, Ship: a.ShipType, Skin: a.Skin, Profession: a.Profession, Behavior: a.Behavior, Seed: a.rng, Pos: a.Pos})
+	}
+	return out
+}
+
 // DespawnAI убирает ИИ-капитана. false: такого нет.
 func (w *World) DespawnAI(id string) bool {
 	w.mu.Lock()

@@ -169,7 +169,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "friend_add", "friend_remove", "friend_list":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "party_fill", "friend_add", "friend_remove", "friend_list":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -335,7 +335,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.pilotMsg(ctx, c, ss, m)
 	case "talk":
 		h.talkMsg(ctx, c, ss, m)
-	case "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow":
+	case "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "party_fill":
 		h.partyMsg(ctx, c, ss, m)
 	case "friend_add", "friend_remove", "friend_list":
 		h.friendMsg(ctx, c, ss, m)

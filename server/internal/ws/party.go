@@ -38,6 +38,8 @@ func (h *Handler) partyMsg(ctx context.Context, c *websocket.Conn, ss *session, 
 		err = h.opts.World.PartyArm(ss.pid, body.Kind)
 	case "party_ready":
 		err = h.opts.World.PartyReady(ss.pid)
+	case "party_fill":
+		err = h.opts.World.PartyFill(ss.pid)
 	case "party_follow":
 		var follow struct {
 			On bool `json:"on"`

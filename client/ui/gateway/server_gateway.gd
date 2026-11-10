@@ -602,6 +602,11 @@ func party_ready() -> void:
 		_client.send_message("party_ready", {})
 
 
+func party_fill() -> void:
+	if _joined:
+		_client.send_message("party_fill", {})
+
+
 func party_follow(on: bool) -> void:
 	if _joined:
 		_client.send_message("party_follow", {"on": on})

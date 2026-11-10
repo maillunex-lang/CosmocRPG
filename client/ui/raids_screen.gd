@@ -1,5 +1,5 @@
 extends Control
-## Коридоры Рубежа: три закрытых вылета. Отряд прыгает только после согласия каждого.
+## Вылеты: карточка подземелья, автоподбор ИИ и согласие на прыжок.
 
 const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
@@ -7,16 +7,47 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 signal closed
 
 const OPS := [
-	{"id": "credits", "title": "Казна", "about": "Три зала. В конце — кредиты.", "pay": "Награда: кредиты", "color": Tokens.RARE},
-	{"id": "gear", "title": "Арсенал", "about": "Три зала. В конце — обшивка «Сталь».", "pay": "Награда: обшивка", "color": Tokens.ACCENT},
-	{"id": "loot", "title": "Трюм", "about": "Три зала. В конце — руда и кристаллы.", "pay": "Награда: руда и кристаллы", "color": Tokens.SUCCESS},
+	{
+		"id": "credits", "title": "Казна", "mark": "К",
+		"level": "отряд 2–4",
+		"about": "Служебный ствол за станцией «Рубеж». Казначейство водило здесь конвои и бросило сейф в последнем зале.",
+		"mech": "Три зала подряд. Дверь вперёд открывается, только когда зал зачищен. Назад отступить можно. Чем больше отряд, тем толще охрана.",
+		"enemies": "Дозорный зала\nСтраж створа\nХранитель награды",
+		"rewards": [{"name": "Кредиты", "n": "500", "color": Tokens.RARE}],
+		"color": Tokens.RARE,
+	},
+	{
+		"id": "gear", "title": "Арсенал", "mark": "А",
+		"level": "отряд 2–4",
+		"about": "Закрытый отсек, где осталась корабельная обшивка. Смотритель не отдаёт её без боя.",
+		"mech": "Тот же коридор из трёх залов. Обшивку «Сталь» можно надеть на корабль сразу после выхода.",
+		"enemies": "Дозорный зала\nСтраж створа\nСмотритель арсенала",
+		"rewards": [{"name": "Сталь", "n": "1", "color": Tokens.ACCENT}, {"name": "Кредиты", "n": "100", "color": Tokens.RARE}],
+		"color": Tokens.ACCENT,
+	},
+	{
+		"id": "loot", "title": "Трюм", "mark": "Т",
+		"level": "отряд 2–4",
+		"about": "Брошенный грузовой ствол. Мародёры уже режут контейнеры, но руда и кристаллы ещё на месте.",
+		"mech": "Три зала. Награда падает в трюм корабля. Если трюм полон, лишнее не помещается.",
+		"enemies": "Дозорный зала\nГрузчик-мародёр\nХранитель награды",
+		"rewards": [{"name": "Руда", "n": "8", "color": Tokens.SUCCESS}, {"name": "Кристаллы", "n": "4", "color": Tokens.ACCENT_2}, {"name": "Кредиты", "n": "100", "color": Tokens.RARE}],
+		"color": Tokens.SUCCESS,
+	},
 ]
 
 var gateway: Node
+var _pick := "credits"
 var _status: Label
 var _squad: Label
-var _cards: Dictionary = {}
-var _agree: Button
+var _title: Label
+var _level: Label
+var _about: Label
+var _mech: Label
+var _enemies: Label
+var _rewards: HBoxContainer
+var _diff: HBoxContainer
+var _pins: Dictionary = {}
 
 
 func bind(gw: Node) -> void:
@@ -30,44 +61,110 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var bg := ColorRect.new()
-	bg.color = Color(Tokens.BG, 0.96)
+	bg.color = Color("#070d14")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 12)
+	add_child(margin)
+	var root := VBoxContainer.new()
+	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_theme_constant_override("separation", 10)
+	margin.add_child(root)
+	root.add_child(_header())
+	var body := HBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 12)
+	root.add_child(body)
+	body.add_child(_rail())
+	body.add_child(_sheet())
+	_show(_pick)
+
+
+func _header() -> Control:
+	var bar := PanelContainer.new()
+	bar.add_theme_stylebox_override("panel", _box(Color(Tokens.SURFACE, 0.94), Tokens.RARE))
+	var row := HBoxContainer.new()
+	bar.add_child(row)
+	var title := Label.new()
+	title.text = "Вылеты"
+	title.theme_type_variation = &"TitleLabel"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(title)
+	var close := ActionButton.new()
+	close.text = "Закрыть"
+	close.custom_minimum_size = Vector2(140, 56)
+	close.pressed.connect(func() -> void: closed.emit())
+	row.add_child(close)
+	return bar
+
+
+func _rail() -> Control:
+	var col := VBoxContainer.new()
+	col.custom_minimum_size = Vector2(196, 0)
+	col.add_theme_constant_override("separation", 10)
+	for op in OPS:
+		col.add_child(_pin(op))
+	return col
+
+
+func _pin(op: Dictionary) -> Button:
+	var b := Button.new()
+	b.text = "%s\n%s" % [op["mark"], op["title"]]
+	b.custom_minimum_size = Vector2(180, 92)
+	b.add_theme_font_size_override("font_size", Tokens.FONT_BODY)
+	var id := str(op["id"])
+	_pins[id] = b
+	b.pressed.connect(func() -> void:
+		_pick = id
+		_show(id)
+		_arm(id)
+	)
+	return b
+
+
+func _sheet() -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(720, 0)
-	center.add_child(panel)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _box(Color("#101820"), Color(Tokens.RARE, 0.85)))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(680, 640)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.add_child(scroll)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	box.custom_minimum_size = Vector2(660, 0)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.custom_minimum_size = Vector2(420, 0)
+	box.add_theme_constant_override("separation", 8)
 	scroll.add_child(box)
-	var title := Label.new()
-	title.text = "Коридоры Рубежа"
-	title.theme_type_variation = &"TitleLabel"
-	box.add_child(title)
-	var about := Label.new()
-	about.text = "Закрытый вылет отряда. Три зала подряд: дверь открывается, когда зал зачищен. Прыжок — после согласия каждого."
-	about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	about.theme_type_variation = &"MutedLabel"
-	box.add_child(about)
-	var halls := HBoxContainer.new()
-	halls.add_theme_constant_override("separation", 8)
-	for i in 3:
-		var hall := Label.new()
-		hall.text = "Зал %d" % (i + 1)
-		hall.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
-		hall.add_theme_color_override("font_color", Tokens.ACCENT)
-		halls.add_child(hall)
-	box.add_child(halls)
-	for op in OPS:
-		box.add_child(_card(op))
+	_title = Label.new()
+	_title.add_theme_font_size_override("font_size", Tokens.FONT_TITLE)
+	box.add_child(_title)
+	_level = Label.new()
+	_level.theme_type_variation = &"MutedLabel"
+	box.add_child(_level)
+	_about = Label.new()
+	_about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_about)
+	box.add_child(_caption("Механика"))
+	_mech = Label.new()
+	_mech.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_mech.theme_type_variation = &"MutedLabel"
+	box.add_child(_mech)
+	box.add_child(_caption("Враги"))
+	_enemies = Label.new()
+	box.add_child(_enemies)
+	box.add_child(_caption("Награда"))
+	_rewards = HBoxContainer.new()
+	_rewards.add_theme_constant_override("separation", 8)
+	box.add_child(_rewards)
+	box.add_child(_caption("Живучесть охраны"))
+	_diff = HBoxContainer.new()
+	_diff.add_theme_constant_override("separation", 8)
+	box.add_child(_diff)
 	_squad = Label.new()
 	_squad.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_squad)
@@ -77,95 +174,71 @@ func _ready() -> void:
 	box.add_child(_status)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var invite := ActionButton.new()
-	invite.text = "Позвать цель"
-	invite.custom_minimum_size = Vector2(0, 56)
-	invite.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	invite.pressed.connect(_invite)
-	row.add_child(invite)
-	_agree = ActionButton.new()
-	_agree.text = "Дать согласие"
-	_agree.variant = ActionButton.Variant.PRIMARY
-	_agree.custom_minimum_size = Vector2(0, 56)
-	_agree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_agree.pressed.connect(_ready_vote)
-	row.add_child(_agree)
+	var fill := ActionButton.new()
+	fill.text = "Автоподбор"
+	fill.custom_minimum_size = Vector2(0, 56)
+	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fill.pressed.connect(func() -> void: _call("party_fill"))
+	row.add_child(fill)
+	var go := ActionButton.new()
+	go.text = "Войти"
+	go.variant = ActionButton.Variant.PRIMARY
+	go.custom_minimum_size = Vector2(0, 56)
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	go.pressed.connect(_ready_vote)
+	row.add_child(go)
 	box.add_child(row)
 	var leave := ActionButton.new()
 	leave.text = "Покинуть отряд"
 	leave.custom_minimum_size = Vector2(0, 52)
 	leave.pressed.connect(func() -> void: _call("party_leave"))
 	box.add_child(leave)
-	var close := ActionButton.new()
-	close.text = "Закрыть"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.pressed.connect(func() -> void: closed.emit())
-	box.add_child(close)
-
-
-func _card(op: Dictionary) -> Control:
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(0, 116)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	panel.add_child(row)
-	var stripe := ColorRect.new()
-	stripe.custom_minimum_size = Vector2(8, 0)
-	stripe.color = op["color"]
-	stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(stripe)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 2)
-	row.add_child(col)
-	var name := Label.new()
-	name.text = str(op["title"])
-	name.add_theme_font_size_override("font_size", Tokens.FONT_H2)
-	col.add_child(name)
-	var about := Label.new()
-	about.text = str(op["about"])
-	about.theme_type_variation = &"MutedLabel"
-	about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(about)
-	var pay := Label.new()
-	pay.text = str(op["pay"])
-	pay.add_theme_color_override("font_color", op["color"])
-	col.add_child(pay)
-	var pick := ActionButton.new()
-	pick.text = "Выбрать"
-	pick.custom_minimum_size = Vector2(148, 56)
-	var id := str(op["id"])
-	_cards[id] = pick
-	pick.pressed.connect(func() -> void: _arm(id))
-	row.add_child(pick)
 	return panel
 
 
-func _arm(id: String) -> void:
-	_call("party_arm", id)
-
-
-func _invite() -> void:
-	var st: Dictionary = gateway.snapshot() if gateway != null else {}
-	var target := str(st.get("target_id", ""))
-	if target == "":
-		_status.text = "Сначала выберите пилота или капитана рядом."
+func _show(id: String) -> void:
+	var op := OPS[0]
+	for item in OPS:
+		if str(item["id"]) == id:
+			op = item
+	if _title == null:
 		return
-	_call("party_invite", target)
+	_title.text = str(op["title"])
+	_title.add_theme_color_override("font_color", op["color"])
+	_level.text = "Рекомендуется: %s. Прыжок после вашего согласия. ИИ соглашаются сами." % str(op["level"])
+	_about.text = str(op["about"])
+	_mech.text = str(op["mech"])
+	_enemies.text = str(op["enemies"])
+	_paint_rewards(op["rewards"])
+	for pin_id in _pins:
+		var b := _pins[pin_id] as Button
+		var on: bool = pin_id == id
+		var tint: Color = Tokens.TEXT_MUTED
+		for item in OPS:
+			if str(item["id"]) == pin_id:
+				tint = item["color"]
+		var fill := Color(tint, 0.38 if on else 0.16)
+		var box := _box(fill, tint if on else Color(Tokens.TEXT_MUTED, 0.6))
+		b.add_theme_stylebox_override("normal", box)
+		b.add_theme_stylebox_override("hover", box)
+		b.add_theme_stylebox_override("pressed", box)
+		b.add_theme_color_override("font_color", Tokens.TEXT)
 
 
-func _ready_vote() -> void:
-	_call("party_ready")
-
-
-func _call(method: String, arg: String = "") -> void:
-	if gateway == null or not gateway.has_method(method):
-		_status.text = "Коридоры доступны в игре на сервере."
+func _paint_rewards(items: Array) -> void:
+	if _rewards == null:
 		return
-	if arg == "":
-		gateway.call(method)
-	else:
-		gateway.call(method, arg)
+	_clear(_rewards)
+	for raw in items:
+		if raw is Dictionary:
+			var chip := PanelContainer.new()
+			chip.add_theme_stylebox_override("panel", _box(Color(raw["color"], 0.22), raw["color"]))
+			var text := Label.new()
+			text.text = "%s\n%s" % [raw["n"], raw["name"]]
+			text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			chip.add_child(text)
+			chip.custom_minimum_size = Vector2(108, 64)
+			_rewards.add_child(chip)
 
 
 func _on_state(state: Dictionary) -> void:
@@ -176,30 +249,104 @@ func _on_state(state: Dictionary) -> void:
 		closed.emit()
 		return
 	var op := str(party.get("op", ""))
-	for id in _cards:
-		var b := _cards[id] as ActionButton
-		var on: bool = id == op
-		b.variant = ActionButton.Variant.PRIMARY if on else ActionButton.Variant.SECONDARY
-	var lines := "Отряд ещё не собран. Позовите цель рядом, затем выберите коридор."
+	if op != "" and op != _pick:
+		_pick = op
+		_show(op)
 	var members: Array = party.get("members", []) if party.get("members") is Array else []
+	var lines := "Отряд ещё не собран. Выберите вылет и нажмите «Автоподбор»."
 	if members.size() > 0:
-		lines = "Отряд"
+		lines = "Отряд · %d" % members.size()
 		for m in members:
 			if m is Dictionary:
 				var nm := str(m.get("name", "пилот"))
 				if bool(m.get("leader", false)):
 					nm += " · ведущий"
+				if bool(m.get("ai", false)):
+					nm += " · ИИ"
 				if bool(m.get("pending", false)):
 					nm += " · ждёт ответ"
 				elif bool(m.get("ready", false)):
 					nm += " · согласен"
 				lines += "\n" + nm
 	_squad.text = lines
+	_paint_diff(members.size())
 	var goal := str(party.get("goal", ""))
 	if goal != "":
 		_status.text = goal
-	elif _status.text == "":
-		_status.text = "Выберите казну, арсенал или трюм. Прыжок начнётся сам, когда согласны все."
-	if _agree != null:
-		_agree.disabled = bool(party.get("you_ready", false)) or bool(party.get("instance", false))
-		_agree.text = "Согласие принято" if bool(party.get("you_ready", false)) else "Дать согласие"
+	elif members.size() >= 2:
+		_status.text = "ИИ уже согласны. «Войти» — ваше согласие, и отряд прыгает."
+	else:
+		_status.text = "Одному в коридор нельзя. Автоподбор позовёт пилотов этой системы."
+
+
+func _paint_diff(size: int) -> void:
+	if _diff == null:
+		return
+	_clear(_diff)
+	var tiers := [
+		{"name": "Обычный", "at": 2, "mul": "×1.6"},
+		{"name": "Трудный", "at": 3, "mul": "×2.1"},
+		{"name": "Тяжёлый", "at": 4, "mul": "×2.7"},
+	]
+	var hot := 2
+	if size >= 4:
+		hot = 4
+	elif size == 3:
+		hot = 3
+	for tier in tiers:
+		var on: bool = int(tier["at"]) == hot and size >= 2
+		var b := Label.new()
+		b.text = "%s\n%s" % [tier["name"], tier["mul"]]
+		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.custom_minimum_size = Vector2(110, 56)
+		b.add_theme_color_override("font_color", Tokens.TEXT if on else Tokens.TEXT_MUTED)
+		var holder := PanelContainer.new()
+		holder.add_theme_stylebox_override("panel", _box(Color(Tokens.ACCENT, 0.35) if on else Color(Tokens.SURFACE_SUNKEN, 0.9), Tokens.ACCENT if on else Tokens.TEXT_MUTED))
+		holder.add_child(b)
+		_diff.add_child(holder)
+
+
+func _arm(id: String) -> void:
+	_call("party_arm", id)
+
+
+func _ready_vote() -> void:
+	_call("party_ready")
+
+
+func _call(method: String, arg: String = "") -> void:
+	if gateway == null or not gateway.has_method(method):
+		if _status != null:
+			_status.text = "Вылеты доступны в игре на сервере."
+		return
+	if arg == "":
+		gateway.call(method)
+	else:
+		gateway.call(method, arg)
+
+
+func _caption(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", Tokens.FONT_BODY)
+	l.add_theme_color_override("font_color", Tokens.RARE)
+	return l
+
+
+func _box(bg: Color, edge: Color) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.border_color = edge
+	s.set_border_width_all(1)
+	s.set_corner_radius_all(14)
+	s.content_margin_left = 10
+	s.content_margin_right = 10
+	s.content_margin_top = 8
+	s.content_margin_bottom = 8
+	return s
+
+
+func _clear(node: Node) -> void:
+	for c in node.get_children():
+		node.remove_child(c)
+		c.free()

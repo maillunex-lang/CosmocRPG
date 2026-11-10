@@ -1,6 +1,7 @@
 package world
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -337,4 +338,50 @@ func TestCorridorConsentAndDoor(t *testing.T) {
 		}
 	}
 	w.mu.Unlock()
+}
+
+func TestPartyFillBringsDistantAIAndThickensGuards(t *testing.T) {
+	r, home := partyHome(t)
+	far := []Vec{{800, 0}, {-700, 40}, {20, 600}}
+	for i, pos := range far {
+		id := "cap-" + string(rune('a'+i))
+		if !home.SpawnAI(AISpawn{ID: id, Name: "Пилот " + id, Behavior: AIPatrol, ShipType: DefaultShip, Seed: uint32(i + 1)}) {
+			t.Fatal("spawn")
+		}
+		home.mu.Lock()
+		home.aiByID[id].Pos = pos
+		home.mu.Unlock()
+	}
+	if _, ok := r.Join(Record{ID: "human", Name: "Пилот", Created: true, Pos: Vec{}, Dir: Vec{X: 1}, ShipType: DefaultShip, PilotSpec: "interceptor"}); !ok {
+		t.Fatal("join")
+	}
+	if err := r.PartyArm("human", "credits"); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.PartyFill("human"); err != nil {
+		t.Fatal(err)
+	}
+	view, ok := r.PartySnapshot("human")
+	if !ok || len(view.Members) != 4 {
+		t.Fatalf("автоподбор: %+v", view.Members)
+	}
+	if err := r.PartyReady("human"); err != nil {
+		t.Fatal(err)
+	}
+	w := r.For("human")
+	if w == nil {
+		t.Fatal("нет коридора")
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	var hull float64
+	for _, n := range w.npcs {
+		if n.ID == "op-1" {
+			hull = n.HullMax
+		}
+	}
+	want := 90 * (1 + 0.55*3)
+	if math.Abs(hull-want) > 0.2 {
+		t.Fatalf("живучесть дозорного %.1f, ожидалось %.1f", hull, want)
+	}
 }

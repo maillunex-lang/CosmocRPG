@@ -116,6 +116,7 @@ func (h *Handler) designPublish(w http.ResponseWriter, r *http.Request, u User) 
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "design_publish", h.clientIP(r), map[string]any{"element": a.ElementID, "version": a.Version, "manifest": v})
+	h.changed("оформление")
 	writeJSON(w, http.StatusOK, map[string]any{"manifest_version": v})
 }
 
@@ -131,6 +132,7 @@ func (h *Handler) designUnpublish(w http.ResponseWriter, r *http.Request, u User
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "design_unpublish", h.clientIP(r), map[string]any{"element": id, "manifest": v})
+	h.changed("оформление")
 	writeJSON(w, http.StatusOK, map[string]any{"manifest_version": v})
 }
 

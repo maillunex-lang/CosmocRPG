@@ -202,6 +202,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			_sent_move = Vector2.INF   # после входа заново сообщаем движение
 			joined.emit()
 			request_chat_history()
+			friend_list()
 			corporation_info()
 			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
 		"market":
@@ -265,6 +266,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 				chat_received.emit(payload["message"])
 		"chat_history":
 			chat_history_loaded.emit(payload.get("general", []), payload.get("dms", []), payload.get("settings", {}))
+		"friends":
+			friends_updated.emit(payload.get("friends", []) if payload.get("friends") is Array else [])
 		"ships":
 			var fleet: Array = payload.get("ships", [])
 			var levels: Dictionary = payload.get("levels", {}) if payload.get("levels") is Dictionary else {}
@@ -595,6 +598,26 @@ func party_arm(kind: String) -> void:
 func party_ready() -> void:
 	if _joined:
 		_client.send_message("party_ready", {})
+
+
+func party_follow(on: bool) -> void:
+	if _joined:
+		_client.send_message("party_follow", {"on": on})
+
+
+func friend_list() -> void:
+	if _joined:
+		_client.send_message("friend_list", {})
+
+
+func friend_add(who: String) -> void:
+	if _joined and who != "":
+		_client.send_message("friend_add", {"id": who, "name": who})
+
+
+func friend_remove(id: String) -> void:
+	if _joined and id != "":
+		_client.send_message("friend_remove", {"id": id})
 
 
 ## Создание персонажа: ник, пол ("m"/"f"), направление пилота (interceptor, scout, trader, miner).

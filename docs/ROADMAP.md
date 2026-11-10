@@ -17,7 +17,7 @@
 ## Сводка прогресса
 
 <!--GEN:SUMMARY-->
-Всего задач в реестре: **64** · DONE **25** · IN_PROGRESS **5** · BLOCKED **3** · TODO **30** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
+Всего задач в реестре: **65** · DONE **25** · IN_PROGRESS **5** · BLOCKED **3** · TODO **31** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
 <!--/GEN-->
 
 Правило подсчёта: прогресс = доля DONE-задач в `tasks.json`. Это **не** готовность игры — см. `roadmap/STATUS.md`.

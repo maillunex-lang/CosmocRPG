@@ -200,10 +200,11 @@ func (w *World) onNPCKilled(p *Player, n *npc) {
 	if n.ai == nil || n.ai.cfg.Reward <= 0 {
 		return
 	}
-	w.rewards = append(w.rewards, Reward{Player: p.ID, Key: fmt.Sprintf("kill:%s:%d:%d", n.ID, n.kills, time.Now().UnixNano()),
+	who := w.lootMate(p)
+	w.rewards = append(w.rewards, Reward{Player: who.ID, Key: fmt.Sprintf("kill:%s:%d:%d", n.ID, n.kills, time.Now().UnixNano()),
 		Kind: "kill", Ref: n.ID, Credits: int64(n.ai.cfg.Reward)})
-	w.emit(Event{Type: "loot", From: n.ID, To: p.ID, Amount: n.ai.cfg.Reward})
-	w.spawnWreck(n)
+	w.emit(Event{Type: "loot", From: n.ID, To: who.ID, Amount: n.ai.cfg.Reward})
+	w.spawnWreck(n, who.ID)
 	n.ai.target = ""
 }
 
@@ -312,6 +313,30 @@ func (w *World) stepEnemy(n *npc, dt float64) {
 	}
 }
 
+func (w *World) lootMate(p *Player) *Player {
+	if p == nil || p.partyID == "" {
+		return p
+	}
+	ids := make([]string, 0, 4)
+	for id, o := range w.players {
+		if o.partyID == p.partyID && !o.ai && !o.wing && o.deadUntil <= w.t {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return p
+	}
+	sort.Strings(ids)
+	n := int(time.Now().UnixNano() % int64(len(ids)))
+	if n < 0 {
+		n = -n
+	}
+	if o := w.players[ids[n]]; o != nil {
+		return o
+	}
+	return p
+}
+
 func (w *World) depositByID(id string) *deposit {
 	for _, d := range w.deposits {
 		if d.ID == id {
@@ -319,6 +344,17 @@ func (w *World) depositByID(id string) *deposit {
 		}
 	}
 	return nil
+}
+
+func mineCfg(p *Player) (AbilityCfg, bool) {
+	if p == nil || p.ai || p.spec.Cargo <= 0 {
+		return AbilityCfg{}, false
+	}
+	if cfg, ok := p.spec.Abilities["mine"]; ok && cfg.Range > 0 && cfg.Damage > 0 {
+		return cfg, true
+	}
+	// Корабль без добывающего модуля всё равно собирает: реже и меньше за один захват.
+	return AbilityCfg{Name: "Ручной сбор", Range: 18, Period: 2.4, Damage: 1}, true
 }
 
 // StartMining начинает добычу из месторождения. Нужна способность mine (модуль добычи), дальность и свободное место в грузе.
@@ -335,7 +371,7 @@ func (w *World) StartMining(id, depID string) error {
 	if p.deadUntil > w.t {
 		return ErrDead
 	}
-	cfg, ok := p.spec.Abilities["mine"]
+	cfg, ok := mineCfg(p)
 	if !ok {
 		return ErrNoModule
 	}
@@ -371,7 +407,7 @@ func (w *World) stepMining(p *Player) {
 	if p.mining == "" || p.actionBusy() || p.cargoRevision == math.MaxInt64 {
 		return
 	}
-	cfg, ok := p.spec.Abilities["mine"]
+	cfg, ok := mineCfg(p)
 	d := w.depositByID(p.mining)
 	stop := func() { p.mining = ""; w.emit(Event{Type: "mine_stop", From: p.ID}) }
 	// добыча прерывается уходом из дальности, уроном и пропажей месторождения

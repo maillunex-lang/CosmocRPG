@@ -38,6 +38,15 @@ func (h *Handler) partyMsg(ctx context.Context, c *websocket.Conn, ss *session, 
 		err = h.opts.World.PartyArm(ss.pid, body.Kind)
 	case "party_ready":
 		err = h.opts.World.PartyReady(ss.pid)
+	case "party_follow":
+		var follow struct {
+			On bool `json:"on"`
+		}
+		if json.Unmarshal(m.Payload, &follow) != nil {
+			reply(errMsg(m.ID, "bad_message", "некорректная команда"))
+			return
+		}
+		err = h.opts.World.PartyFollow(ss.pid, follow.On)
 	default:
 		reply(errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 		return

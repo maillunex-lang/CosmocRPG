@@ -29,6 +29,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipxp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/social"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
@@ -62,6 +63,7 @@ type Options struct {
 	Accounts      *account.Service             // аккаунты (логин и пароль); nil: функция выключена
 	Shop          *shop.Service                // VIP и магазин косметики; nil: функция выключена
 	Chat          *chat.Service                // чат (общий и личные сообщения); nil: функция выключена
+	Social        *social.Service              // список друзей; nil: функция выключена
 	Corp          *corp.Service                // корпорации минимум (R-64); nil: функция выключена
 	Pilot         *pilot.Service               // опыт, уровень и характеристики пилота; nil: функция выключена
 	Ships         *shipxp.Service              // опыт и уровни экземпляров кораблей; nil: функция выключена
@@ -167,7 +169,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "friend_add", "friend_remove", "friend_list":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -333,8 +335,10 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.pilotMsg(ctx, c, ss, m)
 	case "talk":
 		h.talkMsg(ctx, c, ss, m)
-	case "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready":
+	case "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow":
 		h.partyMsg(ctx, c, ss, m)
+	case "friend_add", "friend_remove", "friend_list":
+		h.friendMsg(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
 		if err := json.Unmarshal(m.Payload, &p); err != nil || math.IsNaN(p.X+p.Y) || math.IsInf(p.X+p.Y, 0) {

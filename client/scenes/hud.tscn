@@ -420,9 +420,8 @@ script = ExtResource("5")
 [node name="StorageMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Склад"
+text = "Трюм"
 script = ExtResource("5")
-soon = true
 
 [node name="MailMenuButton" type="Button" parent="MenuPopup/Panel/Scroll/Box"]
 unique_name_in_owner = true

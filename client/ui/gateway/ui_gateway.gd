@@ -65,6 +65,7 @@ func move_input(_v: Vector2) -> void:
 ## Добыча, продажа и магазин: есть только у серверного шлюза; в демо магазин и добыча недоступны.
 signal chat_received(message: Dictionary)
 signal chat_history_loaded(general: Array, dms: Array, settings: Dictionary)
+signal friends_updated(list: Array)
 signal chat_failed(text: String)
 signal ships_updated(ships: Array)
 signal shop_updated(data: Dictionary)

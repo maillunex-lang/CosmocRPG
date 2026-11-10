@@ -26,6 +26,8 @@ const QuestLog := preload("res://ui/quest_log.gd")
 const QuestHints := preload("res://ui/quest_hints.gd")
 const SettingsScreen := preload("res://ui/settings_screen.gd")
 const RaidsScreen := preload("res://ui/raids_screen.gd")
+const HoldScreen := preload("res://ui/hold_screen.gd")
+const FriendsScreen := preload("res://ui/friends_screen.gd")
 const DialogueCard := preload("res://ui/dialogue_card.gd")
 const Nameplates := preload("res://ui/nameplates.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
@@ -133,6 +135,8 @@ func _ready() -> void:
 	_hud.star_map_requested.connect(open_star_map)
 	_hud.station_requested.connect(open_station)
 	_hud.chat_requested.connect(func() -> void: open_chat(ChatOverlay.Mode.FULL))
+	_hud.hold_requested.connect(open_hold)
+	_hud.friends_requested.connect(open_friends)
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -611,6 +615,53 @@ func open_chat(m: int = ChatOverlay.Mode.HALF) -> Control:
 			_hud.chat_panel.visible = false
 		layer.queue_free())
 	return ov
+
+
+func open_chat_to(nick: String) -> void:
+	var ov := open_chat(ChatOverlay.Mode.FULL)
+	if ov != null and _hud != null and _hud.chat_panel != null and _hud.chat_panel.has_method("focus_dm"):
+		_hud.chat_panel.focus_dm(nick)
+
+
+func open_hold() -> Control:
+	var existing := get_node_or_null("HoldLayer/HoldOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var hold: Control = HoldScreen.new()
+	hold.name = "HoldOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 42
+	layer.name = "HoldLayer"
+	add_child(layer)
+	layer.add_child(hold)
+	hold.theme = theme
+	if hold.has_method("bind"):
+		hold.bind(gateway.snapshot() if gateway != null else {})
+	hold.closed.connect(func() -> void: layer.queue_free())
+	return hold
+
+
+func open_friends() -> Control:
+	var existing := get_node_or_null("FriendsLayer/FriendsOverlay")
+	if existing != null:
+		return existing
+	gestures.cancel()
+	var fr: Control = FriendsScreen.new()
+	fr.name = "FriendsOverlay"
+	var layer := CanvasLayer.new()
+	layer.layer = 42
+	layer.name = "FriendsLayer"
+	add_child(layer)
+	layer.add_child(fr)
+	fr.theme = theme
+	if fr.has_method("bind"):
+		fr.bind(gateway)
+	fr.closed.connect(func() -> void: layer.queue_free())
+	fr.write_requested.connect(func(nick: String) -> void:
+		layer.queue_free()
+		open_chat_to(nick))
+	return fr
 
 
 func close_hangar() -> bool:

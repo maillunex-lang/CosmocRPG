@@ -107,9 +107,11 @@ func _run() -> void:
 	_check((_n(c, "%AutopilotButton") as Button).disabled, "автопилот без цели недоступен")
 
 	# ============ «Скоро»: нереализованное не притворяется рабочим ============
-	for nm in ["%StorageMenuButton", "%MailMenuButton"]:
+	for nm in ["%MailMenuButton"]:
 		var b := _n(c, nm) as ActionButton
 		_check(b.disabled and b.text.ends_with("скоро") and b.tooltip_text != "", "«Скоро»: %s неактивна и помечена" % nm)
+	var hold_btn := _n(c, "%StorageMenuButton") as ActionButton
+	_check(not hold_btn.disabled and hold_btn.text == "Трюм", "трюм в меню открыт")
 	_check((_n(c, "%MailMenuButton") as ActionButton).text.count("скоро") == 1, "«Скоро» не дублируется в тексте кнопки")
 	# ============ меню (R-35): кнопка справа сверху раскрывает панель действий ============
 	_check(not (_n(c, "%MenuPopup") as Control).visible, "меню закрыто по умолчанию")

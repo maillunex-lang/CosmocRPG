@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 )
 
 func partyHome(t *testing.T) (*Router, *World) {
@@ -216,6 +218,56 @@ func TestPartyDisconnectExtracts(t *testing.T) {
 	}
 	if rec.Pos != (Vec{}) {
 		t.Fatalf("позиция %+v", rec.Pos)
+	}
+}
+
+func TestPartyFollowAndRandomLoot(t *testing.T) {
+	r, home := partyHome(t)
+	if _, ok := r.Join(Record{ID: "human", Name: "Пилот", Created: true, Pos: Vec{}, Dir: Vec{X: 1}, ShipType: DefaultShip}); !ok {
+		t.Fatal("join")
+	}
+	if _, ok := r.Join(Record{ID: "mate", Name: "Напарник", Created: true, Pos: Vec{X: 20}, Dir: Vec{X: 1}, ShipType: DefaultShip}); !ok {
+		t.Fatal("mate")
+	}
+	if err := r.PartyInvite("human", "mate"); err != nil || r.PartyJoin("mate") != nil {
+		t.Fatal(err)
+	}
+	home.mu.Lock()
+	home.players["mate"].Pos = Vec{X: 180}
+	home.mu.Unlock()
+	for i := 0; i < 40; i++ {
+		r.Step(0.25, time.Now())
+	}
+	st, ok := home.Snapshot("mate")
+	if !ok || st.Ship.Pos[0] > 120 {
+		t.Fatalf("напарник не пошёл за ведущим: %+v", st.Ship.Pos)
+	}
+	if err := r.PartyFollow("mate", false); err != nil {
+		t.Fatal(err)
+	}
+	home.mu.Lock()
+	home.players["mate"].Pos = Vec{X: 180}
+	home.mu.Unlock()
+	r.Step(0.5, time.Now())
+	st, _ = home.Snapshot("mate")
+	if st.Ship.Pos[0] < 160 {
+		t.Fatalf("выключенное следование всё равно тянет: %.1f", st.Ship.Pos[0])
+	}
+	got := map[string]int{}
+	home.mu.Lock()
+	home.players["human"].partyID = "p"
+	home.players["mate"].partyID = "p"
+	n := &npc{ID: "mob", Kind: "hostile", HullMax: 10, ai: &aiState{cfg: worldgen.EnemyCfg{Reward: 25}}}
+	for i := 0; i < 24; i++ {
+		n.Hull = 1
+		home.onNPCKilled(home.players["human"], n)
+	}
+	home.mu.Unlock()
+	for _, rw := range home.DrainRewards() {
+		got[rw.Player]++
+	}
+	if got["human"] == 0 || got["mate"] == 0 {
+		t.Fatalf("дроп не разошёлся по пати: %v", got)
 	}
 }
 

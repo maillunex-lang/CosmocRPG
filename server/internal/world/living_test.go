@@ -110,22 +110,28 @@ func TestMiningRequiresModuleRangeAndCargo(t *testing.T) {
 	w, _ := livingWorld(t)
 	d := w.deposits[0]
 	f := joinAt(w, "f", "FTR-001", d.Pos)
-	if err := w.StartMining("f", d.ID); err != ErrNoModule {
-		t.Fatalf("истребитель без модуля добычи: %v", err)
+	if err := w.StartMining("f", d.ID); err != nil {
+		t.Fatalf("истребитель должен уметь собирать вручную: %v", err)
 	}
-	m := joinAt(w, "m", "TMP-MINE", d.Pos.add(Vec{200, 0}))
-	_ = f
+	m := joinAt(w, "m", "TMP-MINE", d.Pos)
+	w.StopMining("f")
+	mFar := d.Pos.add(Vec{200, 0})
+	m.Pos = mFar
 	if err := w.StartMining("m", d.ID); err != ErrRange {
 		t.Fatalf("вне дальности: %v", err)
 	}
 	m.Pos = d.Pos.add(Vec{5, 0})
+	f.Pos = d.Pos.add(Vec{4, 0})
 	before := d.Amount
 	if err := w.StartMining("m", d.ID); err != nil {
 		t.Fatal(err)
 	}
-	step(w, 5)
-	if m.hold[d.Resource] < 4 || d.Amount >= before {
-		t.Fatalf("добыча не идёт: груз %v, в месторождении %.1f из %.1f", m.hold, d.Amount, before)
+	if err := w.StartMining("f", d.ID); err != nil {
+		t.Fatal(err)
+	}
+	step(w, 6)
+	if m.hold[d.Resource] <= f.hold[d.Resource] || f.hold[d.Resource] <= 0 || d.Amount >= before {
+		t.Fatalf("шахтёр должен собирать быстрее: шахтёр %.2f, истребитель %.2f, жила %.1f", m.hold[d.Resource], f.hold[d.Resource], d.Amount)
 	}
 	// груз не превышает вместимость, добыча останавливается при заполнении
 	step(w, 60)

@@ -12,14 +12,15 @@ type wreck struct {
 	Resource string
 	Amount   float64
 	Until    float64
+	Owner    string // пусто: подбирает любой рядом; иначе только этот игрок пати
 }
 
-func (w *World) spawnWreck(n *npc) {
+func (w *World) spawnWreck(n *npc, owner string) {
 	if n == nil {
 		return
 	}
 	w.wrecks = append(w.wrecks, &wreck{
-		ID: "wreck-" + n.ID + "-" + itoa(n.kills), Pos: n.Pos, Resource: "scrap", Amount: 1.5, Until: w.t + 45,
+		ID: "wreck-" + n.ID + "-" + itoa(n.kills), Pos: n.Pos, Resource: "scrap", Amount: 1.5, Until: w.t + 45, Owner: owner,
 	})
 }
 
@@ -49,6 +50,9 @@ func (w *World) collectWrecks() {
 		for _, id := range ids {
 			p := w.players[id]
 			if p.deadUntil > w.t || dist(p.Pos, wr.Pos) > 70 {
+				continue
+			}
+			if wr.Owner != "" && wr.Owner != id {
 				continue
 			}
 			room := cargoRoom(p, wr.Resource)

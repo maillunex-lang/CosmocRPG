@@ -49,6 +49,7 @@ type PartyView struct {
 	Ready     int               `json:"ready,omitempty"`
 	ReadyNeed int               `json:"ready_need,omitempty"`
 	YouReady  bool              `json:"you_ready,omitempty"`
+	YouFollow bool              `json:"you_follow"`
 	Pending   bool              `json:"pending,omitempty"`
 	Members   []PartyMemberView `json:"members"`
 }
@@ -68,6 +69,7 @@ type partyMember struct {
 	ai, wing         bool
 	pending          bool
 	ready            bool
+	followOff        bool
 	ship, skin       string
 	profession       string
 	behavior         string
@@ -237,6 +239,20 @@ func (r *Router) PartyReady(id string) error {
 		return nil
 	}
 	return r.beginCorridorLocked(p, p.leader)
+}
+
+// PartyFollow включает или выключает автоследование за ведущим. По умолчанию включено.
+func (r *Router) PartyFollow(id string, on bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ensureParty()
+	p := r.parties[r.byMember[id]]
+	m := memberOf(p, id)
+	if p == nil || m == nil || m.pending {
+		return ErrPartyNone
+	}
+	m.followOff = !on
+	return nil
 }
 
 func (r *Router) allReadyLocked(p *party) bool {
@@ -443,6 +459,10 @@ func (r *Router) partyViewLocked(id string, now time.Time) (PartyView, bool) {
 		}
 	}
 	v.Ready, v.ReadyNeed, v.YouReady = readyN, needN, you
+	v.YouFollow = true
+	if me := memberOf(p, id); me != nil {
+		v.YouFollow = !me.followOff
+	}
 	if spec, ok := corridorOps[p.op]; ok {
 		v.Title = spec.title
 		if p.inst != "" {

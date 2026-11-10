@@ -109,7 +109,7 @@ func TestMiningThroughProtocol(t *testing.T) {
 	cl.nextHold(func(s holdState) bool { return s.Ship.Mining == "" })
 }
 
-func TestMineRejectedWithoutModule(t *testing.T) {
+func TestFighterMinesWithoutModule(t *testing.T) {
 	cfg := worldgen.DefaultConfig()
 	lay := worldgen.Generate(cfg.Systems[0], cfg)
 	d := lay.Deposits[0]
@@ -117,11 +117,9 @@ func TestMineRejectedWithoutModule(t *testing.T) {
 	cl := connect(t, url)
 	cl.joinRaw("nomoduletoken0001")
 	cl.send("mine", map[string]any{"id": d.ID})
-	m := cl.next("error")
-	var e struct{ Code string }
-	_ = json.Unmarshal(m.Payload, &e)
-	if e.Code != "no_module" {
-		t.Fatalf("код ошибки %q", e.Code)
+	s := cl.nextHold(func(s holdState) bool { return s.Ship.Mining != "" })
+	if s.Ship.Mining == "" {
+		t.Fatal("истребитель не начал ручной сбор")
 	}
 }
 

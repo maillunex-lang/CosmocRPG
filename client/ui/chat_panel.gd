@@ -211,6 +211,14 @@ func preview_text() -> String:
 	return "%s: %s" % [who, text]
 
 
+func focus_dm(nick: String) -> void:
+	_select_tab("dm")
+	if _to != null:
+		_to.text = nick
+	if _edit != null:
+		_edit.grab_focus()
+
+
 func _select_tab(t: String) -> void:
 	tab = t
 	if t == "dm":

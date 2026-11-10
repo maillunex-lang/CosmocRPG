@@ -3,6 +3,7 @@ package world
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ func aiWorld(t *testing.T) *World {
 	cfg := worldgen.DefaultConfig()
 	lay := worldgen.Generate(cfg.Systems[0], cfg)
 	w := New()
+	w.eventRNG = rand.New(rand.NewSource(1))
 	if err := w.ApplyLayout(lay, cfg); err != nil {
 		t.Fatal(err)
 	}

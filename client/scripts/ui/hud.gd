@@ -30,6 +30,8 @@ signal station_requested    # Э-2: экран станции (ремонт, п�
 signal corporation_requested
 signal settings_requested   # пункт меню «Настройки»
 signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
+signal hold_requested
+signal friends_requested
 signal quest_log_requested   # карточка «Задания»: описание и маршрут
 signal guide_autopilot_requested   # автопилот без выбранной цели: вести к заданию
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
@@ -69,6 +71,7 @@ var _party_invite: Button
 var _party_join: Button
 var _party_start: Button
 var _party_leave: Button
+var _party_follow: Button
 var _layout_doc: Dictionary = {}
 var _layout_homes: Dictionary = {}
 var _layout_lifted: Dictionary = {}
@@ -264,7 +267,10 @@ func _ready() -> void:
 	Icons.apply(%HangarMenuButton, "rocket", Tokens.ACCENT, 22)
 	Icons.apply(%StorageMenuButton, "package", Tokens.ACCENT, 22)
 	Icons.apply(%MailMenuButton, "mail", Tokens.ACCENT, 22)
-	%StorageMenuButton.visible = false
+	%StorageMenuButton.visible = true
+	%StorageMenuButton.disabled = false
+	%StorageMenuButton.text = "Трюм"
+	%StorageMenuButton.pressed.connect(func() -> void: _set_menu_open(false); hold_requested.emit())
 	%MailMenuButton.visible = false
 	%StationMenuButton.visible = false
 	%HangarMenuButton.visible = false
@@ -433,11 +439,17 @@ func _order_menu() -> void:
 	fly.pressed.connect(func() -> void: _set_menu_open(false); map_requested.emit())
 	Icons.apply(fly, "globe", Tokens.ACCENT, 22)
 	box.add_child(fly)
+	var friends := ActionButton.new()
+	friends.name = "FriendsMenuButton"
+	friends.text = "Друзья"
+	friends.pressed.connect(func() -> void: _set_menu_open(false); friends_requested.emit())
+	Icons.apply(friends, "user", Tokens.ACCENT, 22)
+	box.add_child(friends)
 	var order: Array[Node] = [
 		%StationMenuButton, fly, %HangarMenuButton, %ProfileMenuButton,
 		%ShopMenuButton, %CorporationMenuButton, %StarMapMenuButton, %ChatMenuButton,
-		%SettingsMenuButton, %ExitButton,
-		%StorageMenuButton, %MailMenuButton,
+		friends, %StorageMenuButton, %SettingsMenuButton, %ExitButton,
+		%MailMenuButton,
 	]
 	for i in order.size():
 		box.move_child(order[i], i)
@@ -517,6 +529,12 @@ func _build_cargo_ui() -> void:
 	_cargo_label = Label.new()
 	_cargo_label.name = "CargoLabel"
 	_cargo_row.add_child(_cargo_label)
+	var hold := ActionButton.new()
+	hold.name = "HoldButton"
+	hold.text = "Трюм"
+	hold.custom_minimum_size = Vector2(88, 44)
+	hold.pressed.connect(func() -> void: hold_requested.emit())
+	_cargo_row.add_child(hold)
 	_cargo_row.visible = false
 	%BarsRow.add_child(_cargo_row)
 	var stack := _autopilot.get_parent()
@@ -808,6 +826,7 @@ func _build_party_box() -> void:
 	_party_join = _party_button(row, "PartyJoin", "Принять", _on_party_join)
 	_party_start = _party_button(row, "PartyStart", "В бой", _on_party_start)
 	_party_leave = _party_button(row, "PartyLeave", "Выйти", _on_party_leave)
+	_party_follow = _party_button(box, "PartyFollow", "Не следовать", _on_party_follow)
 	add_child(_party_box)
 
 
@@ -905,6 +924,20 @@ func _apply_party(state: Dictionary) -> void:
 	_party_start.visible = false
 	_party_leave.visible = members.size() > 0
 	_party_leave.text = "Покинуть стычку" if in_inst else "Выйти"
+	var following := true
+	if party.has("you_follow"):
+		following = bool(party.get("you_follow"))
+	_party_follow.visible = members.size() > 0 and not pending and not am_leader and mine != ""
+	_party_follow.text = "Не следовать" if following else "Следовать"
+
+
+func _on_party_follow() -> void:
+	var party: Dictionary = _last_state.get("party", {}) if _last_state.get("party") is Dictionary else {}
+	var following := true
+	if party.has("you_follow"):
+		following = bool(party.get("you_follow"))
+	if gateway != null and gateway.has_method("party_follow"):
+		gateway.party_follow(not following)
 
 
 # --- отображение состояния ---

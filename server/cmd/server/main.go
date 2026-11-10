@@ -36,6 +36,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipcatalog"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shipxp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/shop"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/social"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/worldcfg"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
@@ -388,7 +389,7 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: universe, Store: markedPlayers, AIActorGuard: aiGuard, Equipment: equipment.NewPGStore(pool), Fitting: fittingSvc, ShipPassports: &passports, Quests: quests, Locations: visits, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
+		World: universe, Store: markedPlayers, AIActorGuard: aiGuard, Equipment: equipment.NewPGStore(pool), Fitting: fittingSvc, ShipPassports: &passports, Quests: quests, Locations: visits, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Social: social.New(social.NewPGStore(pool)), Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
 	var live *aiciv.Live

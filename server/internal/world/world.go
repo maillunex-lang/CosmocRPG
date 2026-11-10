@@ -106,12 +106,14 @@ type Player struct {
 	mineSince  float64
 	discovered map[string]bool
 
-	ai        bool
-	aiCaptain string
-	wing      bool // в групповом инстансе сам летит к врагу и стреляет
-	ephemeral bool // поднятый на бой капитан: в базу не пишется
-	connected bool
-	lostAt    time.Time // момент обрыва связи
+	ai           bool
+	aiCaptain    string
+	wing         bool // в групповом инстансе сам летит к врагу и стреляет
+	partyID      string
+	followLeader string // пусто: не следует; иначе id ведущего в том же мире
+	ephemeral    bool   // поднятый на бой капитан: в базу не пишется
+	connected    bool
+	lostAt       time.Time // момент обрыва связи
 }
 
 // Record — сохраняемое состояние игрока.
@@ -605,6 +607,13 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 			continue // keep only this actor docked; damage/combat above still run
 		}
 		move := p.Move
+		if p.followLeader != "" && move == (Vec{}) && !p.Autopilot && !p.HasWaypoint && p.mining == "" && !p.Attacking && p.deadUntil <= w.t {
+			if lead := w.players[p.followLeader]; lead != nil && lead.deadUntil <= w.t {
+				if d := lead.Pos.sub(p.Pos); d.length() > 34 {
+					move = d.normalized()
+				}
+			}
+		}
 		if p.Autopilot {
 			dest, ok := w.autopilotDest(p)
 			if !ok {
@@ -664,13 +673,15 @@ func (w *World) Snapshot(id string) (State, bool) {
 	if !ok {
 		return State{}, false
 	}
+	mine, canMine := mineCfg(me)
+	mineRange := mine.Range
 	st := State{
 		Time: w.t,
 		Ship: Ship{Name: me.Name, Pos: [2]float64{me.Pos.X, me.Pos.Y}, Dir: [2]float64{me.Dir.X, me.Dir.Y}, Speed: me.Speed,
 			Type: me.ShipType, Skin: me.Skin, Spec: me.Spec, Hull: me.Hull, HullMax: me.spec.Hull, Shield: me.Shield, ShieldMax: me.spec.Shield,
 			Energy: me.Energy, EnergyMax: me.spec.Energy, Armor: me.spec.Armor, Cargo: me.spec.Cargo, PulseRange: me.spec.Abilities["pulse"].Range, Boosting: me.boostUntil > w.t,
 			Dead: me.deadUntil > w.t, Abilities: w.abilityList(me), Modules: me.moduleList(), Equipment: w.equipmentStatus(me), Level: maxInt(me.shipLevel, 1), Hold: copyHold(me.hold), CargoUsed: holdUsed(me.hold), Bays: me.cargoBays(), Mining: me.mining, Cosmetics: me.cosmetics,
-			CanMine: me.spec.Abilities["mine"].Range > 0, MineRange: me.spec.Abilities["mine"].Range, InSafe: w.inSafe(me.Pos)},
+			CanMine: canMine, MineRange: mineRange, InSafe: w.inSafe(me.Pos)},
 		TargetID:  me.Target,
 		Autopilot: me.Autopilot,
 		Attacking: me.Attacking,

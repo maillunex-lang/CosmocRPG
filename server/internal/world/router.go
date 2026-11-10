@@ -295,6 +295,7 @@ func (r *Router) Records() []Record {
 func (r *Router) Step(dt float64, now time.Time) []Record {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.syncPartyLocked()
 	var out []Record
 	for _, id := range r.order {
 		w := r.worlds[id]
@@ -314,6 +315,53 @@ func (r *Router) Step(dt float64, now time.Time) []Record {
 	}
 	r.tickPartiesLocked()
 	return out
+}
+
+func (r *Router) syncPartyLocked() {
+	for _, w := range r.worlds {
+		if w != nil {
+			w.clearPartyTags()
+		}
+	}
+	for _, p := range r.parties {
+		if p == nil {
+			continue
+		}
+		for _, m := range p.members {
+			if m.pending {
+				continue
+			}
+			w := r.byPlayer[m.id]
+			if w == nil {
+				continue
+			}
+			lead := ""
+			if m.id != p.leader && !m.wing && !m.ai && !m.followOff && r.byPlayer[p.leader] == w {
+				lead = p.leader
+			}
+			w.tagParty(m.id, p.id, lead)
+		}
+	}
+}
+
+func (w *World) clearPartyTags() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, p := range w.players {
+		p.partyID = ""
+		p.followLeader = ""
+	}
+}
+
+func (w *World) tagParty(id, party, leader string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p := w.players[id]
+	if p == nil {
+		return
+	}
+	p.partyID = party
+	p.followLeader = leader
 }
 
 // DrainEvents собирает события всех систем.

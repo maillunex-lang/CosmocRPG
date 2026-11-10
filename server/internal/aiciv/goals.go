@@ -3,16 +3,15 @@ package aiciv
 import (
 	"context"
 	"log/slog"
+	"math"
 	"time"
-
-	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
 // GoalKind is a long-term objective. The agent does not fly without one.
 type GoalKind string
 
 const (
-	GoalFarmCredits GoalKind = "farm_credits" // find hostile → approach → attack → (retreat if low) → repeat or dock
+	GoalFarmCredits GoalKind = "farm_credits" // find hostile → approach → attack → (retreat if low) → repeat
 	GoalIdleDock    GoalKind = "idle_dock"    // stay near station, do not wander
 )
 
@@ -37,15 +36,16 @@ type GoalRunner struct {
 }
 
 type agentState struct {
-	goal     GoalKind
-	step     StepKind
-	target   string
+	goal      GoalKind
+	step      StepKind
+	target    string
 	targetPos [2]float64
-	playerID string
+	playerID  string
 }
 
 // RunGoal drives one agent for the lifetime of ctx.
-// Currently supports GoalFarmCredits: find → approach → attack → (retreat if low) → find again.
+// GoalFarmCredits: find → approach → attack → (retreat if low) → find again.
+// If no target exists the agent holds position instead of wandering.
 func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerID string, goal GoalKind) {
 	if r == nil || g == nil || playerID == "" {
 		return
@@ -72,7 +72,6 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			if !ok {
 				continue
 			}
-			// health override: if low, force retreat step
 			if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax < threshold && st.step != StepRetreat && st.step != StepWait {
 				st.step = StepRetreat
 			}
@@ -80,7 +79,6 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			case StepFindTarget:
 				id, pos := nearestHostile(snap, snap.Ship.Pos)
 				if id == "" {
-					// no target: do not wander; stay put
 					_ = IssueMove(ctx, g, "hold", 0, 0)
 					continue
 				}
@@ -90,9 +88,8 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 					r.Log.Info("AI goal: target found", "captain", captainID, "target", id)
 				}
 			case StepApproach:
-				// move toward target; if close enough, switch to attack
 				dx, dy := st.targetPos[0]-snap.Ship.Pos[0], st.targetPos[1]-snap.Ship.Pos[1]
-				d := mathHypot(dx, dy)
+				d := math.Hypot(dx, dy)
 				if d < 40 {
 					st.step = StepAttack
 					continue
@@ -100,7 +97,6 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 				_ = IssueMove(ctx, g, "approach", dx/d, dy/d)
 			case StepAttack:
 				_ = IssueCombat(ctx, g, "atk", CombatIntent{TargetID: st.target, Attack: true})
-				// stay in attack until health forces retreat or target dies (next snapshot will re-find)
 				id, _ := nearestHostile(snap, snap.Ship.Pos)
 				if id == "" || id != st.target {
 					st.step = StepFindTarget
@@ -115,7 +111,6 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 					r.Log.Info("AI goal: retreating", "captain", captainID)
 				}
 			case StepWait:
-				// wait until hull recovers, then resume goal
 				if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax > threshold+0.15 {
 					_ = IssueMove(ctx, g, "resume", 0, 0)
 					st.step = StepFindTarget
@@ -126,8 +121,4 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			}
 		}
 	}
-}
-
-func mathHypot(dx, dy float64) float64 {
-	return (dx*dx + dy*dy)
 }

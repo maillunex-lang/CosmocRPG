@@ -1,8 +1,11 @@
-# Ручная выкладка только игрового сервера. База, Caddy и каталог /download/ не пересоздаются.
+# Выкладка только игрового сервера на каждый push в main и по ручному запуску.
+# База, Caddy и каталог /download/ не пересоздаются.
 # Секреты SSH те же, что у публикации APK: окружение android-signing, только ветка main.
 name: Выкладка сервера
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,7 +18,7 @@ concurrency:
 jobs:
   deploy:
     name: Сервер на VPS
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
     environment: android-signing
     runs-on: ubuntu-latest
     timeout-minutes: 40

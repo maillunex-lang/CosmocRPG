@@ -22,11 +22,12 @@ Repository Secrets с теми же именами пока дублируют �
 
 ## Порядок запуска сборки
 
-1. Вкладка Actions → «Android release APK» → «Run workflow» → ветка `main` → Run.
-2. Подтверждение **«Approve and deploy»** больше не требуется: у окружения `android-signing` снят обязательный ревьюер. Секреты по-прежнему доступны только workflow с ветки `main`, не из запросов на слияние.
-3. Сборка стартует сразу: Godot 4.7.2 → Gradle → apksigner (проверки package ID `ru.cosmocrpg.game`,
+1. Push в `main` запускает сборку сам. Ручной запуск тоже остаётся: Actions → «Android release APK» → «Run workflow» → ветка `main`.
+2. Подтверждение **«Approve and deploy»** не требуется. Секреты доступны только с ветки `main`, не из запросов на слияние.
+3. Если код версии в git уже есть в игре, для этой сборки он увеличивается на один. В репозиторий новый номер не записывается, иначе push зациклился бы.
+4. Сборка: Godot 4.7.2 → Gradle → apksigner (проверки package ID `ru.cosmocrpg.game`,
    подписи v2/v3, отпечатка SHA-256) → артефакты (APK + cert-sha256.txt + SHA256SUMS + отчёты).
-4. Если в окружении `android-signing` заданы `VPS_SSH_KEY`, `VPS_HOST` и `VPS_USER`, тот же запуск заливает APK на VPS и вызывает `tools/publish_release.sh`. Игра видит обновление в `https://rikagro.ru/download/latest.json`. Игровой сервер и база при этом не перезапускаются. Ключ подписи манифеста остаётся только на VPS.
+5. Затем APK заливается на VPS и публикуется через `tools/publish_release.sh`. Игра видит его в `https://rikagro.ru/download/latest.json`. Сервер этим workflow не перезапускается: его выкладывает отдельный workflow на тот же push.
 
 ## Восстановление после ошибки
 

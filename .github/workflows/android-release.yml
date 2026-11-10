@@ -1,28 +1,30 @@
 # Подписанный release APK и публикация обновления клиента в /download/.
-# Только ручной запуск с ветки main. pull_request намеренно отсутствует.
-# Игровой сервер, база и Docker этим файлом не перезапускаются.
+# Запуск: каждый push в main и ручной workflow_dispatch. pull_request намеренно отсутствует.
+# Игровой сервер этим файлом не перезапускается.
 name: Android release APK
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       notes:
         description: Текст окна обновления в игре
         required: false
-        default: Квесты Меридиана и Красного Шторма
+        default: ""
 
 permissions:
   contents: read
 
 concurrency:
   group: android-apk-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   android-apk:
     name: Подписанный APK
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
-    environment: android-signing   # секреты подписи живут только здесь: подтверждение владельцем + только ветка main
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
+    environment: android-signing   # секреты подписи только здесь и только для ветки main
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -30,8 +32,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Поднять код версии, если он уже опубликован
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, re, urllib.request
+          from pathlib import Path
+
+          project = Path("client/project.godot")
+          preset = Path("client/export_presets.cfg")
+          project_text = project.read_text()
+          preset_text = preset.read_text()
+          code = int(re.search(r"^version_code=(\d+)", project_text, re.M).group(1))
+          preset_code = int(re.search(r"^version/code=(\d+)", preset_text, re.M).group(1))
+          if code != preset_code:
+              raise SystemExit(f"код в проекте {code} не равен пресету {preset_code}")
+          with urllib.request.urlopen("https://rikagro.ru/download/latest.json", timeout=20) as response:
+              published = int(json.load(response)["version_code"])
+          desired = code if code > published else published + 1
+          if desired != code:
+              project.write_text(re.sub(r"^version_code=\d+", f"version_code={desired}", project_text, count=1, flags=re.M))
+              preset.write_text(re.sub(r"^version/code=\d+", f"version/code={desired}", preset_text, count=1, flags=re.M))
+              print(f"для этого APK код {desired}: в git {code}, в игре уже {published}")
+          else:
+              print(f"код {code} новее опубликованного {published}")
+          PY
 
       - name: Проверить preset и восстановить keystore
         env:
@@ -263,7 +291,10 @@ jobs:
             echo "секрет VPS_HOST или VPS_USER указывает не на ожидаемый сервер" >&2
             exit 1
           fi
-          notes="${RELEASE_NOTES:-Квесты Меридиана и Красного Шторма}"
+          notes="${RELEASE_NOTES:-}"
+          if [ -z "$notes" ]; then
+            notes="$(git log -1 --pretty=%s)"
+          fi
           if [ "${#notes}" -gt 400 ]; then
             echo "текст обновления длиннее 400 символов" >&2
             exit 1

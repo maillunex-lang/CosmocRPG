@@ -43,6 +43,7 @@ type rawNode struct {
 type rawScene struct {
 	Start   string             `json:"start"`
 	Closing string             `json:"closing"`
+	Skip    string             `json:"skip"`
 	Nodes   map[string]rawNode `json:"nodes"`
 }
 
@@ -120,7 +121,15 @@ func loadData() {
 				}
 				nodes[nid] = Node{Speaker: rn.Speaker, Text: rn.Text, Choices: chs}
 			}
-			scenes[qid] = Scene{Start: rs.Start, Closing: rs.Closing, Nodes: nodes}
+			for _, node := range nodes {
+				for _, c := range node.Choices {
+					if c.ID == "skip" {
+						loadErr = fmt.Errorf("dialogue %s uses reserved choice skip", qid)
+						return
+					}
+				}
+			}
+			scenes[qid] = Scene{Start: rs.Start, Closing: rs.Closing, Skip: rs.Skip, Nodes: nodes}
 		}
 		loadedScenes = scenes
 		for _, d := range defs {

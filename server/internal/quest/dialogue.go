@@ -20,6 +20,7 @@ type Node struct {
 type Scene struct {
 	Start   string
 	Closing string
+	Skip    string // краткий итог, если игрок пропускает разговор; пусто — берётся Closing
 	Nodes   map[string]Node
 }
 
@@ -38,7 +39,8 @@ type Reply struct {
 }
 
 // Talk открывает или продвигает разговор. Пустой choice только показывает реплику.
-// Засчитывается задание только ответом, который ведёт в done, и только в системе задания.
+// «skip» закрывает текущий разговор итогом сцены и засчитывает задание. Другие ответы
+// засчитываются только если ведут в done, и только в системе задания.
 func (s *Service) Talk(ctx context.Context, pid, system, choice string) (Reply, []Completion, error) {
 	s.mu.Lock()
 	ps := s.players[pid]
@@ -79,6 +81,15 @@ func (s *Service) Talk(ctx context.Context, pid, system, choice string) (Reply, 
 	if choice == "" {
 		s.setLine(pid, nodeID)
 		return replyOf(d.ID, node, false), nil, nil
+	}
+	if choice == "skip" {
+		s.setLine(pid, "")
+		text := scene.Closing
+		if scene.Skip != "" {
+			text = scene.Skip
+		}
+		done := s.EventAt(ctx, pid, system, "talk", d.Target, 1)
+		return Reply{QuestID: d.ID, Speaker: node.Speaker, Text: text, Choices: []Choice{}, Done: true}, done, nil
 	}
 	next := ""
 	matched := false

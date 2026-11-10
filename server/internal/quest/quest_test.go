@@ -107,6 +107,49 @@ func playAurora(t *testing.T, s *Service, pid string, sides bool) {
 	}
 }
 
+func TestSkipClosesCurrentTalkOnly(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc(NewMemStore())
+	if err := s.Join(ctx, "p"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.Talk(ctx, "p", "aurora", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.Talk(ctx, "p", "aurora", "route"); err != nil {
+		t.Fatal(err)
+	}
+	reply, done, err := s.Talk(ctx, "p", "aurora", "skip")
+	if err != nil || !reply.Done || reply.Speaker != "Ирина Ларс" || reply.Text == "" || len(done) != 1 || done[0].QuestID != "ch01_q01" || done[0].Credits != 200 {
+		t.Fatalf("пропуск: %+v %+v %v", reply, done, err)
+	}
+	if _, _, err := s.Talk(ctx, "p", "aurora", "skip"); err != ErrNoDialogue {
+		t.Fatal("пропуск не должен открыть следующий разговор", err)
+	}
+	v, _ := s.View("p")
+	if v.Credits != 200 || len(v.Quests) != 1 || v.Quests[0].ID != "ch01_q02" {
+		t.Fatalf("после пропуска: %+v", v)
+	}
+	if _, _, err := s.Talk(ctx, "p", "aurora", "skip"); err != ErrNoDialogue {
+		t.Fatal("повторный пропуск", err)
+	}
+	if err := s.Join(ctx, "q"); err != nil {
+		t.Fatal(err)
+	}
+	reply, done, err = s.Talk(ctx, "q", "aurora", "skip")
+	sc, _ := Dialogue("ch01_q01")
+	if err != nil || !reply.Done || reply.Text != sc.Closing || len(done) != 1 || done[0].Credits != 200 {
+		t.Fatalf("пропуск с первой реплики: %+v %+v %v", reply, done, err)
+	}
+	if _, _, err := s.Talk(ctx, "q", "aurora", "нет"); err != ErrNoDialogue {
+		t.Fatal(err)
+	}
+	sc, ok := Dialogue("ch01_q06")
+	if !ok || sc.Skip == "" || sc.Skip == sc.Closing {
+		t.Fatal("у выбора без ответа должен быть свой итог пропуска")
+	}
+}
+
 func TestContractFlowAndIdempotentReward(t *testing.T) {
 	ctx := context.Background()
 	st := NewMemStore()

@@ -11,6 +11,8 @@ var _panel: PanelContainer
 var _speaker: Label
 var _text: Label
 var _choices: VBoxContainer
+var _skip: Button
+var _close_btn: Button
 var _open := false
 
 
@@ -65,10 +67,19 @@ func _ready() -> void:
 	_choices = VBoxContainer.new()
 	_choices.add_theme_constant_override("separation", 8)
 	col.add_child(_choices)
-	var close := ActionButton.new()
-	close.text = "Закрыть"
-	close.pressed.connect(_close)
-	col.add_child(close)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	col.add_child(row)
+	_skip = ActionButton.new()
+	_skip.text = "Пропустить"
+	_skip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_skip.pressed.connect(_skip_talk)
+	row.add_child(_skip)
+	_close_btn = ActionButton.new()
+	_close_btn.text = "Закрыть"
+	_close_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_close_btn.pressed.connect(_close)
+	row.add_child(_close_btn)
 
 
 func _on_state(state: Dictionary) -> void:
@@ -92,11 +103,13 @@ func _show(data: Dictionary) -> void:
 	for child in _choices.get_children():
 		child.queue_free()
 	if bool(data.get("done", false)):
+		_skip.visible = false
 		var ok := ActionButton.new()
 		ok.text = "Понятно"
 		ok.pressed.connect(_close)
 		_choices.add_child(ok)
 		return
+	_skip.visible = true
 	for raw in data.get("choices", []):
 		if typeof(raw) != TYPE_DICTIONARY:
 			continue
@@ -109,6 +122,11 @@ func _show(data: Dictionary) -> void:
 			if _gateway != null and _gateway.has_method("talk"):
 				_gateway.talk(id))
 		_choices.add_child(b)
+
+
+func _skip_talk() -> void:
+	if _gateway != null and _gateway.has_method("talk"):
+		_gateway.talk("skip")
 
 
 func _close() -> void:

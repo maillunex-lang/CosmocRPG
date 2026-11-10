@@ -82,6 +82,13 @@ func OpenGateway(ctx context.Context, store *Store, agent, endpoint string) (*Ga
 		}
 	}
 }
+func (g *Gateway) Touch(ctx context.Context) error {
+	if g == nil || g.store == nil {
+		return ErrInput
+	}
+	return g.store.RenewSession(ctx, g.agent, g.leaseHash, 10*time.Minute)
+}
+
 func (g *Gateway) Close() {
 	g.conn.CloseNow()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

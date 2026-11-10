@@ -434,6 +434,7 @@ func run() error {
 			chorus.Live = live
 			go chorus.Run(ctx, 12*time.Second)
 			farm := &aiciv.FarmController{
+				Clans: corpSvc,
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
 				Store:     aiState,
 				World:     gameWorld,

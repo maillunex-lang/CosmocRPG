@@ -358,7 +358,7 @@ func (w *World) stepCombat(p *Player, dt float64) {
 
 func (w *World) stepNPCs() {
 	for _, n := range w.npcs {
-		if n.Kind == "hostile" && n.deadUntil > 0 && n.deadUntil <= w.t {
+		if n.Kind == "hostile" && !n.ephemeral && n.deadUntil > 0 && n.deadUntil <= w.t {
 			n.deadUntil, n.Hull, n.Shield = 0, n.HullMax, n.ShieldMax
 			n.resetAI()
 			w.emit(Event{Type: "respawn", To: n.ID})

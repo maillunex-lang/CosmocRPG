@@ -201,7 +201,7 @@ func _update_ship_labels(_delta: float, me: Node3D) -> void:
 				prio = 500.0 - d
 				maxd = 140.0
 				col = Tokens.DANGER.lightened(0.35)
-		elif kind == "player" or kind == "ai":
+		elif kind == "player" or kind == "ai" or kind == "convoy" or kind == "patrol":
 			prio = 450.0 - d
 			maxd = 160.0
 			col = Tokens.ACCENT.lightened(0.3)

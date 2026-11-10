@@ -455,6 +455,7 @@ func apply_state(state: Dictionary) -> void:
 	_apply_buttons(state, target, ship)
 	_apply_combat_layout(bool(state.get("combat", {}).get("in_combat", false)))
 	_apply_lists(state)
+	_apply_event(state)
 
 
 ## Скорость считается по реальному перемещению корабля между снимками состояния (не выдуманное число).
@@ -698,3 +699,26 @@ func _on_command_failed(_action: String, reason: String) -> void:
 	if _attack.is_busy():
 		_attack.end_busy()
 		_attack_expect = null
+
+
+var _event_label: Label
+
+
+func _apply_event(state: Dictionary) -> void:
+	if _event_label == null:
+		_event_label = Label.new()
+		_event_label.name = "WorldEvent"
+		_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_event_label.custom_minimum_size = Vector2(340, 0)
+		_event_label.add_theme_font_size_override("font_size", 14)
+		_event_label.add_theme_color_override("font_color", Tokens.RARE)
+		var host := _quests_card.get_parent()
+		host.add_child(_event_label)
+		host.move_child(_event_label, _quests_card.get_index() + 1)
+	var ev: Variant = state.get("event", null)
+	if typeof(ev) != TYPE_DICTIONARY or (ev as Dictionary).is_empty():
+		_event_label.visible = false
+		return
+	var e: Dictionary = ev
+	_event_label.visible = true
+	_event_label.text = "%s · %d с\n%s" % [str(e.get("title", "")), int(e.get("left", 0)), str(e.get("text", ""))]

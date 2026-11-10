@@ -218,9 +218,11 @@ type npc struct {
 	respawn                float64
 
 	// живые локации: ИИ врага и точка исследования (nil у учебных объектов)
-	ai    *aiState
-	pt    *pointCfg
-	kills int // сколько раз побеждён (для уникального ключа награды)
+	ai        *aiState
+	pt        *pointCfg
+	kills     int  // сколько раз побеждён (для уникального ключа награды)
+	ephemeral bool // событие мира: не воскресать, жизнь события его уберёт
+	Heading   Vec
 }
 
 func defaultNPCs() []*npc {

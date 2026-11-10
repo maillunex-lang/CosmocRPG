@@ -202,12 +202,13 @@ type Ship struct {
 
 // State — снимок состояния для одного игрока.
 type State struct {
-	Time      float64  `json:"time"`
-	Ship      Ship     `json:"ship"`
-	Objects   []Object `json:"objects"`
-	TargetID  string   `json:"target_id"`
-	Autopilot bool     `json:"autopilot"`
-	Attacking bool     `json:"attacking"`
+	Time      float64   `json:"time"`
+	Ship      Ship      `json:"ship"`
+	Objects   []Object  `json:"objects"`
+	TargetID  string    `json:"target_id"`
+	Autopilot bool      `json:"autopilot"`
+	Attacking bool      `json:"attacking"`
+	Event     *LiveView `json:"event,omitempty"`
 }
 
 // System — описание системы.
@@ -240,6 +241,7 @@ type World struct {
 	layout   worldgen.Layout
 	wcfg     worldgen.Config
 	radius   float64 // радиус системы: из раскладки, иначе Radius
+	live     *liveEvent
 }
 
 // New создаёт мир с одной системой и станцией.
@@ -589,6 +591,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		}
 		w.faceAttackTarget(p, dt)
 	}
+	w.stepEvents(dt)
 	w.stepNPCs()
 	w.stepLiving(dt)
 	w.stepAIs(dt)
@@ -615,12 +618,16 @@ func (w *World) Snapshot(id string) (State, bool) {
 		Autopilot: me.Autopilot,
 		Attacking: me.Attacking,
 		Objects:   []Object{w.station},
+		Event:     w.liveView(),
 	}
 	for _, n := range w.npcs {
 		if n.Hidden && me.revealed[n.ID] <= w.t {
 			continue // скрытые объекты видны только после сканирования
 		}
-		o := Object{ID: n.ID, Kind: n.Kind, Stance: n.Stance, Name: n.Name, Pos: [2]float64{n.Pos.X, n.Pos.Y}, Dir: [2]float64{0, -1}, Dead: n.deadUntil > w.t}
+		o := Object{ID: n.ID, Kind: n.Kind, Stance: n.Stance, Name: n.Name, Pos: [2]float64{n.Pos.X, n.Pos.Y}, Dir: [2]float64{n.Heading.X, n.Heading.Y}, Dead: n.deadUntil > w.t}
+		if n.Heading == (Vec{}) {
+			o.Dir = [2]float64{0, -1}
+		}
 		if n.Kind == "hostile" {
 			h, hm := n.Hull, n.HullMax
 			o.Hull, o.HullMax = &h, &hm

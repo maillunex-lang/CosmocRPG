@@ -124,6 +124,7 @@ func (w *World) ApplyLayout(l worldgen.Layout, cfg worldgen.Config) error {
 		}
 	}
 	w.npcs, w.deposits, w.safe, w.layout, w.wcfg = keep, nil, nil, l, cfg
+	w.live = nil
 	w.radius = l.Radius
 	// Э-1: идентичность системы берётся из раскладки (нефиксированная «Кси»)
 	w.system = System{ID: l.System, Name: l.Name}

@@ -321,15 +321,17 @@ func _draw() -> void:
 				if bool(o.get("dead", false)):
 					continue   # побеждённый враг не показывается и не выбирается
 				draw_circle(sc, 3.5, Tokens.DANGER)
-			"player", "ai":
+			"player", "ai", "convoy":
 				draw_circle(sc, 3.5, Tokens.ACCENT)
+			"patrol":
+				draw_circle(sc, 3.5, Tokens.ACCENT_2)
 			_:
 				continue
 		if kind != "station":
 			_pickables.append({"id": str(o.get("id", "")), "pos": p, "name": str(o.get("name", ""))})
 		if QuestHints.marker(state) == kind:
 			draw_arc(sc, 14, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
-		if kind in ["anomaly", "derelict", "signal"] or str(o.get("id", "")) == selected:
+		if kind in ["anomaly", "derelict", "signal", "convoy", "patrol"] or str(o.get("id", "")) == selected:
 			_draw_name(font, sc + Vector2(8, -8), str(o.get("name", "")))
 		if QuestHints.marked(state, str(o.get("id", "")), kind, str(o.get("resource", ""))):
 			_draw_bang(sc)
@@ -555,7 +557,7 @@ func object_visible(kind: String) -> bool:
 	var category := kind
 	if kind in ["anomaly", "derelict", "signal"]:
 		category = "explore"
-	elif kind == "ai":
+	elif kind in ["ai", "convoy", "patrol"]:
 		category = "player"
 	return bool(_filters.get(category, true))
 

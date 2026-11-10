@@ -12,6 +12,9 @@ signal closed
 var _gateway: UiGateway
 var _rows: VBoxContainer
 var _notice: Label
+var _search: LineEdit
+var _favorites_only := false
+const Settings := preload("res://ui/ui_settings.gd")
 
 
 func _ready() -> void:
@@ -46,6 +49,18 @@ func _ready() -> void:
 	close.pressed.connect(func() -> void: closed.emit())
 	head.add_child(close)
 
+	var tools := HBoxContainer.new()
+	col.add_child(tools)
+	_search = LineEdit.new()
+	_search.placeholder_text = "Поиск по названию системы или фракции"
+	_search.clear_button_enabled = true
+	_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_search.text_changed.connect(func(_text: String) -> void: _rebuild())
+	tools.add_child(_search)
+	var favorites := CheckButton.new()
+	favorites.text = "★ Избранное"
+	favorites.toggled.connect(func(on: bool) -> void: _favorites_only = on; _rebuild())
+	tools.add_child(favorites)
 	_notice = Label.new()
 	_notice.theme_type_variation = &"MutedLabel"
 	_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -78,13 +93,20 @@ func _rebuild() -> void:
 	if _rows == null:
 		return
 	for c in _rows.get_children():
+		_rows.remove_child(c)
 		c.queue_free()
 	if _gateway == null:
 		return
 	var current := str(_gateway.snapshot().get("system", {}).get("id", ""))
 	var ship: Dictionary = _gateway.snapshot().get("ship", {})
 	var pos: Vector2 = ship.get("pos", Vector2.ZERO)
+	var count := 0
 	for sys in _gateway.star_systems():
+		var id := str(sys.get("id", ""))
+		var favorite := Settings.get_bool("map_system_" + id, false)
+		if not matches_system(sys, _search.text) or (_favorites_only and not favorite):
+			continue
+		count += 1
 		var panel := PanelContainer.new()
 		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_rows.add_child(panel)
@@ -96,6 +118,11 @@ func _rebuild() -> void:
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.add_child(col)
+		var star := ActionButton.new()
+		star.text = "★" if favorite else "☆"
+		star.tooltip_text = "Убрать из избранного" if favorite else "В избранное"
+		star.pressed.connect(func() -> void: Settings.set_bool("map_system_" + id, not favorite); _rebuild())
+		box.add_child(star)
 		var name := Label.new()
 		name.text = str(sys.get("name", sys.get("id", ""))) + ("  · вы здесь" if here else "")
 		name.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
@@ -121,6 +148,11 @@ func _rebuild() -> void:
 				Icons.apply(jb, "rocket", Tokens.ACCENT, 20)
 				jb.pressed.connect(_on_jump.bind(to))
 				row.add_child(jb)
+	if count == 0:
+		var empty := Label.new()
+		empty.text = "Системы не найдены. Измените поиск или отключите «Избранное»."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_rows.add_child(empty)
 	if _gateway.jump_gates().is_empty():
 		_notice.text = "В этой системе нет точек гиперперехода."
 	elif _notice.text == "":
@@ -137,3 +169,8 @@ func _system_name(id: String) -> String:
 func _on_jump(to: String) -> void:
 	if _gateway != null:
 		_gateway.jump(to)
+
+
+static func matches_system(system: Dictionary, query: String) -> bool:
+	var text := (str(system.get("name", "")) + " " + str(system.get("id", "")) + " " + str(system.get("faction", ""))).to_lower()
+	return query.strip_edges().is_empty() or text.contains(query.strip_edges().to_lower())

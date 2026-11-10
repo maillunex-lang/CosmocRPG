@@ -67,3 +67,11 @@ Codex, `feature/corporation-client`, отдельный worktree `/workspace/Cos
 ## K-1B — интеграция в main по поручению владельца
 
 2026-11-10: отдельный worktree `/workspace/CosmocRPG-corp-main`, `integration/corporation-main`; база свежей main `78f5c64`, feature `a444891`/код `b9b29e9`. Конфликты документации разрешены сохранением обоих поручений и генерацией сводок из объединённого tasks.json. В test_client.sh сохранены purchase_intent_test и corporation_test, а также оба live сценария. Код атомарной покупки/AI не заменялся.
+
+## MAP-UX-20261110
+
+Codex: `codex/parallel-options`, worktree `/workspace/CosmocRPG-options`. Карта клиента: `client/ui/{map_screen,star_map_screen,map_preferences}.gd`, профильные тесты. Поиск систем, фильтры, локальное избранное, легенда. Корпорации заняты другим ИИ по сообщению владельца; их и AI не менять. IN_PROGRESS.
+
+MAP-UX checkpoint: реализация и профильные headless-проверки завершены (306 PASS), ожидает визуальной приёмки и решения об интеграции. Подробности docs/HANDOFF.md. Серверные области и корпорации не затронуты.
+
+MAP-UX integration: владелец разрешил main. Merge в integration/map-ux-main от origin/main3774fd7; проверена совместимость с клиентом корпораций и purchase intent. Область освобождена; Android-приёмка остаётся.

@@ -559,3 +559,15 @@ K-1B DONE означает реализацию и локальную прове
 По явному «Выгрузи в main» подготовлен обычный merge feature a444891 (код b9b29e9) в актуальную main78f5c64, в отдельном worktree `/workspace/CosmocRPG-corp-main`. Checkpoint атомарной покупки85ee5d4 и чужие коммиты сохранены; runtime сервера не менялся. Конфликты только в реестре/документации и списке тестов, сохранены обе стороны и перегенерированы сводки.
 
 Объединённая версия: corporation36/profile10/HUD161 PASS, purchase_intent PASS; TestCorporationGodotClient и TestPassportGodotClient с race PASS; TestAICivReproFullHoldBuy с race PASS; validator64 задач PASS, bash -n и diff --check PASS. Полный CI/PG suite не запускался, Android/графическая приёмка остаётся. Прежние записи «main не опубликован» описывают feature checkpoint; этот этап разрешает публикацию main, но не production/APK.
+
+## 2026-11-10 — MAP-UX: удобная карта в отдельной ветке
+
+По выбору владельца «6» реализованы клиентские улучшения в `codex/parallel-options` (база c297607, worktree CosmocRPG-options): поиск систем по имени/id/фракции, локальные избранные системы; фильтры станций/добычи/исследования/врагов/пилотов/планет/зон; избранные точки текущей системы с выбором и центрированием. Избранное и фильтры хранятся в user://settings.cfg. Список точек показывает только присутствующие и видимые объекты; скрытая цель не доступна автопилоту. Добавлены подписи исследуемых объектов и расширена легенда, боковая панель прокручивается на компактном экране. Сервер, AI и корпорации не менялись.
+
+Проверки реально выполнены в установленном Godot 4.6.3 headless (проект объявляет 4.7): map_screen_test 23/23, star_map_screen_test 6/6, layout_test 108/108, settings_screen_test 8/8, hud_test 161/161. Всего 306 PASS. Новый star_map_screen_test включён в tools/test_client.sh. validate_roadmap.py и git diff --check PASS. Полный сетевой suite, визуальная приёмка на Android, APK и production не выполнялись. Main не менялась; результаты находятся только в отдельной локальной ветке.
+
+## 2026-11-10 — MAP-UX: интеграция в main
+
+По явному поручению владельца «Выгрузи в main» выполнен merge `codex/parallel-options` (4f0c98f) в свежую origin/main3774fd7 в отдельном worktree CosmocRPG-map-integration. Конфликты только в трёх журналах и списке тестов: сохранены обе стороны, включая purchase_intent_test/corporation_test и новый star_map_screen_test. Сервер, gateway, клиент корпораций и их интеграция совпадают со свежей main.
+
+На объединённом дереве: map23/star_map6/HUD161/corporation36 PASS, purchase_intent ноль провалов; импорт без SCRIPT ERROR/ERROR, validator64 задач PASS, bash -n и diff --check PASS. Godot4.6.3 headless; Android и полный CI не проверены локально. Разрешён обычный push main; production/APK не выполнялись.

@@ -60,6 +60,42 @@ func _run() -> void:
 	m.selected = ""
 	m._refresh_info()
 	_c(m._auto.disabled, "без цели автопилот недоступен")
+	# Скрытая цель не остаётся доступной автопилоту и не выбирается.
+	m.select("dep-1")
+	m.set_filter("deposit", false)
+	await process_frame
+	await process_frame
+	_c(m.pick_at(m.to_screen(Vector2(-30, -190))) == "" and m._auto.disabled, "фильтр скрывает добычу и блокирует автопилот к скрытой цели")
+	m.set_filter("deposit", true)
+	await process_frame
+	await process_frame
+	_c(m.pick_at(m.to_screen(Vector2(-30, -190))) == "dep-1", "возврат фильтра восстанавливает выбор")
+	_c(m.object_visible("anomaly") and m.object_visible("ai"), "категории исследования и пилотов включены")
+	m.set_filter("explore", false)
+	_c(not m.object_visible("signal") and not m.object_visible("derelict"), "единый фильтр всех исследуемых объектов")
+	m.set_filter("explore", true)
+	await process_frame
+	await process_frame
+	m.select("st2")
+	var was_favorite: bool = m._is_favorite("st2")
+	m._toggle_favorite()
+	_c(m._is_favorite("st2") != was_favorite, "переключение избранной точки")
+	if not m._is_favorite("st2"):
+		m._toggle_favorite()
+	_c(m._favorites.item_count >= 2, "избранная точка доступна в списке")
+	m._choose_favorite(1)
+	_c(m.selected == "st2", "избранное выбирает существующую цель")
+	m._point_stars.clear()
+	_c(m._is_favorite("st2"), "избранное загружается с диска")
+	if not was_favorite:
+		m._toggle_favorite()
+	m.reset_view()
+	var scroll: ScrollContainer = m.get_child(0)
+	holder.size = Vector2i(960, 540)
+	await process_frame
+	await process_frame
+	_c(scroll.get_global_rect().end.x <= 960 and scroll.get_global_rect().position.x >= 0, "панель карты помещается на компактном экране")
+	_c(scroll.get_v_scroll_bar().max_value > scroll.size.y, "длинная панель доступна прокруткой")
 	# малая система без раскладки (демо) тоже рисуется
 	m.set_data({}, {"ship": {"pos": Vector2(10, 10), "dir": Vector2(0, 1)}, "objects": []})
 	await process_frame

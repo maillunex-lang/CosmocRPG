@@ -17,8 +17,8 @@ type ChatSpeaker struct {
 	Log  *slog.Logger
 
 	mu      sync.Mutex
-	recent  []uint64          // hashes of last lines (global anti-repeat)
-	context map[string][]line // channel -> last few lines
+	recent  []uint64
+	context map[string][]line
 }
 
 type line struct {
@@ -39,7 +39,6 @@ func hashLine(s string) uint64 {
 	return h.Sum64()
 }
 
-// Seen reports whether a line was said recently (global).
 func (s *ChatSpeaker) Seen(text string) bool {
 	h := hashLine(text)
 	s.mu.Lock()
@@ -68,7 +67,6 @@ func (s *ChatSpeaker) remember(channel, from, text string) {
 	s.context[channel] = l
 }
 
-// Last returns the last line in a channel (for follow-ups). Empty if none.
 func (s *ChatSpeaker) Last(channel string) (from, text string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -81,21 +79,15 @@ func (s *ChatSpeaker) Last(channel string) (from, text string) {
 }
 
 // Say posts a line if it was not said recently. Returns false if skipped.
-func (s *ChatSpeaker) Say(ctx context.Context, captainID, channel, text string) bool {
+func (s *ChatSpeaker) Say(ctx context.Context, captainID, name, channel, text string) bool {
 	if s == nil || s.Chat == nil || text == "" || captainID == "" {
 		return false
 	}
 	if s.Seen(text) {
 		return false
 	}
-	m := chat.Message{
-		Channel: channel,
-		FromID:  captainID,
-		Text:    text,
-		FromAI:  true,
-		At:      time.Now(),
-	}
-	if err := s.Chat.Send(ctx, m); err != nil {
+	_, err := s.Chat.Send(ctx, chat.Sender{ID: captainID, Name: name, AI: true}, channel, "", text)
+	if err != nil {
 		if s.Log != nil {
 			s.Log.Error("AI chat send failed", "captain", captainID, "err", err)
 		}
@@ -106,40 +98,40 @@ func (s *ChatSpeaker) Say(ctx context.Context, captainID, channel, text string) 
 }
 
 // LineForGoal returns a short contextual line based on the agent's current goal.
-// Variants are chosen by time so the same agent does not spam the same sentence.
+// Variants rotate by time so the same agent does not spam the same sentence.
 func LineForGoal(goal GoalKind, name string, now time.Time) string {
-	slot := int(now.Unix()/30) % 4
+	slot := int(now.Unix()/45) % 4
 	switch goal {
 	case GoalFarmCredits:
 		switch slot {
 		case 0:
-			return name + ": вижу вражеский корабль, иду на перехват."
+			return "вижу вражеский корабль, иду на перехват."
 		case 1:
-			return name + ": если кто рядом — могу прикрыть."
+			return "если кто рядом — могу прикрыть."
 		case 2:
-			return name + ": корпус в порядке, продолжаю патруль."
+			return "корпус в порядке, продолжаю патруль."
 		default:
-			return name + ": цель снята, ищу следующую."
+			return "цель снята, ищу следующую."
 		}
 	case GoalMineAndSell:
 		switch slot {
 		case 0:
-			return name + ": нашёл месторождение, начинаю добычу."
+			return "нашёл месторождение, начинаю добычу."
 		case 1:
-			return name + ": трюм почти полный, скоро на станцию."
+			return "трюм почти полный, скоро на станцию."
 		case 2:
-			return name + ": если кто знает хорошую жилу — пишите."
+			return "если кто знает хорошую жилу — пишите."
 		default:
-			return name + ": продал груз, ищу следующее."
+			return "продал груз, ищу следующее."
 		}
 	case GoalExplore:
 		switch slot {
 		case 0:
-			return name + ": иду проверить сигнал."
+			return "иду проверить сигнал."
 		case 1:
-			return name + ": ничего опасного пока не вижу."
+			return "ничего опасного пока не вижу."
 		default:
-			return name + ": отметил точку, двигаюсь дальше."
+			return "отметил точку, двигаюсь дальше."
 		}
 	default:
 		return ""
@@ -147,22 +139,20 @@ func LineForGoal(goal GoalKind, name string, now time.Time) string {
 }
 
 // FollowUp builds a short reply to the last line in the channel, if any.
-// Returns empty if there is nothing to follow or the line would repeat.
-func (s *ChatSpeaker) FollowUp(channel, myName string) string {
+func (s *ChatSpeaker) FollowUp(channel, myID string) string {
 	from, text := s.Last(channel)
-	if from == "" || text == "" || from == myName {
+	if from == "" || text == "" || from == myID {
 		return ""
 	}
-	// simple contextual follow-ups; real variety comes from not repeating
 	switch {
 	case containsAny(text, "враг", "атак", "бой"):
-		return myName + ": понял, держусь подальше."
+		return "понял, держусь подальше."
 	case containsAny(text, "руда", "добы", "месторож"):
-		return myName + ": удачи с грузом."
+		return "удачи с грузом."
 	case containsAny(text, "станц", "док", "причал"):
-		return myName + ": тоже скоро буду."
+		return "тоже скоро буду."
 	default:
-		return myName + ": принято."
+		return "принято."
 	}
 }
 

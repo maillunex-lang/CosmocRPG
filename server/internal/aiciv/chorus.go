@@ -32,6 +32,7 @@ type chatScene struct {
 type Chorus struct {
 	Speaker *ChatSpeaker
 	Board   *Board
+	Live    *Live
 	Log     *slog.Logger
 
 	mu         sync.Mutex
@@ -42,6 +43,8 @@ type Chorus struct {
 	follow     string
 	followLine string
 	pauseUntil time.Time
+	nextLine   time.Time
+	baseGap    time.Duration
 }
 
 func NewChorus(s *ChatSpeaker, log *slog.Logger) *Chorus {
@@ -95,10 +98,11 @@ func (c *Chorus) Run(ctx context.Context, interval time.Duration) {
 	if c == nil || c.Speaker == nil {
 		return
 	}
-	if interval < 8*time.Second {
+	if interval < 4*time.Second {
 		interval = 12 * time.Second
 	}
-	t := time.NewTicker(interval)
+	c.baseGap = interval
+	t := time.NewTicker(4 * time.Second)
 	defer t.Stop()
 	for {
 		select {
@@ -110,10 +114,25 @@ func (c *Chorus) Run(ctx context.Context, interval time.Duration) {
 	}
 }
 
+func (c *Chorus) gap(fallback time.Duration) time.Duration {
+	if c.Live == nil {
+		return fallback
+	}
+	sec := c.Live.Get().IntervalSec
+	if sec < 4 {
+		sec = 12
+	}
+	return time.Duration(sec) * time.Second
+}
+
 func (c *Chorus) turn(ctx context.Context, now time.Time) {
-	if now.Before(c.pauseUntil) {
+	if now.Before(c.pauseUntil) || now.Before(c.nextLine) {
 		return
 	}
+	if c.Live != nil && !c.Live.Get().Chat {
+		return
+	}
+	c.nextLine = now.Add(c.gap(c.baseGap))
 	voices := c.snapshot()
 	if len(voices) < 2 {
 		return
@@ -152,8 +171,24 @@ func (c *Chorus) turn(ctx context.Context, now time.Time) {
 }
 
 func (c *Chorus) pickScene(voices []Voice) *chatScene {
-	need := 3 + int(c.roll()%13) // 3..15
-	if c.Board != nil && c.roll()%5 == 0 {
+	minN, maxN := 3, 15
+	help := c.Board != nil
+	if c.Live != nil {
+		k := c.Live.Get()
+		if k.TalkMin >= 1 {
+			minN = k.TalkMin
+		}
+		if k.TalkMax >= minN {
+			maxN = k.TalkMax
+		}
+		help = help && k.Help
+	}
+	span := maxN - minN + 1
+	need := minN
+	if span > 1 {
+		need = minN + int(c.roll()%uint32(span))
+	}
+	if help && c.roll()%5 == 0 {
 		v := voices[int(c.roll())%len(voices)]
 		return &chatScene{pact: true, need: need, from: v.ID, kind: askKind(v.Goal), topic: "quiet"}
 	}

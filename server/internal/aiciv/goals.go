@@ -40,9 +40,30 @@ type GoalRunner struct {
 	World   WorldView
 	Store   *Store
 	Board   *Board
+	Live    *Live
 	Log     *slog.Logger
 	LowHull float64
 	Name    string
+}
+
+func (r *GoalRunner) hullLimit() float64 {
+	if r != nil && r.Live != nil {
+		p := r.Live.Get().RetreatPct
+		if p >= 5 && p <= 90 {
+			return float64(p) / 100
+		}
+	}
+	if r != nil && r.LowHull > 0 && r.LowHull < 1 {
+		return r.LowHull
+	}
+	return 0.3
+}
+
+func (r *GoalRunner) helpOn() bool {
+	if r == nil || r.Live == nil {
+		return true
+	}
+	return r.Live.Get().Help
 }
 
 type agentState struct {
@@ -62,10 +83,6 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 		goal = GoalIdleDock
 	}
 	st := agentState{goal: goal, step: StepFindTarget, playerID: playerID}
-	threshold := r.LowHull
-	if threshold <= 0 || threshold >= 1 {
-		threshold = 0.3
-	}
 	t := time.NewTicker(2 * time.Second)
 	defer t.Stop()
 	for {
@@ -80,12 +97,13 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			if !ok {
 				continue
 			}
-			if r.Board != nil {
+			if r.helpOn() && r.Board != nil {
 				if ord, ok := r.Board.OrderFor(captainID, time.Now()); ok {
 					r.execPact(ctx, g, ord, snap)
 					continue
 				}
 			}
+			threshold := r.hullLimit()
 			if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax < threshold && st.step != StepRetreat && st.step != StepWait {
 				st.step = StepRetreat
 			}
@@ -196,10 +214,7 @@ func (r *GoalRunner) doRetreat(ctx context.Context, g *Gateway, captainID string
 }
 
 func (r *GoalRunner) waitRecover(ctx context.Context, g *Gateway, captainID string, st *agentState, snap world.State) {
-	threshold := r.LowHull
-	if threshold <= 0 || threshold >= 1 {
-		threshold = 0.3
-	}
+	threshold := r.hullLimit()
 	if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax > threshold+0.15 {
 		_ = IssueMove(ctx, g, "resume", 0, 0)
 		st.step = StepFindTarget

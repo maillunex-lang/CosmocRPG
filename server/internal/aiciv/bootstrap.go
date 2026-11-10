@@ -124,6 +124,25 @@ func (s *Store) IssueSession(ctx context.Context, id string, ttl time.Duration) 
 	return token, nil
 }
 
+// RenewSession продлевает уже открытый вход, не меняя токен соединения.
+func (s *Store) RenewSession(ctx context.Context, agent string, hash [32]byte, ttl time.Duration) error {
+	if s == nil || !validID(agent) {
+		return ErrInput
+	}
+	if ttl < time.Second || ttl > 10*time.Minute {
+		ttl = 10 * time.Minute
+	}
+	tag, err := s.pool.Exec(ctx, `UPDATE ai_gateway_sessions SET expires_at=now()+$2::bigint*interval '1 second'
+ WHERE agent_id=$1 AND token_hash=$3 AND expires_at>now()`, agent, int64(ttl/time.Second), hash[:])
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrSession
+	}
+	return nil
+}
+
 // AuthorizeSession использует время БД, не время клиента. AI-владелец определяется
 // по собственной persistent binding, а не флагу AI в присланном сообщении.
 func (s *Store) AuthorizeSession(ctx context.Context, player string, hash [32]byte) error {

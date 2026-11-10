@@ -163,11 +163,20 @@ type memCorp struct {
 
 // MemStore — хранилище в памяти; повторяет ограничения PGStore.
 type MemStore struct {
-	mu     sync.Mutex
-	byID   map[string]*memCorp
-	byName map[string]string
-	byTag  map[string]string
-	player map[string]string
+	mu           sync.Mutex
+	byID         map[string]*memCorp
+	byName       map[string]string
+	byTag        map[string]string
+	player       map[string]string
+	alliances    map[string]*memAlliance
+	clanAlliance map[string]string
+	tasks        map[string]Task
+}
+
+type memAlliance struct {
+	Alliance
+	clans map[string]bool
+	votes map[string]string
 }
 
 // NewMemStore создаёт пустое хранилище.

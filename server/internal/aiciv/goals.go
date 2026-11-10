@@ -35,13 +35,13 @@ const (
 )
 
 // GoalRunner executes a long-term goal as an ordered chain of steps.
+// Chat is owned by Chorus so several agents can answer each other.
 type GoalRunner struct {
 	World   WorldView
 	Store   *Store
-	Speaker *ChatSpeaker
-	Name    string
 	Log     *slog.Logger
 	LowHull float64
+	Name    string
 }
 
 type agentState struct {
@@ -78,15 +78,6 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			snap, ok := r.World.Snapshot(playerID)
 			if !ok {
 				continue
-			}
-			// occasional contextual line (anti-repeat inside Speaker)
-			if r.Speaker != nil && r.Name != "" && int(time.Now().Unix())%50 == 0 {
-				if line := LineForGoal(st.goal, r.Name, time.Now()); line != "" {
-					r.Speaker.Say(ctx, captainID, r.Name, "general", line)
-				}
-				if fu := r.Speaker.FollowUp("general", captainID); fu != "" {
-					r.Speaker.Say(ctx, captainID, r.Name, "general", fu)
-				}
 			}
 			if snap.Ship.HullMax > 0 && snap.Ship.Hull/snap.Ship.HullMax < threshold && st.step != StepRetreat && st.step != StepWait {
 				st.step = StepRetreat
@@ -144,14 +135,12 @@ func (r *GoalRunner) stepMine(ctx context.Context, g *Gateway, captainID string,
 	case StepApproach:
 		r.moveToward(ctx, g, st, snap, 15, StepMine)
 	case StepMine:
-		// start mining; if hold looks full or deposit gone, go sell
 		_ = IssueMine(ctx, g, "mine", st.target)
 		if snap.Ship.CargoUsed > snap.Ship.Cargo*0.8 {
 			_ = IssueMineStop(ctx, g, "mine-stop")
 			st.step = StepSell
 		}
 	case StepSell:
-		// move toward station if we know one, then sell
 		_ = IssueSell(ctx, g, "sell")
 		st.step = StepFindTarget
 	case StepRetreat:

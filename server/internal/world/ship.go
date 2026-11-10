@@ -186,6 +186,9 @@ type AbilityInfo struct {
 	CooldownLeft      float64 `json:"cooldown_left"`
 	NeedsTarget       bool    `json:"needs_target"`
 	Active            bool    `json:"active"`
+	Range             float64 `json:"range,omitempty"`
+	Icon              string  `json:"icon,omitempty"`
+	Role              string  `json:"role,omitempty"` // strike, ult, module; пусто — прежние умения корпуса
 }
 
 // Arrival — первое прибытие игрока к именованной точке этой сессии.

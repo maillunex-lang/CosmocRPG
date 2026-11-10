@@ -48,7 +48,9 @@ func _run() -> void:
 	await process_frame
 	_check(not bool(gateway.snapshot()["ship"]["modules"][0]["equipped"]), "Unequip not reflected")
 	_check(hangar._engine_button.text.contains("Установить"), "Open hangar did not refresh")
-	_check(screen.get_node("%Hud")._skill_buttons[0].disabled, "HUD still allows M01")
+	gateway.cast_ability("M01")
+	await create_timer(1.2).timeout
+	_check(not bool(gateway.snapshot().get("ship", {}).get("boosting", false)), "снятый двигатель всё ещё включает форсаж")
 	# Reconnect the real client while the server retains the live ship.
 	gateway.close()
 	Session.gateway = null
@@ -71,8 +73,7 @@ func _run() -> void:
 	hangar._engine_button.pressed.emit()
 	_check(await _wait_revision(gateway, 2), "Refit did not commit")
 	await process_frame
-	_check(not screen.get_node("%Hud")._skill_buttons[0].disabled, "HUD did not restore M01")
-	gateway.use_skill(0)
+	gateway.cast_ability("M01")
 	var deadline := Time.get_ticks_msec() + 5000
 	while Time.get_ticks_msec() < deadline and not bool(gateway.snapshot().get("ship", {}).get("boosting", false)):
 		await process_frame

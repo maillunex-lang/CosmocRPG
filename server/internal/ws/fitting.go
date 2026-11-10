@@ -75,6 +75,7 @@ func (h *Handler) fittingMsg(ctx context.Context, ss *session, m Message) {
 		reply(errMsg(m.ID, fittingCode(err), fittingText(err)))
 		return
 	}
+	h.pushCategories(ss.pid, next)
 	view := equipment.PublicView(h.opts.Fitting.Catalog(), next)
 	h.decorateFitting(&view, ss.pid)
 	reply(Message{Type: "fitting", ID: m.ID, Payload: mustJSON(view)})
@@ -87,6 +88,7 @@ func (h *Handler) loadFitting(ctx context.Context, owner, hull, spec string) (eq
 	if err != nil {
 		return equipment.View{}, err
 	}
+	h.pushCategories(owner, state)
 	return equipment.PublicView(h.opts.Fitting.Catalog(), state), nil
 }
 
@@ -101,6 +103,27 @@ func (h *Handler) decorateFitting(view *equipment.View, id string) {
 		return
 	}
 	view.CanChange = true
+}
+
+func (h *Handler) pushCategories(id string, state fitting.State) {
+	shipWorld := h.opts.World.For(id)
+	if shipWorld == nil || h.opts.Fitting == nil {
+		return
+	}
+	shipWorld.SetModuleCategories(id, equipment.ModuleCategories(h.opts.Fitting.Catalog(), state))
+}
+
+func (h *Handler) syncFitting(ctx context.Context, id, hull, spec string) {
+	if h.opts.Fitting == nil || hull == "" {
+		return
+	}
+	readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	state, err := h.opts.Fitting.Ensure(readCtx, id, hull, spec)
+	if err != nil {
+		return
+	}
+	h.pushCategories(id, state)
 }
 
 func fittingCode(err error) string {

@@ -132,6 +132,9 @@ func (w *World) cooldownLeft(p *Player, ab string) float64 {
 }
 
 func (w *World) available(p *Player, ab string) (AbilityCfg, error) {
+	if sk, ok := skillByID(ab); ok {
+		return w.availableSkill(p, sk)
+	}
 	// Catalog presence does not imply an implemented handler. Fail before any
 	// resource checks so imported/future keys cannot report a successful cast.
 	switch ab {
@@ -183,6 +186,9 @@ func (w *World) UseAbility(id, ab string) error {
 	cfg, err := w.available(p, ab)
 	if err != nil {
 		return err
+	}
+	if sk, ok := skillByID(ab); ok {
+		return w.castSkill(p, sk)
 	}
 	switch ab {
 	case "boost":
@@ -266,6 +272,9 @@ func (w *World) damagePlayerLocked(id string, dmg float64, attacker string) {
 	}
 	if dmg > 0 {
 		p.combatUntil = w.t + equipmentCombatGrace
+	}
+	if dmg > 0 && p.guardUntil > w.t && p.guardMul > 0 && p.guardMul < 1 {
+		dmg *= p.guardMul
 	}
 	toS, toH := applyDamage(&p.Shield, &p.Hull, p.spec.Armor, dmg)
 	p.lastHit = w.t
@@ -369,7 +378,11 @@ func (w *World) stepNPCs() {
 // speedFor возвращает множитель скорости игрока (форсаж).
 func (w *World) speedFor(p *Player) float64 {
 	if p.boostUntil > w.t {
-		return p.spec.Abilities["boost"].SpeedMul
+		mul := p.spec.Abilities["boost"].SpeedMul
+		if mul < 1.2 {
+			mul = 1.7
+		}
+		return mul
 	}
 	return 1
 }
@@ -401,7 +414,7 @@ func (w *World) abilityList(p *Player) []AbilityInfo {
 		}
 		out = append(out, info)
 	}
-	return out
+	return w.appendLoadout(p, out)
 }
 
 // SpecInfo возвращает паспорт корабля игрока (для ангара).

@@ -71,6 +71,36 @@ func PublicView(c *fitting.Catalog, s fitting.State) View {
 	return out
 }
 
+// ModuleCategories — категории надетых модулей в порядке слотов корпуса.
+func ModuleCategories(c *fitting.Catalog, s fitting.State) []string {
+	if c == nil {
+		return nil
+	}
+	h, ok := c.Hull(s.Hull)
+	if !ok {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, slot := range h.Slots {
+		id := s.Slots[slot.ID]
+		if id == "" {
+			continue
+		}
+		item, ok := s.Items[id]
+		if !ok {
+			continue
+		}
+		m, ok := c.Module(item.Prototype)
+		if !ok || m.Category == "" || seen[m.Category] {
+			continue
+		}
+		seen[m.Category] = true
+		out = append(out, m.Category)
+	}
+	return out
+}
+
 func itemView(c *fitting.Catalog, item fitting.Item) ItemView {
 	name, category := item.Prototype, ""
 	if m, ok := c.Module(item.Prototype); ok {

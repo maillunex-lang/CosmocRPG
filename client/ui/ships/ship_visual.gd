@@ -32,6 +32,10 @@ var _sparks: CPUParticles3D
 var _boom: CPUParticles3D
 var _boom_flash: MeshInstance3D
 var _scan_ring: MeshInstance3D
+var _skill_ring: MeshInstance3D
+var _skill_flash: MeshInstance3D
+var _skill_sparks: CPUParticles3D
+var _skill_bolt: MeshInstance3D
 var _dock_tween: Tween
 
 
@@ -54,6 +58,10 @@ func build(sid: String, skin: String = "") -> void:
 	_boom = null
 	_boom_flash = null
 	_scan_ring = null
+	_skill_ring = null
+	_skill_flash = null
+	_skill_sparks = null
+	_skill_bolt = null
 	_boost_trail = null
 	_move_trail = null
 	var def := ShipDef.get_def(sid)
@@ -308,6 +316,109 @@ func play_scan(radius: float) -> void:
 	tw.tween_callback(func() -> void: _scan_ring.visible = false)
 
 
+func play_burst(color: Color, radius: float) -> void:
+	_pulse_ring(color, radius, 0.45)
+
+
+func _skill_fx() -> bool:
+	if points.is_empty() or not points.has("Hit_Center"):
+		return false
+	var center := points["Hit_Center"] as Marker3D
+	if _skill_ring == null:
+		_skill_ring = ShipVfx.ring(Color.WHITE)
+		_skill_ring.rotation_degrees.x = 90
+		center.add_child(_skill_ring)
+		_skill_flash = ShipVfx.flash(Color.WHITE, 0.45)
+		center.add_child(_skill_flash)
+		_skill_sparks = ShipVfx.particles(Color(1, 0.8, 0.4), 16, 0.4, 0.08, 2.4)
+		center.add_child(_skill_sparks)
+		_skill_bolt = ShipVfx.bolt(Color(1, 0.85, 0.4))
+		add_child(_skill_bolt)
+	return true
+
+
+func _pulse_ring(color: Color, radius: float, seconds: float) -> void:
+	if not _skill_fx():
+		return
+	_skill_ring.material_override = ShipVfx.glow(Color(color, 0.9), 1.8)
+	_skill_ring.visible = true
+	_skill_ring.scale = Vector3.ONE * 0.35
+	var tw := create_tween()
+	tw.tween_property(_skill_ring, "scale", Vector3.ONE * maxf(radius, 0.8), seconds)
+	tw.tween_callback(func() -> void: _skill_ring.visible = false)
+
+
+func _pulse_flash(color: Color, scale_to: float) -> void:
+	if not _skill_fx():
+		return
+	_skill_flash.material_override = ShipVfx.glow(Color(color, 0.85), 2.2)
+	_tween_flash(_skill_flash, scale_to, 0.28)
+
+
+func _burst_sparks(color: Color) -> void:
+	if not _skill_fx():
+		return
+	_skill_sparks.material_override = ShipVfx.glow(Color(color, 1), 2.0)
+	_skill_sparks.restart()
+	_skill_sparks.emitting = true
+
+
+## Удар умения: отдельный снаряд, не путать с очередью автоатаки.
+func play_strike(target: Variant) -> void:
+	if not alive or not _skill_fx():
+		return
+	_pulse_flash(Color(1.0, 0.75, 0.35), 1.4)
+	if target is Vector3 and points.has("Weapon_L"):
+		var from: Vector3 = (points["Weapon_L"] as Marker3D).global_position
+		var b := _skill_bolt
+		b.material_override = ShipVfx.glow(Color(1, 0.8, 0.35, 1), 2.6)
+		b.top_level = true
+		b.global_position = from
+		if from.distance_to(target) > 0.01:
+			b.look_at(target, Vector3.UP)
+		b.visible = true
+		var tw := create_tween()
+		tw.tween_property(b, "global_position", target, 0.1)
+		tw.tween_callback(func() -> void: b.visible = false)
+
+
+func play_dash(target: Variant) -> void:
+	play_boost()
+	play_strike(target)
+	_pulse_ring(Color(0.5, 0.85, 1.0), 1.6, 0.25)
+
+
+func play_nova(radius: float) -> void:
+	_pulse_ring(Color(1.0, 0.42, 0.12), radius, 0.45)
+	_burst_sparks(Color(1.0, 0.5, 0.15))
+	_pulse_flash(Color(1.0, 0.45, 0.1), 2.4)
+
+
+func play_barrier() -> void:
+	_pulse_ring(Color(0.35, 0.7, 1.0), 1.8, 0.35)
+	_pulse_flash(Color(0.45, 0.75, 1.0), 1.8)
+
+
+func play_mend() -> void:
+	_burst_sparks(Color(0.4, 1.0, 0.55))
+	_pulse_ring(Color(0.45, 1.0, 0.6), 1.3, 0.4)
+
+
+func play_drone_fx() -> void:
+	_burst_sparks(Color(0.7, 0.85, 1.0))
+	_pulse_ring(Color(0.65, 0.8, 1.0), 1.2, 0.3)
+
+
+func play_fortify() -> void:
+	_pulse_ring(Color(0.95, 0.75, 0.25), 1.7, 0.5)
+	_pulse_flash(Color(0.95, 0.7, 0.2), 1.5)
+
+
+func play_vent() -> void:
+	_burst_sparks(Color(0.3, 0.95, 1.0))
+	_pulse_flash(Color(0.35, 0.9, 1.0), 1.6)
+
+
 ## Воспроизвести событие по имени («Fire», «HitShield», …) — единая точка входа для сетевых событий.
 func play(name: String, arg: Variant = null) -> void:
 	match name:
@@ -319,3 +430,11 @@ func play(name: String, arg: Variant = null) -> void:
 		"Dock": play_dock()
 		"Scan": play_scan(float(arg) if arg != null else 20.0)
 		"Respawn": respawn()
+		"Strike": play_strike(arg)
+		"Dash": play_dash(arg)
+		"Nova": play_nova(float(arg) if arg != null else 8.0)
+		"Barrier": play_barrier()
+		"Mend": play_mend()
+		"Drone": play_drone_fx()
+		"Fortify": play_fortify()
+		"Vent": play_vent()

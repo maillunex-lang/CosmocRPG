@@ -612,11 +612,18 @@ func _dock_skills() -> void:
 func _place_fan() -> void:
 	var spots := [Vector2(0, 0), Vector2(64, 0), Vector2(8, 68), Vector2(78, 58)]
 	var sides := [56.0, 56.0, 58.0, 68.0]
+	var extra_spots := [Vector2(148, 62), Vector2(198, 24)]
 	for i in _skill_buttons.size():
 		var b := _skill_buttons[i] as Control
-		b.position = spots[i]
-		b.set_meta("fan_side", sides[i])
-		_round_button(b, sides[i])
+		if i < spots.size():
+			b.position = spots[i]
+			b.set_meta("fan_side", sides[i])
+			_round_button(b, sides[i])
+		else:
+			b.position = extra_spots[i - spots.size()]
+			b.set_meta("fan_side", 46.0)
+			_round_button(b, 46.0)
+			b.visible = false
 	_attack.position = Vector2(164, 138)
 	_auto_skills.position = Vector2(100, 176)
 	_round_button(_auto_skills, 48)
@@ -691,7 +698,7 @@ func _paint_auto() -> void:
 
 
 func _build_skills() -> void:
-	for i in 4:
+	for i in 6:
 		var b := ActionButton.new()
 		b.name = "Skill%d" % i
 		b.text = "Навык %d" % (i + 1)
@@ -892,7 +899,11 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 		var skills: Array = state.get("skills", [])
 		if i >= skills.size():
 			b.disabled = true
+			b.text = ""
+			b.icon = null
+			b.visible = i < 4
 			continue
+		b.visible = true
 		var s: Dictionary = skills[i]
 		var cd: float = s["cooldown_left"]
 		var fill := b.get_node_or_null("CooldownFill") as ColorRect
@@ -900,15 +911,36 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 			fill.anchor_right = clampf(cd / maxf(float(s["cooldown"]), 0.001), 0.0, 1.0) if cd > 0.0 else 0.0
 			fill.offset_right = 0.0
 		var skill_name := str(s["name"])
-		b.text = str(int(ceil(cd))) if cd > 0.0 else skill_name
+		var icon := str(s.get("icon", ""))
+		if cd > 0.0:
+			b.text = str(int(ceil(cd)))
+			if icon != "":
+				b.icon = null
+		else:
+			b.text = "" if icon != "" else skill_name
+			if icon != "":
+				var tint := Color.WHITE
+				if str(s.get("role", "")) == "ult":
+					tint = Color(0.95, 0.78, 0.35)
+				elif str(s.get("role", "")) == "module":
+					tint = Color(0.65, 0.9, 1.0)
+				Icons.apply(b, icon, tint, 22)
+				b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 		if b.has_meta("fan_side"):
 			var side := float(b.get_meta("fan_side"))
 			b.custom_minimum_size = Vector2(side, side)
 			b.size = Vector2(side, side)
-		b.tooltip_text = "%s · энергия %d · перезарядка %d с" % [skill_name, int(s["energy_cost"]), int(s["cooldown"])]
+		var role_name: String = str({"strike": "атака", "ult": "ульта", "module": "модуль"}.get(str(s.get("role", "")), ""))
+		var kind := ("%s · " % role_name) if role_name != "" else ""
+		b.tooltip_text = "%s%s · энергия %d · перезарядка %d с" % [kind, skill_name, int(s["energy_cost"]), int(s["cooldown"])]
 		var blocked: bool = not bool(s.get("enabled", true)) or bool(ship.get("dead", false)) or cd > 0.0 or float(ship.get("energy", 0.0)) < float(s["energy_cost"])
+		var reach := float(s.get("range", 0.0))
+		var near := bool(state.get("target_in_range", false))
+		if reach > 0.0 and has_target and ship.get("pos") is Vector2 and target.get("pos") is Vector2:
+			near = (ship["pos"] as Vector2).distance_to(target["pos"]) <= reach
 		if s["needs_target"]:
-			blocked = blocked or not has_target or friendly or not state.get("target_in_range", false)
+			blocked = blocked or not has_target or friendly or not near
 		b.disabled = blocked
 		if not bool(s.get("enabled", true)):
 			b.tooltip_text = "Навык не изучен" if str(s.get("unavailable_reason", "")) == "ability_not_learned" else "Требуется установленный модуль"

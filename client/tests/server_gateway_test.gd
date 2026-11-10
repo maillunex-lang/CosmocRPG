@@ -113,13 +113,17 @@ func _run() -> void:
 	# корабль «Стриж»: паспорт, способности, форсаж и облик от сервера
 	var sh: Dictionary = a.snapshot()["ship"]
 	_check(sh.get("type") == "FTR-001" and sh.get("hull_max") == 1200.0 and sh.get("shield_max") == 600.0 and sh.get("armor") == 120.0 and sh.get("cargo") == 8.0, "паспорт Стрижа с сервера (корпус 1200, щит 600, броня 120, груз 8)")
-	_check(a.snapshot()["skills"].size() == 2 and a.snapshot()["combat_available"], "кнопки способностей: форсаж и специализация")
+	_check(a.snapshot()["skills"].size() >= 4 and a.snapshot()["combat_available"], "умения корабля: атака, модули, ульта и форсаж корпуса")
+	var roles: Dictionary = {}
+	for sk in a.snapshot()["skills"]:
+		roles[str(sk.get("role", ""))] = true
+	_check(bool(roles.get("strike", false)) and bool(roles.get("ult", false)) and bool(roles.get("module", false)), "на веере есть атака, ульта и модуль")
 	var fx: Array = []
 	a.combat_event.connect(func(e: Dictionary) -> void: fx.append(e["type"]))
-	a.use_skill(0)
+	a.cast_ability("M01")
 	await _wait(a, func() -> bool: return a.snapshot()["ship"]["boosting"])
-	_check(a.snapshot()["ship"]["boosting"] and "boost" in fx, "форсаж включён сервером, событие получено")
-	a.use_skill(0)
+	_check(a.snapshot()["ship"]["boosting"] and "boost" in fx, "форсаж корпуса включён сервером, событие получено")
+	a.cast_ability("M01")
 	var errs: Array = []
 	a.command_failed.connect(func(_a: String, r: String) -> void: errs.append(r))
 	await _wait(a, func() -> bool: return errs.size() > 0, 3.0)

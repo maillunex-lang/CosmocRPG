@@ -68,6 +68,7 @@ var _corp_wait := 0.0
 const CORP_TIMEOUT := 10.0
 
 var _ability_ids: Array = []   # слот способности (кнопка HUD) -> идентификатор на сервере
+var _castable: Dictionary = {} # id или catalog_id -> что слать серверу, включая скрытый форсаж корпуса
 var _locations: Array = []     # журнал прибытий этой сессии и с сервера
 
 
@@ -410,15 +411,41 @@ func _apply_state(p: Dictionary) -> void:
 	_target_id = str(p.get("target_id", ""))
 	_autopilot = bool(p.get("autopilot", false))
 	var abilities: Array = ship.get("abilities", [])
+	var shown: Array = []
+	var tagged: Array = []
+	var legacy: Array = []
+	_castable.clear()
+	for ab in abilities:
+		if ab is Dictionary:
+			var raw_id := str(ab.get("id", ""))
+			var catalog_id := str(ab.get("catalog_id", ""))
+			var wire: String = catalog_id if catalog_id != "" else raw_id
+			if raw_id != "":
+				_castable[raw_id] = wire
+			if catalog_id != "":
+				_castable[catalog_id] = wire
+			if str(ab.get("role", "")) in ["strike", "ult", "module"]:
+				tagged.append(ab)
+			else:
+				legacy.append(ab)
+	if tagged.size() > 0:
+		shown = tagged
+		shown.append_array(legacy)
+	else:
+		shown = abilities
 	var skills: Array = []
 	_ability_ids.clear()
-	for i in abilities.size():
-		var ab: Dictionary = abilities[i]
+	for i in shown.size():
+		var ab: Dictionary = shown[i]
 		var catalog_id := str(ab.get("catalog_id", ""))
 		_ability_ids.append(catalog_id if catalog_id != "" else str(ab.get("id", "")))
+		var icon := str(ab.get("icon", ""))
+		if icon == "":
+			icon = str({"boost": "rocket", "intercept": "zap", "scan": "globe"}.get(str(ab.get("id", "")), ""))
 		skills.append({"slot": i, "name": str(ab.get("name", "")), "energy_cost": float(ab.get("energy_cost", 0)), "cooldown": float(ab.get("cooldown", 0)),
 			"cooldown_left": float(ab.get("cooldown_left", 0)), "needs_target": bool(ab.get("needs_target", false)),
-			"enabled": bool(ab.get("enabled", true)), "unavailable_reason": str(ab.get("unavailable_reason", ""))})
+			"enabled": bool(ab.get("enabled", true)), "unavailable_reason": str(ab.get("unavailable_reason", "")),
+			"icon": icon, "role": str(ab.get("role", "")), "range": float(ab.get("range", 0.0))})
 	var has_combat := ship.has("hull")
 	var tpos: Variant = null
 	for o in objects:
@@ -522,6 +549,16 @@ func stop_attack() -> void:
 func use_skill(slot: int) -> void:
 	if _joined and slot >= 0 and slot < _ability_ids.size():
 		_client.send_message("ability", {"id": _ability_ids[slot]})
+
+
+## Прямой вызов умения по id сервера. Нужен форсажу корпуса: на веере его место заняли атака, модули и ульта.
+func cast_ability(id: String) -> void:
+	if not _joined:
+		return
+	var wire := str(_castable.get(id, ""))
+	if wire == "":
+		return
+	_client.send_message("ability", {"id": wire})
 
 
 ## Создание персонажа: ник, пол ("m"/"f"), направление пилота (interceptor, scout, trader, miner).

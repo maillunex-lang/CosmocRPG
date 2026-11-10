@@ -857,6 +857,37 @@ func _on_combat_event(e: Dictionary) -> void:
 		"scan":
 			if from_v != null:
 				from_v.play("Scan", float(e.get("radius", 20.0)) / 2.0)
+		"skill_strike":
+			if from_v != null:
+				from_v.play("Strike", to_v.global_position if to_v != null else null)
+		"skill_dash":
+			if from_v != null:
+				from_v.play("Dash", to_v.global_position if to_v != null else null)
+		"skill_nova":
+			if from_v != null:
+				from_v.play("Nova", float(e.get("radius", 8.0)) / 10.0)
+		"skill_barrier":
+			if from_v != null:
+				from_v.play("Barrier")
+		"skill_mend":
+			if from_v != null:
+				from_v.play("Mend")
+		"skill_drone":
+			if from_v != null:
+				from_v.play("Drone")
+				from_v.play("Strike", to_v.global_position if to_v != null else null)
+		"skill_fortify":
+			if from_v != null:
+				from_v.play("Fortify")
+		"skill_boost":
+			if from_v != null:
+				from_v.play("Boost")
+		"skill_vent":
+			if from_v != null:
+				from_v.play("Vent")
+		"skill_scan":
+			if from_v != null:
+				from_v.play("Scan", float(e.get("radius", 20.0)) / 2.0)
 	var role := SfxRules.cue_for(str(e.get("type", "")), from_id, to_id, _self_ids())
 	if role != "":
 		var sfx := get_node_or_null("/root/Sfx")

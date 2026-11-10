@@ -33,6 +33,21 @@ func _wait(cond: Callable, sec: float = 6.0) -> bool:
 	return false
 
 
+func _hull_skills(skills: Array) -> bool:
+	var roles: Dictionary = {}
+	var legacy := 0
+	for s in skills:
+		var role := str(s.get("role", ""))
+		var name := str(s.get("name", ""))
+		if role == "":
+			if name != "Форсаж":
+				return false
+			legacy += 1
+		else:
+			roles[role] = true
+	return legacy == 1 and bool(roles.get("strike", false)) and bool(roles.get("ult", false)) and bool(roles.get("module", false))
+
+
 func _run() -> void:
 	# форма
 	for bad in ["", "ab", "a b", "_ab", "ab_", "123456", "Привет!", "очень_длинный_ник_17"]:
@@ -109,7 +124,7 @@ func _run() -> void:
 	var ship: Dictionary = gw.snapshot()["ship"]
 	_c(gw.snapshot()["player"]["name"] == "Tst_" + tag, "ник применён: %s" % gw.snapshot()["player"]["name"])
 	_c(ship.get("type") == "TMP-HAUL" and ship.get("cargo") == 60.0 and ship.get("hull_max") == 1800.0, "торговец получил временный грузовик (груз 60, корпус 1800)")
-	_c(gw.snapshot()["skills"].size() == 1, "у грузовика только общий «Форсаж»: способности специализаций «Стрижа» не выданы")
+	_c(_hull_skills(gw.snapshot()["skills"]), "у грузовика своя атака, ульта и умения модулей, без способностей «Стрижа»")
 	gw.close()
 	await process_frame
 	# повторный вход тем же устройством: персонаж уже есть

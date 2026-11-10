@@ -50,10 +50,10 @@ func _run() -> void:
 	if modules.size() != 1 or not bool(modules[0].get("owned", false)) or not bool(modules[0].get("equipped", false)) or not hangar._module_info.text.contains("M01"):
 		push_error("Bound engine did not reach the hangar")
 		_failed = true
-	if gateway._ability_ids.is_empty() or gateway._ability_ids[0] != "M01":
+	if not gateway._castable.has("M01"):
 		push_error("M01 alias was lost in the gateway")
 		_failed = true
-	gateway.use_skill(0)
+	gateway.cast_ability("M01")
 	deadline = Time.get_ticks_msec() + 5000
 	while Time.get_ticks_msec() < deadline and not bool(gateway.snapshot().get("ship", {}).get("boosting", false)):
 		await process_frame

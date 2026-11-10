@@ -73,6 +73,10 @@ type Player struct {
 	Attacking           bool
 	noRetaliate         bool // автоответ на атаку выключен игроком (по умолчанию включён)
 	boostUntil          float64
+	guardUntil          float64
+	guardMul            float64
+	moduleCategories    []string
+	modulesKnown        bool
 	cooldowns           map[string]float64 // способность -> игровое время окончания перезарядки
 	attackAt            float64
 	lastHit             float64

@@ -1247,6 +1247,7 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 		reply(errMsg(m.ID, "server_full", "сервер переполнен"))
 		return false
 	}
+	h.syncFitting(ctx, rec.ID, rec.ShipType, rec.Spec)
 	if h.opts.Quests != nil {
 		qctx, qcancel := context.WithTimeout(ctx, 5*time.Second)
 		if err := h.opts.Quests.Join(qctx, rec.ID); err != nil {

@@ -38,7 +38,7 @@ func TestStrizPassportMatchesSpec(t *testing.T) {
 		t.Fatalf("стартовое состояние: %+v", p)
 	}
 	st, _ := w.Snapshot("a")
-	if st.Ship.HullMax != 1200 || st.Ship.ShieldMax != 600 || st.Ship.Type != "FTR-001" || len(st.Ship.Abilities) != 2 {
+	if st.Ship.HullMax != 1200 || st.Ship.ShieldMax != 600 || st.Ship.Type != "FTR-001" || st.Ship.Abilities[0].ID != "boost" || !hasRole(st.Ship.Abilities, "strike") || !hasRole(st.Ship.Abilities, "ult") {
 		t.Fatalf("снимок: %+v", st.Ship)
 	}
 }
@@ -381,7 +381,7 @@ func TestStartersAndTemporaryShips(t *testing.T) {
 		t.Fatalf("сканер у грузовика: %v", err)
 	}
 	st, _ := w.Snapshot("h")
-	if st.Ship.Type != "TMP-HAUL" || st.Ship.Cargo != 60 || len(st.Ship.Abilities) != 1 {
+	if st.Ship.Type != "TMP-HAUL" || st.Ship.Cargo != 60 || st.Ship.Abilities[0].Role != "" || !hasRole(st.Ship.Abilities, "ult") {
 		t.Fatalf("снимок: %+v", st.Ship)
 	}
 	// неизвестный тип корабля заменяется стандартным

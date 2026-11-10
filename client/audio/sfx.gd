@@ -87,7 +87,7 @@ static func cue_for(event_type: String, from_id: String, to_id: String, me_ids: 
 	var from_me := from_id != "" and from_id in me_ids
 	var to_me := to_id != "" and to_id in me_ids
 	match event_type:
-		"fire", "intercept":
+		"fire", "intercept", "skill_strike", "skill_dash", "skill_drone", "skill_nova":
 			if from_me:
 				return "weapon"
 		"hit_shield", "hit_hull":

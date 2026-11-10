@@ -580,8 +580,10 @@ func has_chat() -> bool:
 
 
 func chat_send(channel: String, to: String, text: String) -> void:
-	if _joined:
+	if _joined and _client != null:
 		_client.send_message("chat_send", {"channel": channel, "to": to, "text": text})
+	else:
+		chat_failed.emit("Нет соединения с сервером")
 
 
 func request_chat_history() -> void:

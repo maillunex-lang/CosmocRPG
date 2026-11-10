@@ -61,6 +61,12 @@ var _attack_expect: Variant = null  # ожидаемое значение attack
 var _peek_a: Label
 var _peek_b: Label
 var _chat_open: Button
+var _party_box: PanelContainer
+var _party_label: Label
+var _party_invite: Button
+var _party_join: Button
+var _party_start: Button
+var _party_leave: Button
 
 @onready var _joystick: Control = %Joystick
 @onready var _reset_button: ActionButton = %ResetButton
@@ -178,6 +184,7 @@ func _ready() -> void:
 		bar.custom_minimum_size.y = 18.0
 	_skills_grid.add_theme_constant_override("separation", 10)
 	_build_chat_strip()
+	_build_party_box()
 	_target_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_target_info.max_lines_visible = 2
 	_target_info.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -744,6 +751,124 @@ func _process(_delta: float) -> void:
 		gateway.move_input(total)
 
 
+func _build_party_box() -> void:
+	_party_box = PanelContainer.new()
+	_party_box.name = "PartyBox"
+	_party_box.visible = false
+	_party_box.mouse_filter = Control.MOUSE_FILTER_STOP
+	_party_box.position = Vector2(16, 168)
+	_party_box.custom_minimum_size = Vector2(228, 0)
+	_airy(_party_box, 0.72)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	_party_box.add_child(box)
+	_party_label = Label.new()
+	_party_label.name = "PartyLabel"
+	_party_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_party_label.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	box.add_child(_party_label)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	box.add_child(row)
+	_party_invite = _party_button(row, "PartyInvite", "В пати", _on_party_invite)
+	_party_join = _party_button(row, "PartyJoin", "Принять", _on_party_join)
+	_party_start = _party_button(row, "PartyStart", "В бой", _on_party_start)
+	_party_leave = _party_button(row, "PartyLeave", "Выйти", _on_party_leave)
+	add_child(_party_box)
+
+
+func _party_button(row: Node, node_name: String, caption: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.name = node_name
+	b.text = caption
+	b.custom_minimum_size = Vector2(0, Tokens.TOUCH_MIN)
+	b.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	b.pressed.connect(cb)
+	row.add_child(b)
+	return b
+
+
+func _party_call(method: String, arg: String = "") -> void:
+	if gateway == null or not gateway.has_method(method):
+		return
+	if arg == "":
+		gateway.call(method)
+	else:
+		gateway.call(method, arg)
+
+
+func _on_party_invite() -> void:
+	var target_id: String = str(_last_state.get("target_id", ""))
+	_party_call("party_invite", target_id)
+
+
+func _on_party_join() -> void:
+	_party_call("party_join")
+
+
+func _on_party_start() -> void:
+	_party_call("party_start")
+
+
+func _on_party_leave() -> void:
+	_party_call("party_leave")
+
+
+func _apply_party(state: Dictionary) -> void:
+	if _party_box == null:
+		return
+	var party: Dictionary = {}
+	if state.get("party") is Dictionary:
+		party = state["party"]
+	var members: Array = []
+	var raw_members: Variant = party.get("members", [])
+	if raw_members is Array:
+		members = raw_members
+	var pending: bool = bool(party.get("pending", false))
+	var in_inst: bool = bool(party.get("instance", false))
+	var target_id: String = str(state.get("target_id", ""))
+	var target_kind: String = ""
+	var target_ai: bool = false
+	for o in state.get("objects", []):
+		if o is Dictionary and str(o.get("id", "")) == target_id:
+			target_kind = str(o.get("kind", ""))
+			target_ai = bool(o.get("ai", false))
+			break
+	var can_invite: bool = target_id != "" and not in_inst and (target_kind == "ai" or target_kind == "player" or target_ai)
+	var mine: String = ""
+	if gateway != null:
+		mine = str(gateway.get("player_id"))
+	var leader_id: String = str(party.get("leader", ""))
+	var am_leader: bool = mine != "" and mine == leader_id
+	var show_box: bool = members.size() > 0 or pending or can_invite
+	_party_box.visible = show_box
+	if not show_box:
+		return
+	var title: String = str(party.get("title", ""))
+	if title == "":
+		title = "Пати"
+	var lines: String = title
+	var need: int = int(party.get("need", 0))
+	if need > 0:
+		lines += "  %d/%d" % [int(party.get("progress", 0)), need]
+	for m in members:
+		if m is Dictionary:
+			var nm: String = str(m.get("name", "пилот"))
+			if bool(m.get("leader", false)):
+				nm += " · ведущий"
+			if bool(m.get("ai", false)):
+				nm += " · ИИ"
+			if bool(m.get("pending", false)):
+				nm += " · ждёт"
+			lines += "\n" + nm
+	_party_label.text = lines
+	var alone: bool = members.is_empty()
+	_party_invite.visible = can_invite and (alone or am_leader)
+	_party_join.visible = pending
+	_party_start.visible = am_leader and not pending and not in_inst
+	_party_leave.visible = members.size() > 0
+
+
 # --- отображение состояния ---
 
 func apply_state(state: Dictionary) -> void:
@@ -785,6 +910,7 @@ func apply_state(state: Dictionary) -> void:
 	_apply_combat_layout(bool(state.get("combat", {}).get("in_combat", false)))
 	_apply_lists(state)
 	_apply_event(state)
+	_apply_party(state)
 
 
 ## Скорость считается по реальному перемещению корабля между снимками состояния (не выдуманное число).

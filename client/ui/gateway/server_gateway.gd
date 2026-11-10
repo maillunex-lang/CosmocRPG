@@ -245,7 +245,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			dialogue_opened.emit(payload)
 		"reward":
 			var credits := int(payload.get("credits", 0))
-			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
+			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан", "party": "Стычка у маяка"}.get(str(payload.get("kind", "")), "Награда")
 			notification.emit("%s: +%d кредитов" % [what, credits])
 		"xp":
 			if payload.get("pilot") is Dictionary:   # сообщение может нести только опыт корабля
@@ -316,7 +316,8 @@ func _on_error(payload: Dictionary) -> void:
 			else:
 				join_failed.emit(text)
 		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec", \
-				"equipment_unavailable", "equipment_revision_conflict", "equipment_busy", "equipment_in_combat", "equipment_unsupported_ship", "module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big", "engine_slot_locked", "fitting_unavailable", "unknown_slot", "module_category", "module_size", "module_class", "not_owned":
+				"equipment_unavailable", "equipment_revision_conflict", "equipment_busy", "equipment_in_combat", "equipment_unsupported_ship", "module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big", "engine_slot_locked", "fitting_unavailable", "unknown_slot", "module_category", "module_size", "module_class", "not_owned", \
+				"party_full", "party_too_far", "party_need_mate", "party_not_leader", "party_none", "party_busy", "party_no_one", "party_already":
 			command_failed.emit("space", text)
 		_:
 			command_failed.emit("server", text)
@@ -397,6 +398,7 @@ func _apply_state(p: Dictionary) -> void:
 			"id": str(o.get("id", "")), "kind": str(o.get("kind", "")), "stance": str(o.get("stance", "neutral")),
 			"name": str(o.get("name", "")), "pos": _vec(o.get("pos")), "dir": _vec(o.get("dir")),
 			"ship": str(o.get("ship", "")), "skin": str(o.get("skin", "")), "dead": bool(o.get("dead", false)),
+			"ai": bool(o.get("ai", false)),
 		}
 		if o.has("hull"):
 			obj["hull"] = float(o["hull"])
@@ -470,6 +472,8 @@ func _apply_state(p: Dictionary) -> void:
 		"attacking": bool(p.get("attacking", false)), "auto_skills": _auto_battle, "target_in_range": in_range,
 		"quests": [], "chat": [],
 	}
+	if p.get("party") is Dictionary:
+		_state["party"] = p["party"]
 	# кредиты и задания показываются, только если сервер их прислал (контракты включены флагом на сервере)
 	if p.has("credits"):
 		_state["credits"] = int(p["credits"])
@@ -559,6 +563,26 @@ func cast_ability(id: String) -> void:
 	if wire == "":
 		return
 	_client.send_message("ability", {"id": wire})
+
+
+func party_invite(id: String) -> void:
+	if _joined and id != "":
+		_client.send_message("party_invite", {"id": id})
+
+
+func party_join() -> void:
+	if _joined:
+		_client.send_message("party_join", {})
+
+
+func party_leave() -> void:
+	if _joined:
+		_client.send_message("party_leave", {})
+
+
+func party_start() -> void:
+	if _joined:
+		_client.send_message("party_start", {})
 
 
 ## Создание персонажа: ник, пол ("m"/"f"), направление пилота (interceptor, scout, trader, miner).

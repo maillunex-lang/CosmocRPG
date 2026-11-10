@@ -34,11 +34,17 @@ type Router struct {
 	worlds   map[string]*World
 	gates    map[string][]Gate // система -> точки прыжка
 	byPlayer map[string]*World
+	parties  map[string]*party
+	byMember map[string]string
+	invites  map[string]partyInvite
 }
 
 // NewRouter создаёт маршрутизатор; primary — главный мир (стартовая система).
 func NewRouter(primary *World) *Router {
-	return &Router{primary: primary, worlds: map[string]*World{}, gates: map[string][]Gate{}, byPlayer: map[string]*World{}}
+	return &Router{
+		primary: primary, worlds: map[string]*World{}, gates: map[string][]Gate{}, byPlayer: map[string]*World{},
+		parties: map[string]*party{}, byMember: map[string]string{}, invites: map[string]partyInvite{},
+	}
 }
 
 // Add регистрирует мир; идентификатор берётся из мира (System().ID).
@@ -98,6 +104,9 @@ func (r *Router) Systems() []System {
 	defer r.mu.Unlock()
 	out := make([]System, 0, len(r.order))
 	for _, id := range r.order {
+		if skipInstanceSystem(id) || r.worlds[id] == nil {
+			continue
+		}
 		out = append(out, r.worlds[id].System())
 	}
 	return out
@@ -132,7 +141,12 @@ func (r *Router) worldOf(id string) *World {
 
 // Join помещает игрока в мир его системы ("" — главный).
 func (r *Router) Join(rec Record) (*Player, bool) {
-	w := r.worldOf(rec.System)
+	r.mu.Lock()
+	w := r.byPlayer[rec.ID]
+	if w == nil {
+		w = r.worldOf(rec.System)
+	}
+	r.mu.Unlock()
 	p, ok := w.Join(rec)
 	if ok {
 		r.mu.Lock()
@@ -262,7 +276,17 @@ func (r *Router) Records() []Record {
 	defer r.mu.Unlock()
 	var out []Record
 	for _, id := range r.order {
-		out = append(out, r.worlds[id].Records()...)
+		w := r.worlds[id]
+		if w == nil {
+			continue
+		}
+		recs := w.Records()
+		for i := range recs {
+			if home, ok := r.homePosLocked(recs[i].ID); ok {
+				recs[i].Pos = home
+			}
+		}
+		out = append(out, recs...)
 	}
 	return out
 }
@@ -273,8 +297,22 @@ func (r *Router) Step(dt float64, now time.Time) []Record {
 	defer r.mu.Unlock()
 	var out []Record
 	for _, id := range r.order {
-		out = append(out, r.worlds[id].Step(dt, now)...)
+		w := r.worlds[id]
+		if w == nil {
+			continue
+		}
+		recs := w.Step(dt, now)
+		for i := range recs {
+			if home, ok := r.homePosLocked(recs[i].ID); ok {
+				recs[i].Pos = home
+			}
+			if r.byPlayer[recs[i].ID] == w {
+				delete(r.byPlayer, recs[i].ID)
+			}
+		}
+		out = append(out, recs...)
 	}
+	r.tickPartiesLocked()
 	return out
 }
 
@@ -317,7 +355,14 @@ func (r *Router) Snapshot(pid string) (State, bool) {
 	if w == nil {
 		return State{}, false
 	}
-	return w.Snapshot(pid)
+	st, ok := w.Snapshot(pid)
+	if !ok {
+		return State{}, false
+	}
+	if view, has := r.PartySnapshot(pid); has {
+		st.Party = &view
+	}
+	return st, true
 }
 
 // ObjectPos возвращает позицию объекта в системе игрока.
@@ -331,11 +376,31 @@ func (r *Router) ObjectPos(pid string) (Vec, bool) {
 
 // Disconnect отмечает обрыв связи игрока в его системе (возвращает запись для сохранения).
 func (r *Router) Disconnect(pid string, now time.Time) (Record, bool) {
-	w := r.For(pid)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ensureParty()
+	if pidParty := r.byMember[pid]; pidParty != "" {
+		if p := r.parties[pidParty]; p != nil && p.inst != "" {
+			if p.leader == pid {
+				r.disbandLocked(p, false)
+			} else {
+				r.extractLocked(p, pid)
+				r.dropMemberLocked(p, pid)
+			}
+		}
+	}
+	w := r.byPlayer[pid]
 	if w == nil {
 		return Record{}, false
 	}
-	return w.Disconnect(pid, now)
+	rec, ok := w.Disconnect(pid, now)
+	if !ok {
+		return Record{}, false
+	}
+	if home, okHome := r.homePosLocked(pid); okHome {
+		rec.Pos = home
+	}
+	return rec, true
 }
 
 // SetShipLevel задаёт уровень корабля в системе игрока.

@@ -108,6 +108,8 @@ type Player struct {
 
 	ai        bool
 	aiCaptain string
+	wing      bool // в групповом инстансе сам летит к врагу и стреляет
+	ephemeral bool // поднятый на бой капитан: в базу не пишется
 	connected bool
 	lostAt    time.Time // момент обрыва связи
 }
@@ -210,13 +212,14 @@ type Ship struct {
 
 // State — снимок состояния для одного игрока.
 type State struct {
-	Time      float64   `json:"time"`
-	Ship      Ship      `json:"ship"`
-	Objects   []Object  `json:"objects"`
-	TargetID  string    `json:"target_id"`
-	Autopilot bool      `json:"autopilot"`
-	Attacking bool      `json:"attacking"`
-	Event     *LiveView `json:"event,omitempty"`
+	Time      float64    `json:"time"`
+	Ship      Ship       `json:"ship"`
+	Objects   []Object   `json:"objects"`
+	TargetID  string     `json:"target_id"`
+	Autopilot bool       `json:"autopilot"`
+	Attacking bool       `json:"attacking"`
+	Event     *LiveView  `json:"event,omitempty"`
+	Party     *PartyView `json:"party,omitempty"`
 }
 
 // System — описание системы.
@@ -423,6 +426,9 @@ func (w *World) Records() []Record {
 	defer w.mu.Unlock()
 	out := make([]Record, 0, len(w.players))
 	for _, p := range w.players {
+		if p.ephemeral {
+			continue
+		}
 		out = append(out, p.record())
 	}
 	return out
@@ -565,7 +571,9 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 	var removed []Record
 	for id, p := range w.players {
 		if !p.connected && p.equipmentLease == nil && p.purchaseLease == nil && now.Sub(p.lostAt) >= Grace {
-			removed = append(removed, p.record())
+			if !p.ephemeral {
+				removed = append(removed, p.record())
+			}
 			delete(w.players, id)
 			continue
 		}
@@ -573,6 +581,23 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		if p.deadUntil > w.t {
 			p.Speed, p.Move = 0, Vec{}
 			continue
+		}
+		if p.wing {
+			p.Autopilot = false
+			p.HasWaypoint = false
+			if n := nearestHostile(w.npcs, p.Pos); n != nil {
+				p.Target = n.ID
+				p.Attacking = true
+				d := n.Pos.sub(p.Pos)
+				if d.length() > 26 {
+					p.Move = d.normalized()
+				} else {
+					p.Move = Vec{}
+				}
+			} else {
+				p.Attacking = false
+				p.Move = Vec{}
+			}
 		}
 		if p.actionBusy() {
 			p.Speed = 0

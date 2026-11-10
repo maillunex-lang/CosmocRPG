@@ -120,6 +120,23 @@ func _run() -> void:
 	server_gateway._on_message("state", {"ship": wire_ship}, "")
 	h.set_data(server_gateway.snapshot()["ship"])
 	_c(h._equipment_refresh.visible and h._engine_button.disabled, "неопределённое состояние предлагает перечитать оснащение")
+	h.set_fleet([
+		{"id": "FTR-001", "name": "Стриж", "class": "Лёгкий истребитель"},
+		{"id": "COR-001", "name": "Барс", "class": "Корвет"},
+		{"id": "TMP-MINE", "name": "Шахтёр", "class": "Лёгкий добытчик"},
+	])
+	_c(h._fleet_buttons.size() == 3 and h._filter_buttons.has("all") and h._filter_buttons.has("corvette") and h._filter_buttons.has("miner"), "фильтры по типу корабля")
+	_c(h._fleet_buttons["FTR-001"].visible and h._fleet_buttons["COR-001"].visible, "без фильтра видна вся коллекция")
+	h._apply_filter("corvette")
+	_c(h._fleet_buttons["COR-001"].visible and not h._fleet_buttons["FTR-001"].visible and not h._fleet_buttons["TMP-MINE"].visible, "фильтр «Корветы» оставляет только корвет")
+	h._apply_filter("all")
+	_c(h._fleet_buttons["FTR-001"].visible and h._fleet_buttons["TMP-MINE"].visible, "«Все» возвращает коллекцию")
+	h.set_fitting({"can_change": false, "mass_tons": 10, "mass_budget_tons": 65, "power_draw_mw": 80, "power_capacity_mw": 320, "revision": 1, "pilot_revision": 1, "slots": [
+		{"id": "weapon-1", "item": {"name": "Штатное лазерное орудие M"}},
+		{"id": "defense-1"},
+	]})
+	var slot_label: Label = h._fit_box.get_child(1).get_child(0) as Label
+	_c(slot_label != null and slot_label.text.contains("Орудие 1") and slot_label.text.contains("Штатное лазерное орудие M"), "слот модуля читается строкой, не столбиком")
 	server_gateway.free()
 	h.closed.emit()
 	await process_frame

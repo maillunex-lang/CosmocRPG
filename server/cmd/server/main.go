@@ -461,9 +461,9 @@ func run() error {
 				if err != nil || len(profiles) == 0 {
 					return nil
 				}
-				cast := aiciv.PickCast(profiles, n)
-				members := make([]aiciv.CastMember, 0, len(cast))
-				for _, p := range cast {
+				due := aiciv.PickDue(profiles, n, time.Now())
+				members := make([]aiciv.CastMember, 0, len(due))
+				for _, p := range due {
 					members = append(members, aiciv.CastMember{ID: p.ID, Name: p.Name, Goal: aiciv.GoalForProfile(p)})
 				}
 				return members

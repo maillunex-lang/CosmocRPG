@@ -201,8 +201,13 @@ func (f *FarmController) Supervise(ctx context.Context, src func(n int) []CastMe
 			return
 		}
 		members := src(want)
-		if len(members) == 0 {
+		if members == nil {
 			f.noteErr("в AI Studio нет профилей капитанов")
+			return
+		}
+		if len(members) == 0 {
+			stopAll()
+			f.noteErr("")
 			return
 		}
 		keep := map[string]struct{}{}

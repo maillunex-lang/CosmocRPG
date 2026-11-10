@@ -19,6 +19,7 @@ const (
 	Radius        = 400.0 // радиус системы по умолчанию (без раскладки), ед.
 	AutopilotStop = 10.0  // автопилот останавливается на таком расстоянии от цели, ед.
 	MaxPlayers    = 50
+	MaxAI         = 500 // отдельный потолок ИИ-капитанов, не живых игроков
 	Grace         = 10 * time.Second // сколько корабль остаётся в мире после обрыва связи
 	StationID     = "st1"
 )
@@ -316,7 +317,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 			humans++
 		}
 	}
-	if (!r.AI && humans >= MaxPlayers) || (r.AI && ais >= 200) {
+	if (!r.AI && humans >= MaxPlayers) || (r.AI && ais >= MaxAI) {
 		return nil, false
 	}
 	if r.AI && (r.AICaptain == "" || w.aiByID[r.AICaptain] != nil) {

@@ -37,8 +37,8 @@ func (s *Shadow) Run(ctx context.Context) {
 			} else {
 				sort.Slice(ps, func(i, j int) bool { return ps[i].ID < ps[j].ID })
 				profiles = ps
-				if len(profiles) > 300 {
-					profiles = profiles[:300]
+				if len(profiles) > 500 {
+					profiles = profiles[:500]
 				}
 				if len(profiles) == 0 {
 					cursor = 0

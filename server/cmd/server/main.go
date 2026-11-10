@@ -408,10 +408,12 @@ func run() error {
 			})
 			log.Info("AI civilization Director started (gateway flag, studio candidates)")
 			// Real join + PvE farm: nearest hostile from world snapshot.
+			speaker := aiciv.NewChatSpeaker(chatSvc, log)
 			farm := &aiciv.FarmController{
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
 				Store:     aiState,
 				World:     gameWorld,
+				Speaker:   speaker,
 				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
 				Fallback:  []string{"dr1", "dr2"},
 				Log:       log,

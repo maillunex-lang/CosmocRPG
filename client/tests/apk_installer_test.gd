@@ -33,6 +33,11 @@ func _run() -> void:
 	_c(Inst.verify_file({"size": 9, "sha256": sha}, p) == "", "верный файл принимается")
 	_c(Inst.verify_file({"size": 8, "sha256": sha}, p) != "", "неверный размер отклоняется")
 	_c(Inst.verify_file({"size": 9, "sha256": "0".repeat(64)}, p) != "", "неверная сумма отклоняется")
+	var other := dir + "/b.apk"
+	var g2 := FileAccess.open(other, FileAccess.WRITE)
+	g2.store_string("apk-byteZ")
+	g2.close()
+	_c(Inst.verify_file({"size": 9, "sha256": sha}, other) != "", "другой набор байт того же размера отклоняется")
 	_c(Inst.verify_file({"size": 9, "sha256": sha}, dir + "/нет.apk") != "", "отсутствующий файл отклоняется")
 	var g := FileAccess.open(dir + "/old.apk", FileAccess.WRITE)
 	g.store_string("x")

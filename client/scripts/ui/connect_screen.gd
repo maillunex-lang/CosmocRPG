@@ -82,7 +82,7 @@ func _ready() -> void:
 	_build_start_screen()
 	if auto_connect:
 		_on_connect_pressed.call_deferred()
-		_updater.check.call_deferred()   # тихая проверка обновлений при запуске: окно только если обновление есть
+		_begin_update_check.call_deferred(false)
 
 
 ## Стартовый экран поверх служебного: адрес сервера игроку не показывается. Служебный экран открывается пятью нажатиями на логотип.
@@ -131,9 +131,7 @@ func _build_start_screen() -> void:
 		if is_instance_valid(_content):
 			_content.check())
 	_splash.update_check_requested.connect(func() -> void:
-		_update_manual = true
-		_splash.begin_update_check()
-		_updater.check()
+		_begin_update_check(true)
 		_content.check(true))
 	_installer = ApkInstaller.new()
 	add_child(_installer)
@@ -150,7 +148,20 @@ func _build_start_screen() -> void:
 		_splash.show_update_progress("Подготовка…", true)
 		_installer.start(info))
 	_splash.secret_opened.connect(func() -> void: _open_overlay(true))
+	if _updater.play_blocked():
+		_splash.hold_for_required_update()
 	_sync_splash()
+
+
+## Проверка обновления со стартового экрана: при запуске и по кнопке. Повтор, пока идёт первая, не стартует.
+func _begin_update_check(manual: bool) -> void:
+	if _updater == null or bool(_updater.busy):
+		return
+	_update_manual = manual
+	if bool(_updater.play_blocked()):
+		_splash.hold_for_required_update()
+	_splash.begin_update_check()
+	_updater.check()
 
 
 ## Короткая строка о докачке контента для стартового экрана.

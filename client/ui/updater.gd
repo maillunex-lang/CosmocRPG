@@ -1,10 +1,11 @@
 extends Node
 ## Проверка обновлений приложения. Godot скачивает **подписанный** манифест версии по HTTPS, проверяет подпись (RSA-SHA256,
-## публичный ключ вшит в приложение), сравнивает версии и сообщает результат. «Обновить» открывает защищённую ссылку на APK;
-## установку выполняет Android с подтверждением пользователя (тихой установки нет).
+## публичный ключ вшит в приложение), сравнивает версии и сообщает результат. Файл APK ставит игра (сверка SHA-256) либо,
+## если установщика нет, открывается защищённая ссылка; установку подтверждает Android.
 ##
 ## Защита: только HTTPS и разрешённый хост; подпись манифеста; запрет отката (манифест со старой версией отклоняется, в том числе
-## старее уже виденного); контрольная сумма и размер APK берутся из подписанного манифеста; при установке Android сам проверяет
+## старее уже виденного); контрольная сумма и размер APK берутся из подписанного манифеста. Подтверждённое обязательное обновление
+## запоминается: сбой сети его не снимает и не создаёт, если такого подтверждения ещё не было. При установке Android проверяет
 ## подпись приложения (обновление принимается только с тем же ключом, данные игры сохраняются).
 
 const AppVersion := preload("res://ui/app_version.gd")
@@ -135,20 +136,66 @@ func _fetch(url: String) -> Dictionary:
 	add_child(http)
 	if http.request(url) != OK:
 		http.queue_free()
-		return {"ok": false, "error": "Не удалось начать запрос"}
+		return {"ok": false, "error": "Нет связи с сервером обновлений"}
 	var r: Array = await http.request_completed
 	http.queue_free()
 	if int(r[0]) != HTTPRequest.RESULT_SUCCESS:
-		return {"ok": false, "error": "Нет связи с сервером обновлений"}
+		var why := "Нет связи с сервером обновлений"
+		match int(r[0]):
+			HTTPRequest.RESULT_TIMEOUT:
+				why = "Сервер обновлений не ответил вовремя"
+			HTTPRequest.RESULT_CANT_RESOLVE:
+				why = "Нет связи с сервером обновлений: адрес не найден"
+			HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
+				why = "Не удалось установить защищённое соединение с сервером обновлений"
+			HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED:
+				why = "Манифест обновления слишком большой"
+		return {"ok": false, "error": why}
 	if int(r[1]) != 200:
 		return {"ok": false, "error": "Сервер обновлений ответил кодом %d" % int(r[1])}
 	return {"ok": true, "body": r[3]}
 
 
-## Проверка обновлений по сети. Результат приходит в сигнале finished.
-func check() -> void:
+func _load_required_min() -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(state_path) == OK:
+		return int(cfg.get_value("update", "required_min", 0))
+	return 0
+
+
+func _set_required_min(value: int) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(state_path)
+	cfg.set_value("update", "required_min", maxi(value, 0))
+	cfg.save(state_path)
+
+
+## Есть подписанное обязательное обновление, которое эта установка ещё не закрыла.
+func play_blocked() -> bool:
+	return _load_required_min() > AppVersion.code()
+
+
+## Запоминает исход проверки. Ошибка сети, таймаут и битая подпись не создают и не снимают обязательность.
+## Успешный манифест либо подтверждает блокировку, либо снимает её. В результат добавляется play_blocked.
+func settle(result: Dictionary) -> Dictionary:
+	var status := str(result.get("status", "error"))
+	if status != "error":
+		var info: Dictionary = result.get("info", {})
+		var code := int(info.get("version_code", 0))
+		if code > 0:
+			_save_highest(code)
+		if int(info.get("min_version_code", 1)) > AppVersion.code():
+			_set_required_min(int(info.get("min_version_code", 0)))
+		else:
+			_set_required_min(0)
+	result["play_blocked"] = play_blocked()
+	return result
+
+
+## Проверка обновлений по сети. false: проверка уже идёт, вторая не запускается. Результат — сигнал finished.
+func check() -> bool:
 	if busy:
-		return
+		return false
 	busy = true
 	var res: Dictionary
 	var m := await _fetch(manifest_url)
@@ -160,10 +207,10 @@ func check() -> void:
 			res = _err(str(s["error"]))
 		else:
 			res = evaluate(m["body"], (s["body"] as PackedByteArray).get_string_from_utf8(), PUBLIC_KEY_PEM, AppVersion.code(), _load_highest())
-			if res["status"] != "error":
-				_save_highest(int(res["info"]["version_code"]))
+	res = settle(res)
 	busy = false
 	finished.emit(res)
+	return true
 
 
 ## «Обновить»: открывает защищённую ссылку на APK в системном браузере; дальше установка средствами Android.

@@ -265,13 +265,15 @@ func _build_update_panel() -> void:
 	add_child(update_panel)
 
 
-## Результат проверки обновлений: окно с версией, размером, описанием и контрольной суммой, либо короткое сообщение в статусе.
-## manual=true: показывать и «последняя версия», и ошибки; при автоматической проверке сообщаются только доступные обновления.
+## Результат проверки обновлений: окно с версией, размером, описанием и контрольной суммой.
+## manual=true: показать и «последняя версия». Ошибка сети показывается всегда, с «Повторить».
+## Вход блокируется только обязательным обновлением или ранее подтверждённым требованием (play_blocked).
 func show_update_result(result: Dictionary, manual: bool) -> void:
 	update_button.end_busy()
 	var status := str(result.get("status", "error"))
 	var info: Dictionary = result.get("info", {})
-	update_required = status == "required"
+	var blocked := status == "required" or bool(result.get("play_blocked", false))
+	update_required = blocked
 	if status == "available" or status == "required":
 		var mb := float(info.get("size", 0)) / 1048576.0
 		var lines := ["Доступна версия %s (%d), размер %.1f МБ." % [str(info.get("version_name", "")), int(info.get("version_code", 0)), mb],
@@ -291,19 +293,46 @@ func show_update_result(result: Dictionary, manual: bool) -> void:
 		update_ok.pressed.connect(func() -> void: update_confirmed.emit(info))
 		update_later.visible = status != "required"
 		update_panel.visible = true
-		_apply_play_gate()
-	elif manual:
-		update_panel.visible = false
-		var text := "У вас последняя версия" if status == "up_to_date" else "Не удалось проверить обновления: %s" % str(result.get("error", ""))
-		update_text.text = text
+	elif status == "error":
+		var err_lines := ["Не удалось проверить обновления: %s" % str(result.get("error", "неизвестная ошибка"))]
+		if blocked:
+			err_lines.append("Обязательное обновление уже подтверждено. Вход откроется после успешной проверки.")
+		else:
+			err_lines.append("Можно войти в игру и повторить проверку позже.")
+		update_text.text = "\n".join(err_lines)
+		for c in update_ok.pressed.get_connections():
+			update_ok.pressed.disconnect(c["callable"])
+		update_ok.text = "Повторить"
+		update_ok.disabled = false
+		update_ok.pressed.connect(func() -> void: update_check_requested.emit())
+		update_later.visible = not blocked
+		update_later.disabled = false
+		update_panel.visible = true
+	elif manual and status == "up_to_date":
+		update_text.text = "У вас последняя версия"
 		update_panel.visible = true
 		for c in update_ok.pressed.get_connections():
 			update_ok.pressed.disconnect(c["callable"])
 		update_ok.text = "Понятно"
+		update_ok.disabled = false
 		update_ok.pressed.connect(func() -> void:
 			update_panel.visible = false
 			update_ok.text = "Обновить")
 		update_later.visible = false
+	else:
+		update_panel.visible = false
+	_apply_play_gate()
+
+
+## До ответа сервера держит вход закрытым, если обязательное обновление уже было подтверждено подписью.
+func hold_for_required_update() -> void:
+	update_required = true
+	update_text.text = "Нужно обязательное обновление. Проверяем сервер обновлений…"
+	update_later.visible = false
+	update_ok.text = "Проверка…"
+	update_ok.disabled = true
+	update_panel.visible = true
+	_apply_play_gate()
 
 
 ## Строка о докачке контента рядом с версией (пустая — только версия).
@@ -329,10 +358,14 @@ func begin_update_check() -> void:
 	update_button.begin_busy("Проверка…")
 
 
-## Обязательное обновление блокирует «ИГРАТЬ».
+## Обязательное обновление блокирует «ИГРАТЬ»; снятие требования возвращает кнопку, если сервер игры уже на связи.
 func _apply_play_gate() -> void:
-	if update_required and play_button != null:
+	if play_button == null:
+		return
+	if update_required:
 		play_button.disabled = true
+	elif state == State.READY:
+		play_button.disabled = false
 
 
 ## Состояние связи: подпись, доступность кнопок, спиннер.

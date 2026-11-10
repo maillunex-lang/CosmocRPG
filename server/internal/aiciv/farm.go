@@ -72,7 +72,7 @@ func Hold(ctx context.Context, g *Gateway) {
 }
 
 // RunGoalOnce joins the first candidate and runs a long-term goal chain (no aimless flying).
-func (f *FarmController) RunGoalOnce(ctx context.Context, candidates []string) {
+func (f *FarmController) RunGoalOnce(ctx context.Context, candidates []string, goal GoalKind) {
 	if len(candidates) == 0 {
 		return
 	}
@@ -90,6 +90,7 @@ func (f *FarmController) RunGoalOnce(ctx context.Context, candidates []string) {
 		f.Log.Info("AI civilization: agent joined, starting goal", "captain", id, "player", playerID)
 	}
 	runner := &GoalRunner{World: f.World, Store: f.Store, Log: f.Log, LowHull: f.LowHull}
-	go runner.RunGoal(ctx, g, id, playerID, GoalFarmCredits)
+	if goal == "" { goal = GoalFarmCredits }
+	go runner.RunGoal(ctx, g, id, playerID, goal)
 	Hold(ctx, g)
 }

@@ -45,6 +45,7 @@ var _auto: ActionButton
 var _side: ScrollContainer
 var _filters_box: GridContainer
 var _pickables: Array = []   # [{id, pos(мир), name}]
+var _labels: Array = []     # подписи с приоритетом: пересекающиеся отбрасываются
 var _waypoint := Vector2.ZERO
 var _has_waypoint := false
 var _touches := {}           # index -> позиция (щипок и перетаскивание)
@@ -266,6 +267,7 @@ func _pos(d: Dictionary) -> Vector2:
 func _draw() -> void:
 	_compute_rect()
 	_pickables.clear()
+	_labels.clear()
 	draw_rect(Rect2(Vector2.ZERO, size), Tokens.BG)
 	var grid_step := _nice_step(70.0 / _scale)
 	if grid_step > 0.0:
@@ -278,6 +280,7 @@ func _draw() -> void:
 	draw_circle(_center, radius() * _scale, Color(Tokens.SURFACE_SUNKEN, 0.9))
 	draw_arc(_center, radius() * _scale, 0, TAU, 128, Color(Tokens.ACCENT, 0.5), 2.0, true)
 	var font := UiTheme.make_font(600)
+	_queue_regions(font)
 	for z in layout.get("zones", []) if _filters.get("zones", true) else []:
 		var c: Color = ZONE_COLORS.get(str(z.get("type", "")), Tokens.TEXT_MUTED)
 		var zp := to_screen(_pos(z))
@@ -291,51 +294,72 @@ func _draw() -> void:
 		draw_circle(bp, br, Color(float(col2[0]), float(col2[1]), float(col2[2]), 0.9))
 		if bool(b.get("ring", false)):
 			draw_arc(bp, br * 1.5, 0, TAU, 32, Color(0.85, 0.8, 0.7, 0.6), 1.5, true)
-		if str(b.get("kind", "")) == "planet":
-			draw_string(font, bp + Vector2(-br, -br - 4), str(b.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Tokens.TEXT, 0.7))
+		if str(b.get("kind", "")) == "planet" and _zoom >= 2.2:
+			var planet_name := str(b.get("name", ""))
+			var psz := font.get_string_size(planet_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+			_queue_label(bp + Vector2(-psz.x * 0.5, -br - 4), planet_name, 55, 12, Color(Tokens.TEXT, 0.7))
 	for s in layout.get("stations", []) if _filters.get("station", true) else []:
 		var sp := to_screen(_pos(s))
 		draw_rect(Rect2(sp - Vector2(5, 5), Vector2(10, 10)), Tokens.TEXT)
-		draw_string(font, sp + Vector2(8, 4), str(s.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Tokens.TEXT)
+		_queue_label(sp + Vector2(8, 4), str(s.get("name", "")), 80, 12, Tokens.TEXT)
 		_pickables.append({"id": str(s.get("id", "")), "pos": _pos(s), "name": str(s.get("name", ""))})
 		if QuestHints.marked(state, str(s.get("id", "")), "station"):
 			_draw_bang(sp)
 		elif QuestHints.marker(state) == "station":
 			draw_arc(sp, 16, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
 	# серверные объекты из состояния: месторождения, точки, враги, игроки
+	var cluster_at: Dictionary = {}
 	for o in state.get("objects", []):
 		var kind := str(o.get("kind", ""))
 		if not object_visible(kind):
 			continue
 		var p: Vector2 = o["pos"]
 		var sc := to_screen(p)
-		match kind:
-			"deposit":
-				var rc: Color = RESOURCE_COLORS.get(str(o.get("resource", "")), Color("#b08968"))
-				draw_circle(sc, 3.0, rc)
-			"anomaly":
-				draw_colored_polygon(PackedVector2Array([sc + Vector2(0, -6), sc + Vector2(6, 0), sc + Vector2(0, 6), sc + Vector2(-6, 0)]), ZONE_COLORS["explore"])
-			"derelict":
-				draw_rect(Rect2(sc - Vector2(4, 4), Vector2(8, 8)), Color("#9aa4ad"), false, 2.0)
-			"signal":
-				draw_circle(sc, 3.0, Tokens.ACCENT)
-			"hostile":
-				if bool(o.get("dead", false)):
-					continue   # побеждённый враг не показывается и не выбирается
-				draw_circle(sc, 3.5, Tokens.DANGER)
-			"player", "ai", "convoy":
-				draw_circle(sc, 3.5, Tokens.ACCENT)
-			"patrol":
-				draw_circle(sc, 3.5, Tokens.ACCENT_2)
-			_:
-				continue
+		var oid := str(o.get("id", ""))
+		var marked := QuestHints.marked(state, oid, kind, str(o.get("resource", "")))
+		var crowded := false
+		if _zoom < 1.8 and kind in ["hostile", "deposit", "player", "ai"] and oid != selected and not marked:
+			if cluster_at.has(kind):
+				var prev: Vector2 = cluster_at[kind]
+				if sc.distance_to(prev) < 18.0:
+					crowded = true
+		if kind == "hostile" and bool(o.get("dead", false)):
+			continue   # побеждённый враг не показывается и не выбирается
+		if not crowded:
+			match kind:
+				"deposit":
+					var rc: Color = RESOURCE_COLORS.get(str(o.get("resource", "")), Color("#b08968"))
+					draw_circle(sc, 3.0, rc)
+				"anomaly":
+					draw_colored_polygon(PackedVector2Array([sc + Vector2(0, -6), sc + Vector2(6, 0), sc + Vector2(0, 6), sc + Vector2(-6, 0)]), ZONE_COLORS["explore"])
+				"derelict":
+					draw_rect(Rect2(sc - Vector2(4, 4), Vector2(8, 8)), Color("#9aa4ad"), false, 2.0)
+				"signal":
+					draw_circle(sc, 3.0, Tokens.ACCENT)
+				"hostile":
+					draw_circle(sc, 3.5, Tokens.DANGER)
+				"player", "ai", "convoy":
+					draw_circle(sc, 3.5, Tokens.ACCENT)
+				"patrol":
+					draw_circle(sc, 3.5, Tokens.ACCENT_2)
+				_:
+					continue
+			cluster_at[kind] = sc
+		elif kind not in ["deposit", "anomaly", "derelict", "signal", "hostile", "player", "ai", "convoy", "patrol"]:
+			continue
 		if kind != "station":
-			_pickables.append({"id": str(o.get("id", "")), "pos": p, "name": str(o.get("name", ""))})
+			_pickables.append({"id": oid, "pos": p, "name": str(o.get("name", ""))})
 		if QuestHints.marker(state) == kind:
 			draw_arc(sc, 14, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
-		if kind in ["anomaly", "derelict", "signal", "convoy", "patrol"] or str(o.get("id", "")) == selected:
-			_draw_name(font, sc + Vector2(8, -8), str(o.get("name", "")))
-		if QuestHints.marked(state, str(o.get("id", "")), kind, str(o.get("resource", ""))):
+		var show_name := kind in ["anomaly", "derelict", "signal", "convoy", "patrol"] or oid == selected
+		if _zoom < 2.2 and oid != selected and not marked:
+			show_name = false
+		if show_name:
+			var name_pri := 30
+			if oid == selected or marked:
+				name_pri = 100
+			_queue_label(sc + Vector2(8, -8), str(o.get("name", "")), name_pri, 12, Tokens.TEXT)
+		if marked:
 			_draw_bang(sc)
 	for g in state.get("gates", []):
 		if typeof(g) != TYPE_DICTIONARY:
@@ -345,6 +369,8 @@ func _draw() -> void:
 		var gs := to_screen(gpos)
 		draw_colored_polygon(PackedVector2Array([gs + Vector2(0, -7), gs + Vector2(7, 0), gs + Vector2(0, 7), gs + Vector2(-7, 0)]), Tokens.ACCENT)
 		_pickables.append({"id": "gate:" + str((g as Dictionary).get("to", "")), "pos": gpos, "name": "Ворота в " + str((g as Dictionary).get("to", ""))})
+		if _zoom >= 1.6:
+			_queue_label(gs + Vector2(8, 4), "Ворота", 70, 12, Tokens.ACCENT)
 		if QuestHints.marked(state, "", "gate", str((g as Dictionary).get("to", ""))):
 			_draw_bang(gs)
 	var me: Dictionary = state.get("ship", {})
@@ -383,6 +409,7 @@ func _draw() -> void:
 			if pk["id"] == selected:
 				var sp2 := to_screen(pk["pos"])
 				draw_arc(sp2, 10, 0, TAU, 24, Tokens.RARE, 2.0, true)
+	_flush_labels(font)
 	_draw_panel_bg()
 	_refresh_info()
 
@@ -395,6 +422,68 @@ func _draw_panel_bg() -> void:
 		return
 	draw_rect(r, Tokens.SURFACE)
 	draw_rect(r, Color(Tokens.ACCENT, 0.35), false, 1.0)
+
+
+func _queue_label(at: Vector2, text: String, priority: int, size_px: int, color: Color) -> void:
+	if text == "":
+		return
+	_labels.append({"at": at, "text": text, "pri": priority, "size": size_px, "color": color})
+
+
+## Дальний масштаб показывает имена районов. Ближе они уступают объектам.
+func _queue_regions(font: Font) -> void:
+	if _zoom >= 2.6:
+		return
+	var regions: Array = layout.get("regions", [])
+	for raw in regions:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var rg: Dictionary = raw
+		var title := str(rg.get("name", ""))
+		if title == "":
+			continue
+		var role := str(rg.get("role", ""))
+		var col := Color(Tokens.TEXT_MUTED, 0.9)
+		match role:
+			"safe":
+				col = Color(Tokens.ACCENT, 0.95)
+			"explore":
+				col = ZONE_COLORS["explore"]
+			"industry":
+				col = ZONE_COLORS["mining"]
+			"danger":
+				col = ZONE_COLORS["pve"]
+			"ruins":
+				col = Color("#c5ced6")
+			"outer":
+				col = Color(Tokens.ACCENT_2, 0.95)
+		var sz := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+		_queue_label(to_screen(_pos(rg)) - Vector2(sz.x * 0.5, 0), title, 35, 15, col)
+
+
+## Высокий приоритет остаётся, пересекающиеся подписи меньшего приоритета не рисуются.
+func _flush_labels(font: Font) -> void:
+	_labels.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["pri"]) > int(b["pri"]))
+	var taken: Array[Rect2] = []
+	for raw in _labels:
+		var lb: Dictionary = raw
+		var text := str(lb["text"])
+		var size_px := int(lb["size"])
+		var at: Vector2 = lb["at"]
+		var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px)
+		var rect := Rect2(at + Vector2(-2, -float(size_px)), Vector2(sz.x + 4, float(size_px) + 4))
+		var hit := false
+		for prev in taken:
+			if rect.intersects(prev):
+				hit = true
+				break
+		if hit:
+			continue
+		taken.append(rect)
+		var col: Color = lb["color"]
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, col)
+	_labels.clear()
 
 
 func _draw_name(font: Font, at: Vector2, text: String) -> void:

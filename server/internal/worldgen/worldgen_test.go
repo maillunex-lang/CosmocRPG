@@ -285,3 +285,104 @@ func TestMeridianStoryLocations(t *testing.T) {
 		t.Fatalf("не все точки Меридиана: %v", got)
 	}
 }
+
+func TestAuroraDistricts(t *testing.T) {
+	cfg := DefaultConfig()
+	var aurora, meridian SystemParams
+	for _, p := range cfg.Systems {
+		switch p.ID {
+		case "aurora":
+			aurora = p
+		case "meridian":
+			meridian = p
+		}
+	}
+	if aurora.ID == "" || meridian.ID == "" {
+		t.Fatal("нет Авроры или Меридиана")
+	}
+	l := Generate(aurora, cfg)
+	if !reflect.DeepEqual(l, Generate(aurora, cfg)) {
+		t.Fatal("раскладка Авроры зависит от повторного вызова")
+	}
+	if errs := l.Validate(); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if l.Radius != 1400 || l.Hub != ([2]float64{-12, 14}) || l.Stations[0].ID != "st1" {
+		t.Fatalf("хаб или радиус сдвинуты: r=%v hub=%v st=%+v", l.Radius, l.Hub, l.Stations[0])
+	}
+	want := []string{"aur-beacon", "aur-az01", "aur-az02", "aur-az03", "aur-az04", "aur-az05"}
+	byID := map[string]Point{}
+	for _, p := range l.Points {
+		byID[p.ID] = p
+	}
+	for _, id := range want {
+		p, ok := byID[id]
+		if !ok {
+			t.Fatalf("нет сюжетной точки %s", id)
+		}
+		d := hypot(p.Pos[0]-l.Hub[0], p.Pos[1]-l.Hub[1])
+		if d < HubFreeRadius || d > 480 {
+			t.Fatalf("%s не в безопасном центре: %.0f", id, d)
+		}
+	}
+	north, east, south, west := false, false, false, false
+	for _, b := range l.Bodies {
+		if b.Kind == "planet" && b.Pos[1] > l.Hub[1]+300 {
+			north = true
+		}
+	}
+	for _, z := range l.Zones {
+		dx := z.Pos[0] - l.Hub[0]
+		dy := z.Pos[1] - l.Hub[1]
+		switch {
+		case z.Type == "mining" && len(z.ID) >= 6 && z.ID[:6] == "z-belt" && dx > 120:
+			east = true
+		case z.Type == "mining" && len(z.ID) >= 8 && z.ID[:8] == "z-debris" && dx < -250:
+			west = true
+		case z.Type == "pve":
+			if dy < -300 {
+				south = true
+			}
+			if hypot(dx, dy) < 400 {
+				t.Fatalf("опасная зона %s близко к хабу: %.0f", z.ID, hypot(dx, dy))
+			}
+		}
+	}
+	if !west {
+		for _, p := range l.Points {
+			if p.Kind == "derelict" && p.Pos[0] < l.Hub[0]-250 {
+				west = true
+			}
+		}
+	}
+	for _, s := range l.Spawns {
+		if d := hypot(s.Pos[0]-l.Hub[0], s.Pos[1]-l.Hub[1]); d < 280 {
+			t.Fatalf("враг %s близко к хабу: %.0f", s.ID, d)
+		}
+	}
+	if !north || !east || !south || !west {
+		t.Fatalf("районы пусты: север %v восток %v юг %v запад %v", north, east, south, west)
+	}
+	if len(l.Regions) != 6 {
+		t.Fatalf("ожидались 6 районов, получено %d", len(l.Regions))
+	}
+	roles := map[string]bool{}
+	for _, r := range l.Regions {
+		roles[r.Role] = true
+		if hypot(r.Pos[0], r.Pos[1])+r.Radius > l.Radius*1.05 && r.Role != "outer" {
+			t.Fatalf("район %s вылезает за систему", r.ID)
+		}
+	}
+	for _, role := range []string{"safe", "explore", "industry", "danger", "ruins", "outer"} {
+		if !roles[role] {
+			t.Fatalf("нет роли %s", role)
+		}
+	}
+	other := Generate(meridian, cfg)
+	if len(other.Regions) != 0 {
+		t.Fatal("районы Авроры не должны появляться в Меридиане")
+	}
+	if errs := other.Validate(); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+}

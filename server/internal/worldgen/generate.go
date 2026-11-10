@@ -99,6 +99,15 @@ type DecorParams struct {
 	Busy    bool    `json:"busy"`
 }
 
+// Region — подпись района на карте. Это ориентир, не коллайдер и не отдельная локация.
+type Region struct {
+	ID     string     `json:"id"`
+	Name   string     `json:"name"`
+	Role   string     `json:"role"` // safe | explore | industry | danger | ruins | outer
+	Pos    [2]float64 `json:"pos"`
+	Radius float64    `json:"radius"`
+}
+
 // Layout — раскладка системы.
 type Layout struct {
 	System   string      `json:"system"`
@@ -114,6 +123,7 @@ type Layout struct {
 	Points   []Point     `json:"points"`
 	Lanes    []Lane      `json:"lanes"`
 	Decor    DecorParams `json:"decor"`
+	Regions  []Region    `json:"regions,omitempty"`
 }
 
 type circle struct{ x, y, r float64 }
@@ -125,6 +135,15 @@ type gen struct {
 	p        SystemParams
 	blockers []circle // занятые области (кроме разрешённых пересечений)
 	hub      circle
+	wedge    wedge // сектор Авроры; у остальных систем выключен
+}
+
+// wedge ограничивает угол (рад, от +X против часовой) и дистанцию от центра.
+// Только Аврора: постоянная география районов вместо кольца вокруг нуля.
+type wedge struct {
+	on     bool
+	a0, a1 float64
+	d0, d1 float64
 }
 
 func (g *gen) free(c circle, gap float64) bool {
@@ -143,10 +162,47 @@ func (g *gen) free(c circle, gap float64) bool {
 }
 
 // place ищет свободное место в кольце [lo, hi] долей радиуса системы.
+// Если включён сектор Авроры, угол и дистанция берутся из него, а кольцо только сужает дистанцию.
 func (g *gen) place(radius, lo, hi, gap float64) (circle, bool) {
-	for i := 0; i < 600; i++ {
+	tries := 600
+	if g.wedge.on {
+		tries = 900
+	}
+	for i := 0; i < tries; i++ {
 		a := g.r.Float64() * 2 * math.Pi
 		d := (lo + g.r.Float64()*(hi-lo)) * g.p.Radius
+		if g.wedge.on {
+			span := g.wedge.a1 - g.wedge.a0
+			if span <= 0 {
+				span += 2 * math.Pi
+			}
+			a = g.wedge.a0 + (a/(2*math.Pi))*span
+			dLo, dHi := g.wedge.d0, g.wedge.d1
+			reqLo := lo * g.p.Radius
+			reqHi := hi * g.p.Radius
+			if reqHi > dLo && reqLo < dHi {
+				overlap := math.Min(reqHi, dHi) - math.Max(reqLo, dLo)
+				// Узкое пересечение с радиальным кольцом не сжимает район в полоску.
+				if overlap >= 80 && overlap >= 0.3*(dHi-dLo) {
+					if reqLo > dLo {
+						dLo = reqLo
+					}
+					if reqHi < dHi {
+						dHi = reqHi
+					}
+				}
+			}
+			frac := 0.0
+			if hi > lo {
+				frac = (d/g.p.Radius - lo) / (hi - lo)
+			}
+			if frac < 0 {
+				frac = 0
+			} else if frac > 1 {
+				frac = 1
+			}
+			d = dLo + frac*(dHi-dLo)
+		}
 		c := circle{math.Cos(a) * d, math.Sin(a) * d, radius}
 		if g.free(c, gap) {
 			return c, true
@@ -216,6 +272,15 @@ func (g *gen) placeAbs(radius float64, b band, gap float64) (circle, bool) {
 	return g.place(radius, lo/g.p.Radius, hi/g.p.Radius, gap)
 }
 
+// useDistrict включает сектор только для Авроры. Остальные системы остаются на кольцах.
+func (g *gen) useDistrict(a0, a1, d0, d1 float64) {
+	if g.p.ID != "aurora" {
+		g.wedge.on = false
+		return
+	}
+	g.wedge = wedge{on: true, a0: a0, a1: a1, d0: d0, d1: d1}
+}
+
 // count возвращает число объектов: явное значение параметра, иначе 1 при наличии особенности и 0 без неё.
 func count(explicit int, feature bool) int {
 	if explicit > 0 {
@@ -257,8 +322,10 @@ func Generate(p SystemParams, cfg Config) Layout {
 	l.Decor = DecorParams{Seed: p.Seed*31 + 7, Density: dens, Busy: trade}
 	gas := has(p.Features, "gas_giant")
 
-	// планеты: первая крупная (газовый гигант, если задан), остальные меньше; луны у первой
+	// планеты: первая крупная (газовый гигант, если задан), остальные меньше; луны у первой.
+	// Аврора: северный сектор исследования.
 	nPlanets := count(p.Planets, true)
+	g.useDistrict(1.0, 2.2, 480, 1000)
 	for i := 0; i < nPlanets; i++ {
 		b := bandMid
 		if i > 0 {
@@ -308,9 +375,14 @@ func Generate(p SystemParams, cfg Config) Layout {
 		}
 	}
 
-	// астероидные пояса: зоны добычи (первый рядом с хабом)
+	// астероидные пояса: зоны добычи. На Авроре — восток, первый пояс ближе к хабу (учебная руда).
 	var belts []circle
 	for i := 0; i < count(p.Belts, has(p.Features, "asteroid_belt") || p.Specialization == "mining"); i++ {
+		if i == 0 {
+			g.useDistrict(-0.55, 0.7, 200, 340)
+		} else {
+			g.useDistrict(-0.55, 0.7, 420, 900)
+		}
 		bc, ok := g.placeAbs(g.rnd(55, 75), g.bandFor(i, true), ZoneGap)
 		if !ok {
 			continue
@@ -321,7 +393,7 @@ func Generate(p SystemParams, cfg Config) Layout {
 		g.blockers = append(g.blockers, circle{bc.x, bc.y, bc.r})
 	}
 
-	// пиратские территории: первая может частично перекрывать пояс
+	// пиратские территории: первая может частично перекрывать пояс (не на Авроре — юг отдельно от добычи)
 	type pz struct {
 		c    circle
 		id   string
@@ -329,10 +401,11 @@ func Generate(p SystemParams, cfg Config) Layout {
 	}
 	var pirates []pz
 	for i := 0; i < count(p.PirateZones, has(p.Features, "pirate_territory") || p.Specialization == "pirate"); i++ {
+		g.useDistrict(3.9, 5.3, 560, 820)
 		pr := g.rnd(88, 115)
 		var pc circle
 		ok := false
-		if i == 0 && len(belts) > 0 && g.r.Intn(100) < 65 {
+		if i == 0 && len(belts) > 0 && g.r.Intn(100) < 65 && g.p.ID != "aurora" {
 			idx := len(g.blockers) - 1
 			for j := range g.blockers { // последний блокер пояса: найдём его по координатам
 				if g.blockers[j].x == belts[0].x && g.blockers[j].y == belts[0].y {
@@ -402,8 +475,9 @@ func Generate(p SystemParams, cfg Config) Layout {
 			l.Deposits = append(l.Deposits, mkDeposit(l, "crystals", cfg.Resources["crystals"], pir.id, "Богатое месторождение (под охраной)", c, 1.6))
 		}
 	}
-	// логово босса: далеко от хаба, мировой босс и охрана
+	// логово босса: далеко от хаба, на Авроре — дальний юг
 	if has(p.Features, "boss_lair") {
+		g.useDistrict(4.2, 5.2, 1080, 1220)
 		if bc, ok := g.placeAbs(g.rnd(70, 90), bandFar, ZoneGap); ok {
 			id := "z-pve-boss"
 			l.Zones = append(l.Zones, Zone{ID: id, Type: "pve", Name: "Логово «Левиафан»", Pos: pos(bc), Radius: round1(bc.r), Danger: 3})
@@ -419,8 +493,9 @@ func Generate(p SystemParams, cfg Config) Layout {
 			l.Deposits = append(l.Deposits, mkDeposit(l, "crystals", cfg.Resources["crystals"], id, "Сокровищница логова (под охраной)", circle{bc.x + 10, bc.y, 0}, 2.2))
 		}
 	}
-	// поля обломков: зоны лома без пиратов
+	// поля обломков: на Авроре — западные руины
 	for i := 0; i < count(p.DebrisFields, has(p.Features, "debris_field")); i++ {
+		g.useDistrict(2.5, 3.8, 500, 1080)
 		if dc, ok := g.placeAbs(g.rnd(35, 50), g.bandFor(i, true), ZoneGap); ok {
 			id := fmt.Sprintf("z-debris-%d", i+1)
 			l.Zones = append(l.Zones, Zone{ID: id, Type: "mining", Name: "Поле обломков", Pos: pos(dc), Radius: round1(dc.r), Danger: 0})
@@ -431,8 +506,9 @@ func Generate(p SystemParams, cfg Config) Layout {
 			}
 		}
 	}
-	// заброшенные станции: точки исследования
+	// заброшенные станции: на Авроре — запад
 	for i := 0; i < count(p.Derelicts, has(p.Features, "derelict")); i++ {
+		g.useDistrict(2.55, 3.7, 520, 1040)
 		if dc, ok := g.placeAbs(26, g.bandFor(i+1, false), ZoneGap); ok {
 			n := i + 1
 			dname := "Заброшенная станция"
@@ -444,8 +520,9 @@ func Generate(p SystemParams, cfg Config) Layout {
 			g.blockers = append(g.blockers, circle{dc.x, dc.y, dc.r})
 		}
 	}
-	// охраняемые тайники: малые PvE-зоны с элитным стражем
+	// охраняемые тайники: на Авроре — юг, в стороне от логова
 	for i := 0; i < count(p.Caches, has(p.Features, "guarded_cache")); i++ {
+		g.useDistrict(3.85, 5.35, 640, 900)
 		if cc, ok := g.placeAbs(30, g.bandFor(i+1, false), ZoneGap); ok {
 			id := fmt.Sprintf("z-pve-cache-%d", i+1)
 			l.Zones = append(l.Zones, Zone{ID: id, Type: "pve", Name: "Охраняемый тайник", Pos: pos(cc), Radius: round1(cc.r), Danger: min(p.Difficulty+1, 3)})
@@ -454,30 +531,44 @@ func Generate(p SystemParams, cfg Config) Layout {
 			g.blockers = append(g.blockers, circle{cc.x, cc.y, cc.r})
 		}
 	}
-	// торговля: дополнительные станции и маршруты
+	// торговля: дополнительные станции. Аврора: восток — промышленность, север — наука.
 	nStations := count(p.Stations, trade)
 	prev := "st1"
+	stationNames := []string{"Торговая станция «Дальний порт»", "Станция «Каменный причал»", "Форпост «Северный ветер»", "Станция «Янтарная гавань»"}
+	if p.ID == "aurora" {
+		stationNames = []string{"Промстанция «Рудный двор»", "Научная станция «Полярная»", "Форпост «Северный ветер»", "Станция «Янтарная гавань»"}
+	}
 	for i := 0; i < nStations; i++ {
 		b := bandMid
 		if i > 0 {
 			b = bandFar
 		}
+		if i == 0 {
+			g.useDistrict(-0.45, 0.65, 460, 880)
+		} else {
+			g.useDistrict(1.15, 2.05, 560, 980)
+		}
 		if sc, ok := g.placeAbs(46, b, ZoneGap); ok {
 			id := fmt.Sprintf("st%d", i+2)
-			names := []string{"Торговая станция «Дальний порт»", "Станция «Каменный причал»", "Форпост «Северный ветер»", "Станция «Янтарная гавань»"}
+			names := stationNames
 			l.Stations = append(l.Stations, Station{ID: id, Name: names[i%len(names)], Pos: pos(sc), SafeRadius: 35})
-			l.Zones = append(l.Zones, Zone{ID: fmt.Sprintf("z-trade-%d", i+2), Type: "trade", Name: "Торговый узел " + names[i%len(names)][strings.Index(names[i%len(names)], " ")+1:], Pos: pos(sc), Radius: 45, Danger: 0})
+			zoneName := "Торговый узел " + names[i%len(names)][strings.Index(names[i%len(names)], " ")+1:]
+			if p.ID == "aurora" {
+				zoneName = names[i%len(names)]
+			}
+			l.Zones = append(l.Zones, Zone{ID: fmt.Sprintf("z-trade-%d", i+2), Type: "trade", Name: zoneName, Pos: pos(sc), Radius: 45, Danger: 0})
 			g.blockers = append(g.blockers, circle{sc.x, sc.y, 45})
 			l.Lanes = append(l.Lanes, Lane{A: prev, B: id})
 			prev = id
 		}
 	}
-	// исследование: аномалии и скрытые сигналы далеко от центра
+	// исследование: аномалии и скрытые сигналы. Аврора: аномалии на севере, сигналы у внешнего пояса.
 	nAn := count(p.Anomalies, has(p.Features, "anomalies") || p.Specialization == "explore")
 	if p.Specialization == "explore" && p.Anomalies == 0 {
 		nAn = 2
 	}
 	for i := 0; i < nAn; i++ {
+		g.useDistrict(1.05, 2.25, 700, 1050)
 		if ac, ok := g.placeAbs(30, g.bandFor(i+1, false), ZoneGap); ok {
 			id := fmt.Sprintf("an-%d", i+1)
 			anName := "Гравитационная аномалия"
@@ -493,6 +584,7 @@ func Generate(p SystemParams, cfg Config) Layout {
 	}
 	if nAn > 0 {
 		for i := 0; i < 1+nAn/2; i++ {
+			g.useDistrict(-0.15, 0.55, 1000, 1220)
 			if sc, ok := g.placeAbs(14, band{400, 1100}, ZoneGap); ok {
 				l.Points = append(l.Points, Point{ID: fmt.Sprintf("sg-%d", i+1), Kind: "signal", Name: "Секретный сигнал", Pos: pos(sc), Radius: 14, Reward: 120 + 30*float64(i), Hidden: true})
 				g.blockers = append(g.blockers, circle{sc.x, sc.y, 20})
@@ -500,7 +592,22 @@ func Generate(p SystemParams, cfg Config) Layout {
 		}
 	}
 	g.addStoryPins(&l)
+	if p.ID == "aurora" {
+		l.Regions = auroraRegions(p.Hub)
+	}
 	return l
+}
+
+// auroraRegions — постоянные подписи шести районов. Координаты якорей, не физических зон.
+func auroraRegions(hub [2]float64) []Region {
+	return []Region{
+		{ID: "core", Name: "Центральный сектор", Role: "safe", Pos: hub, Radius: 280},
+		{ID: "north", Name: "Северный сектор", Role: "explore", Pos: [2]float64{0, 720}, Radius: 340},
+		{ID: "east", Name: "Восточный сектор", Role: "industry", Pos: [2]float64{680, 40}, Radius: 320},
+		{ID: "south", Name: "Южный сектор", Role: "danger", Pos: [2]float64{40, -760}, Radius: 340},
+		{ID: "west", Name: "Западный сектор", Role: "ruins", Pos: [2]float64{-760, 20}, Radius: 320},
+		{ID: "outer", Name: "Внешний пояс", Role: "outer", Pos: [2]float64{1050, 180}, Radius: 220},
+	}
 }
 
 // storyPin — фиксированная сюжетная точка. Награда 0: посещение пишет журнал, но не выдаёт кредиты до квеста.
@@ -550,6 +657,17 @@ func (g *gen) addStoryPins(l *Layout) {
 }
 
 func (g *gen) pinSpot(radius float64) (circle, bool) {
+	if g.p.ID == "aurora" {
+		// Учебные точки держатся в центральном секторе, вне круга хаба.
+		g.useDistrict(0.35, 1.35, 160, 320)
+		if c, ok := g.placeAbs(radius, band{160, 320}, 8); ok {
+			return c, true
+		}
+		g.useDistrict(0.2, 1.6, 140, 420)
+		if c, ok := g.placeAbs(radius, band{140, 420}, 0); ok {
+			return c, true
+		}
+	}
 	for _, b := range []band{bandNear, bandMid, bandFar, {120, 1200}} {
 		if c, ok := g.placeAbs(radius, b, 8); ok {
 			return c, true

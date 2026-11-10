@@ -14,16 +14,24 @@ type WorldView interface {
 	Snapshot(id string) (world.State, bool)
 }
 
-// FarmController joins one reserved captain as a real player and then runs a long-term goal.
+// FarmController joins reserved captains as real players and runs their goals.
 type FarmController struct {
 	Bootstrap *Bootstrapper
 	Store     *Store
 	World     WorldView
 	Speaker   *ChatSpeaker
+	Chorus    *Chorus
+	Res       *Reservation
 	Endpoint  string
 	Fallback  []string
 	LowHull   float64
 	Log       *slog.Logger
+}
+
+// CastMember is one captain to put in the world and in the chat.
+type CastMember struct {
+	ID, Name string
+	Goal     GoalKind
 }
 
 func nearestHostile(st world.State, me [2]float64) (id string, pos [2]float64) {
@@ -47,6 +55,9 @@ func (f *FarmController) Join(ctx context.Context, captainID string) (playerID s
 	if f == nil || f.Bootstrap == nil || f.Store == nil || f.Endpoint == "" || captainID == "" {
 		return "", nil, ErrInput
 	}
+	if f.Res != nil {
+		f.Res.Reserve(captainID)
+	}
 	rec, err := f.Bootstrap.EnsurePlayer(ctx, CharacterRequest{
 		CaptainID: captainID,
 		Nick:      "AI-" + captainID,
@@ -63,35 +74,71 @@ func (f *FarmController) Join(ctx context.Context, captainID string) (playerID s
 	return rec.ID, g, nil
 }
 
-// Hold keeps the gateway open until the context is cancelled, then closes it.
-func Hold(ctx context.Context, g *Gateway) {
-	if g == nil {
+// RunCast joins several captains, runs each goal, and registers them as chat voices.
+// Blocks until ctx is cancelled, then closes every gateway.
+func (f *FarmController) RunCast(ctx context.Context, members []CastMember) {
+	if f == nil || len(members) == 0 {
 		return
+	}
+	var open []*Gateway
+	for i, m := range members {
+		if m.ID == "" {
+			continue
+		}
+		if i > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(2 * time.Second):
+			}
+		}
+		joinCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		playerID, g, err := f.Join(joinCtx, m.ID)
+		cancel()
+		if err != nil {
+			if f.Log != nil {
+				f.Log.Error("AI join failed", "captain", m.ID, "err", err)
+			}
+			continue
+		}
+		name := m.Name
+		if name == "" {
+			name = "AI-" + m.ID
+		}
+		goal := m.Goal
+		if goal == "" {
+			goal = GoalFarmCredits
+		}
+		if f.Chorus != nil {
+			f.Chorus.Add(Voice{ID: m.ID, Name: name, Goal: goal})
+		}
+		if f.Log != nil {
+			f.Log.Info("AI civilization: agent joined", "captain", m.ID, "name", name, "goal", string(goal), "player", playerID)
+		}
+		runner := &GoalRunner{World: f.World, Store: f.Store, Log: f.Log, LowHull: f.LowHull, Name: name}
+		go runner.RunGoal(ctx, g, m.ID, playerID, goal)
+		open = append(open, g)
+	}
+	if f.Res != nil && len(open) > 0 {
+		go f.keepReserved(ctx, members)
 	}
 	<-ctx.Done()
-	g.Close()
+	for _, g := range open {
+		g.Close()
+	}
 }
 
-// RunGoalOnce joins the first candidate and runs a long-term goal chain (no aimless flying).
-func (f *FarmController) RunGoalOnce(ctx context.Context, candidates []string, goal GoalKind) {
-	if len(candidates) == 0 {
-		return
-	}
-	id := candidates[0]
-	joinCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	playerID, g, err := f.Join(joinCtx, id)
-	if err != nil {
-		if f.Log != nil {
-			f.Log.Error("AI join failed", "captain", id, "err", err)
+func (f *FarmController) keepReserved(ctx context.Context, members []CastMember) {
+	t := time.NewTicker(2 * time.Minute)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			for _, m := range members {
+				f.Res.Reserve(m.ID)
+			}
 		}
-		return
 	}
-	if f.Log != nil {
-		f.Log.Info("AI civilization: agent joined, starting goal", "captain", id, "player", playerID)
-	}
-	runner := &GoalRunner{World: f.World, Store: f.Store, Speaker: f.Speaker, Name: "AI-" + id, Log: f.Log, LowHull: f.LowHull}
-	if goal == "" { goal = GoalFarmCredits }
-	go runner.RunGoal(ctx, g, id, playerID, goal)
-	Hold(ctx, g)
 }

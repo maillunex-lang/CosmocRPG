@@ -21,8 +21,6 @@ jobs:
     timeout-minutes: 60
     env:
       GODOT_VERSION: 4.7.2-stable
-      # Вне каталога репозитория и вне dist/, чтобы ключ не попал в артефакт.
-      GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ runner.temp }}/release.keystore
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,11 +48,14 @@ jobs:
           test -n "$KEYSTORE_B64"
           test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_USER"
           test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD"
+          # RUNNER_TEMP вне репозитория и вне каталога артефакта.
+          keystore="${RUNNER_TEMP}/release.keystore"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=${keystore}" >> "$GITHUB_ENV"
           umask 077
-          install -m 600 /dev/null "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH"
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH"
-          chmod 600 "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH"
-          python3 - "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH" <<'PY'
+          install -m 600 /dev/null "$keystore"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          python3 - "$keystore" <<'PY'
           import pathlib, sys
           raw = pathlib.Path(sys.argv[1]).read_bytes()
           # JKS начинается с FEEDFEED, PKCS12 — с ASN.1 SEQUENCE (0x30). Содержимое не печатаем.
@@ -173,5 +174,5 @@ jobs:
           if [ -x client/android/build/gradlew ]; then
             (cd client/android/build && ./gradlew --stop) || true
           fi
-          rm -f "$GODOT_ANDROID_KEYSTORE_RELEASE_PATH"
+          rm -f "${RUNNER_TEMP}/release.keystore"
           find client -type f -name '*.keystore' -delete

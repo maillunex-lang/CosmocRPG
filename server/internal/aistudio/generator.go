@@ -118,9 +118,9 @@ type GenerateOptions struct {
 
 // GenerateResult — итог генерации.
 type GenerateResult struct {
-	Added   []string `json:"added"`
-	Skipped []string `json:"skipped"` // уже существовали (в том числе правленные вручную)
-	Enriched int `json:"enriched"`
+	Added    []string `json:"added"`
+	Skipped  []string `json:"skipped"` // уже существовали (в том числе правленные вручную)
+	Enriched int      `json:"enriched"`
 }
 
 // Generate добавляет в конфигурацию недостающих капитанов с номерами 1..Count.

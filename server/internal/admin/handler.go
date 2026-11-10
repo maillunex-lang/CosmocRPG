@@ -35,18 +35,18 @@ type Options struct {
 	TrustProxy    bool // доверять заголовку X-Forwarded-For от обратного прокси (Caddy)
 	Version       string
 	StartedAt     time.Time
-	WSSessions    func() int64         // число активных игровых сессий
-	AI            *aistudio.Service    // AI Civilization Training Studio (nil: раздел выключен)
-	Agent         *aiagent.Manager     // ИИ-игроки в мире: статус, настройки, капитаны (nil: раздел выключен)
-	Civ           *aiciv.Live          // живые настройки цивилизации (nil: шлюз не запущен)
+	WSSessions    func() int64          // число активных игровых сессий
+	AI            *aistudio.Service     // AI Civilization Training Studio (nil: раздел выключен)
+	Agent         *aiagent.Manager      // ИИ-игроки в мире: статус, настройки, капитаны (nil: раздел выключен)
+	Civ           *aiciv.Live           // живые настройки цивилизации (nil: шлюз не запущен)
 	Cast          *aiciv.FarmController // кто реально вошёл в мир (nil: шлюз не запущен)
-	Ships         *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
-	World         *worldcfg.Service    // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
-	Chat          *chat.Service        // чат: журнал, мьюты, настройки (nil: раздел выключен)
-	Design        *design.Service      // библиотека дизайна: каталог элементов, замены, публикация (nil: раздел выключен)
-	Media         *media.Service       // библиотека музыки и радио (nil: раздел выключен)
-	LivingEnabled bool                 // включены ли живые локации на сервере (флаг COSMOC_FEATURE_LIVING)
-	OnChanged     func(reason string)  // настройки сохранены: сказать игрокам, что сервер обновился
+	Ships         *shipcatalog.Service  // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
+	World         *worldcfg.Service     // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
+	Chat          *chat.Service         // чат: журнал, мьюты, настройки (nil: раздел выключен)
+	Design        *design.Service       // библиотека дизайна: каталог элементов, замены, публикация (nil: раздел выключен)
+	Media         *media.Service        // библиотека музыки и радио (nil: раздел выключен)
+	LivingEnabled bool                  // включены ли живые локации на сервере (флаг COSMOC_FEATURE_LIVING)
+	OnChanged     func(reason string)   // настройки сохранены: сказать игрокам, что сервер обновился
 }
 
 // Handler — HTTP-обработчик админ-API (/api/...).

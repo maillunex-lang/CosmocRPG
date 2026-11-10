@@ -13,20 +13,20 @@ const (
 )
 
 var (
-	ErrNotOwner      = errors.New("not_owner")
-	ErrAllianceFull  = errors.New("alliance_full")
-	ErrHasAlliance   = errors.New("has_alliance")
-	ErrNoAlliance    = errors.New("no_alliance")
-	ErrBadVote       = errors.New("bad_vote")
+	ErrNotOwner     = errors.New("not_owner")
+	ErrAllianceFull = errors.New("alliance_full")
+	ErrHasAlliance  = errors.New("has_alliance")
+	ErrNoAlliance   = errors.New("no_alliance")
+	ErrBadVote      = errors.New("bad_vote")
 )
 
 // Alliance — объединение не больше чем из трёх кланов.
 type Alliance struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Governor      string `json:"governor"`
-	GovernorName  string `json:"governor_name,omitempty"`
-	Clans         int    `json:"clans"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Governor     string `json:"governor"`
+	GovernorName string `json:"governor_name,omitempty"`
+	Clans        int    `json:"clans"`
 }
 
 // Seat — клан внутри союза.

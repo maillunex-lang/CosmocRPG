@@ -152,7 +152,7 @@ func TestEquipmentReservationBlocksRouterTransfer(t *testing.T) {
 	to := New()
 	to.system.ID = "other"
 	r.Add(to)
-	r.SetGates(w.System().ID, []Gate{{To: "other", Pos: p.Pos}})
+	r.SetGates(w.System().ID, []Gate{{To: "other", Pos: [2]float64{p.Pos.X, p.Pos.Y}}})
 	entered, release := make(chan struct{}), make(chan struct{})
 	done := make(chan error, 1)
 	go func() {

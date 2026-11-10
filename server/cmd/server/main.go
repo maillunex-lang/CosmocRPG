@@ -293,7 +293,7 @@ func run() error {
 			universe.Add(w)
 			gates := make([]world.Gate, 0, len(sp.Jumps))
 			for _, j := range sp.Jumps {
-				gates = append(gates, world.Gate{To: j.To, Pos: world.Vec{X: j.Pos[0], Y: j.Pos[1]}})
+				gates = append(gates, world.Gate{To: j.To, Pos: [2]float64{j.Pos[0], j.Pos[1]}})
 			}
 			universe.SetGates(sp.ID, gates)
 			log.Info("система готова", "id", sp.ID, "переходы", len(gates))

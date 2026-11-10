@@ -22,8 +22,8 @@ const GateRadius = 70.0
 
 // Gate — точка гиперперехода между системами.
 type Gate struct {
-	To  string
-	Pos Vec
+	To  string     `json:"to"`
+	Pos [2]float64 `json:"pos"`
 }
 
 // Router — реестр миров по системам.
@@ -60,6 +60,26 @@ func (r *Router) SetGates(system string, gates []Gate) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.gates[system] = gates
+}
+
+// Links возвращает уникальные рёбра гиперпереходов между системами (для звёздной карты).
+func (r *Router) Links() [][2]string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	seen := map[string]bool{}
+	var out [][2]string
+	for from, gates := range r.gates {
+		for _, g := range gates {
+			key := from + "|" + g.To
+			rev := g.To + "|" + from
+			if seen[key] || seen[rev] {
+				continue
+			}
+			seen[key] = true
+			out = append(out, [2]string{from, g.To})
+		}
+	}
+	return out
 }
 
 // WorldOf возвращает мир системы (nil, если не зарегистрирована).
@@ -160,14 +180,15 @@ func (r *Router) Jump(pid, to string) (Record, Vec, error) {
 		return Record{}, Vec{}, ErrNoSystem
 	}
 	// зеркальная точка в целевой системе (переход обратно)
-	spawn := Vec{X: 0, Y: -float64(gate.Pos.Y)}
+	gateVec := Vec{X: gate.Pos[0], Y: gate.Pos[1]}
+	spawn := Vec{X: 0, Y: -gate.Pos[1]}
 	for _, g := range r.gates[to] {
 		if g.To == fromID {
-			spawn = g.Pos
+			spawn = Vec{X: g.Pos[0], Y: g.Pos[1]}
 			break
 		}
 	}
-	rec, err := from.removePlayer(pid, &gate.Pos)
+	rec, err := from.removePlayer(pid, &gateVec)
 	if err != nil {
 		if err == ErrNoPlayer {
 			err = ErrNoSystem

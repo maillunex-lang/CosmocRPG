@@ -1,6 +1,7 @@
 extends Control
-## Звёздная карта (Э-1): системы галактики прототипа, фракции, точки прыжков текущей системы.
-## Прыжок отправляет серверу jump {to}; сервер проверяет близость к точке (no_gate/no_link — тост ошибки).
+## Звёздная карта v2 — граф галактики (Kimi, 2026-11-10): системы-узлы, линии гиперкоридоров,
+## ворота на активном коридоре, выбор системы тапом. Прыжок отправляет серверу jump {to};
+## сервер проверяет близость к воротам (no_gate/no_link — тост ошибки).
 
 const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
@@ -9,71 +10,65 @@ const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 
 signal closed
 
-var _gateway: UiGateway
-var _rows: VBoxContainer
-var _notice: Label
-var _search: LineEdit
-var _favorites_only := false
-const Settings := preload("res://ui/ui_settings.gd")
+const FACTION_COLORS := {
+	"Солярный Конкордат": Color("#ffd24a"),
+	"Союз Свободных Систем": Color("#42C6E5"),
+	"Доминион Веспер": Color("#F16C79"),
+}
+# Компоновка графа (доли размера экрана): стабильные позиции систем.
+const LAYOUT := {"aurora": Vector2(0.26, 0.44), "meridian": Vector2(0.66, 0.26), "redstorm": Vector2(0.62, 0.66)}
 
+var _gateway: UiGateway
+var _notice: Label
+var _jump_btn: ActionButton
+var _selected := ""       # система, выбранная тапом
+var _star_seed := 7
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	var bg := ColorRect.new()
-	bg.color = Color(Tokens.BG, 0.96)
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 20)
-	add_child(margin)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	margin.add_child(col)
-
 	var head := HBoxContainer.new()
-	col.add_child(head)
+	head.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	head.offset_left = 20
+	head.offset_top = 16
+	head.offset_right = -20
+	head.offset_bottom = 76
+	add_child(head)
 	head.add_child(Icons.rect("globe", 32, Tokens.ACCENT))
 	var title := Label.new()
-	title.text = "Звёздная карта"
+	title.text = "Карта галактики"
 	title.theme_type_variation = &"TitleLabel"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	var close := ActionButton.new()
 	close.text = "Закрыть"
 	Icons.apply(close, "x")
-	close.custom_minimum_size = Vector2(140, 52)
+	close.custom_minimum_size = Vector2(150, 54)
 	close.pressed.connect(func() -> void: closed.emit())
 	head.add_child(close)
 
-	var tools := HBoxContainer.new()
-	col.add_child(tools)
-	_search = LineEdit.new()
-	_search.placeholder_text = "Поиск по названию системы или фракции"
-	_search.clear_button_enabled = true
-	_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_search.text_changed.connect(func(_text: String) -> void: _rebuild())
-	tools.add_child(_search)
-	var favorites := CheckButton.new()
-	favorites.text = "★ Избранное"
-	favorites.toggled.connect(func(on: bool) -> void: _favorites_only = on; _rebuild())
-	tools.add_child(favorites)
 	_notice = Label.new()
-	_notice.theme_type_variation = &"MutedLabel"
-	_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(_notice)
+	_notice.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_notice.offset_left = 24
+	_notice.offset_right = -24
+	_notice.offset_top = -76
+	_notice.offset_bottom = -24
+	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_notice.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
+	add_child(_notice)
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	col.add_child(scroll)
-	_rows = VBoxContainer.new()
-	_rows.add_theme_constant_override("separation", 8)
-	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_rows)
+	_jump_btn = ActionButton.new()
+	_jump_btn.text = "Прыгнуть"
+	_jump_btn.variant = ActionButton.Variant.PRIMARY
+	Icons.apply(_jump_btn, "rocket", Tokens.BG, 24)
+	_jump_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_jump_btn.offset_left = -260
+	_jump_btn.offset_top = -92
+	_jump_btn.offset_right = -24
+	_jump_btn.offset_bottom = -28
+	_jump_btn.visible = false
+	_jump_btn.pressed.connect(_on_jump_pressed)
+	add_child(_jump_btn)
 	_rebuild()
 
 
@@ -85,78 +80,59 @@ func bind(gw: UiGateway) -> void:
 
 
 func _on_system_changed(_info: Dictionary) -> void:
-	_rebuild()   # после прыжка: новая текущая система и точки
-	_notice.text = "Гиперпереход выполнен."
+	_selected = ""
+	_rebuild()
+	set_process(true)
+
+
+func _system_pos(sys_id: String) -> Vector2:
+	var f: Vector2 = LAYOUT.get(sys_id, Vector2(0.5, 0.5))
+	return Vector2(size.x * f.x, size.y * f.y)
 
 
 func _rebuild() -> void:
-	if _rows == null:
+	if _jump_btn == null:
 		return
-	for c in _rows.get_children():
-		_rows.remove_child(c)
-		c.queue_free()
+	_update_notice()
+	queue_redraw()
+
+
+func _update_notice() -> void:
 	if _gateway == null:
+		_notice.text = ""
+		_jump_btn.visible = false
 		return
-	var current := str(_gateway.snapshot().get("system", {}).get("id", ""))
+	var current := _current_id()
+	if _selected == "" or _selected == current:
+		_notice.text = "Нажмите на систему, чтобы построить маршрут."
+		_jump_btn.visible = false
+		return
+	# есть ли коридор current → selected?
+	var gate := _gate_to(_selected)
+	if gate.is_empty():
+		_notice.text = "Прямого коридора нет: долетите до системы-соседа."
+		_jump_btn.visible = false
+		return
 	var ship: Dictionary = _gateway.snapshot().get("ship", {})
 	var pos: Vector2 = ship.get("pos", Vector2.ZERO)
-	var count := 0
-	for sys in _gateway.star_systems():
-		var id := str(sys.get("id", ""))
-		var favorite := Settings.get_bool("map_system_" + id, false)
-		if not matches_system(sys, _search.text) or (_favorites_only and not favorite):
-			continue
-		count += 1
-		var panel := PanelContainer.new()
-		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_rows.add_child(panel)
-		var box := HBoxContainer.new()
-		box.add_theme_constant_override("separation", 10)
-		panel.add_child(box)
-		var here := str(sys.get("id", "")) == current
-		box.add_child(Icons.rect("globe", 26, Tokens.ACCENT if here else Tokens.TEXT_MUTED))
-		var col := VBoxContainer.new()
-		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		box.add_child(col)
-		var star := ActionButton.new()
-		star.text = "★" if favorite else "☆"
-		star.tooltip_text = "Убрать из избранного" if favorite else "В избранное"
-		star.pressed.connect(func() -> void: Settings.set_bool("map_system_" + id, not favorite); _rebuild())
-		box.add_child(star)
-		var name := Label.new()
-		name.text = str(sys.get("name", sys.get("id", ""))) + ("  · вы здесь" if here else "")
-		name.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
-		col.add_child(name)
-		var info := Label.new()
-		info.theme_type_variation = &"MutedLabel"
-		info.text = str(sys.get("faction", ""))
-		col.add_child(info)
-		if here:
-			# точки прыжков текущей системы: расстояние и кнопка
-			for g in _gateway.jump_gates():
-				var to := str(g.get("to", ""))
-				var gpos := Vector2(float(g.get("pos", [0, 0])[0]), float(g.get("pos", [0, 0])[1]))
-				var row := HBoxContainer.new()
-				row.add_theme_constant_override("separation", 8)
-				col.add_child(row)
-				var gl := Label.new()
-				gl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				gl.text = "Переход: %s · %.0f ед." % [_system_name(to), pos.distance_to(gpos)]
-				row.add_child(gl)
-				var jb := ActionButton.new()
-				jb.text = "Прыгнуть"
-				Icons.apply(jb, "rocket", Tokens.ACCENT, 20)
-				jb.pressed.connect(_on_jump.bind(to))
-				row.add_child(jb)
-	if count == 0:
-		var empty := Label.new()
-		empty.text = "Системы не найдены. Измените поиск или отключите «Избранное»."
-		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_rows.add_child(empty)
-	if _gateway.jump_gates().is_empty():
-		_notice.text = "В этой системе нет точек гиперперехода."
-	elif _notice.text == "":
-		_notice.text = "Подлетите к точке перехода и нажмите «Прыгнуть»."
+	var gpos := Vector2(float(gate.get("pos", [0, 0])[0]), float(gate.get("pos", [0, 0])[1]))
+	var dist := pos.distance_to(gpos)
+	_jump_btn.visible = true
+	if dist <= 70.0:
+		_notice.text = "Коридор в %s открыт. Ворота в %d ед. — можно прыгать." % [_system_name(_selected), int(round(dist))]
+		_jump_btn.disabled = false
+	else:
+		_notice.text = "Курс на %s. Подлетите к воротам (%d ед.)." % [_system_name(_selected), int(round(dist))]
+		_jump_btn.disabled = false   # сервер всё равно проверит; отказ даст понятный тост
+
+
+func _on_jump_pressed() -> void:
+	if _gateway != null and _selected != "":
+		_gateway.jump(_selected)
+
+
+func _current_id() -> String:
+	return str(_gateway.snapshot().get("system", {}).get("id", "")) if _gateway != null else ""
 
 
 func _system_name(id: String) -> String:
@@ -166,11 +142,103 @@ func _system_name(id: String) -> String:
 	return id
 
 
-func _on_jump(to: String) -> void:
-	if _gateway != null:
-		_gateway.jump(to)
+func _gate_to(sys_id: String) -> Dictionary:
+	for g in _gateway.jump_gates():
+		if str(g.get("to", "")) == sys_id:
+			return g
+	return {}
 
 
-static func matches_system(system: Dictionary, query: String) -> bool:
-	var text := (str(system.get("name", "")) + " " + str(system.get("id", "")) + " " + str(system.get("faction", ""))).to_lower()
-	return query.strip_edges().is_empty() or text.contains(query.strip_edges().to_lower())
+func _process(_delta: float) -> void:
+	# живое обновление дистанции до ворот, пока открыта карта
+	if visible and _selected != "" and _gateway != null:
+		_update_notice()
+		queue_redraw()
+
+
+func _draw() -> void:
+	if _gateway == null:
+		return
+	var current := _current_id()
+	_draw_stars()
+	# коридоры
+	for ln in _gateway.gate_links():
+		var a := _system_pos(str(ln[0]))
+		var b := _system_pos(str(ln[1]))
+		var active := str(ln[0]) == current or str(ln[1]) == current
+		var col := Color(Tokens.ACCENT, 0.55) if active else Color(Tokens.TEXT_MUTED, 0.22)
+		draw_line(a, b, col, 2.5 if active else 1.5, true)
+		if active:
+			# «энергия» коридора: пунктирные вспышки
+			for k in range(1, 6):
+				var p := a.lerp(b, k / 6.0)
+				draw_circle(p, 2.2, Color(Tokens.ACCENT, 0.5))
+	# ворота текущей системы — ромб на коридоре
+	for g in _gateway.jump_gates():
+		var to_id := str(g.get("to", ""))
+		var gp := _system_pos(to_id)
+		var cur := _system_pos(current)
+		var dir := (gp - cur).normalized()
+		var gate_screen := cur + dir * 62.0
+		var gp2: Vector2 = Vector2(float(g.get("pos", [0, 0])[0]), float(g.get("pos", [0, 0])[1]))
+		var ship: Dictionary = _gateway.snapshot().get("ship", {})
+		var sp: Vector2 = ship.get("pos", Vector2.ZERO)
+		var near := sp.distance_to(gp2) <= 70.0
+		var col := Tokens.RARE if near else Color(Tokens.ACCENT, 0.8)
+		var pts := PackedVector2Array([gate_screen + Vector2(0, -9), gate_screen + Vector2(9, 0), gate_screen + Vector2(0, 9), gate_screen + Vector2(-9, 0)])
+		draw_colored_polygon(pts, col)
+		draw_arc(gate_screen, 13, 0, TAU, 20, Color(col, 0.5), 1.5, true)
+	# системы-узлы
+	for sys in _gateway.star_systems():
+		var id := str(sys.get("id", ""))
+		var p := _system_pos(id)
+		var here := id == current
+		var sel := id == _selected
+		var faction := str(sys.get("faction", ""))
+		var col: Color = FACTION_COLORS.get(faction, Tokens.TEXT_MUTED)
+		# свечение
+		draw_circle(p, 30, Color(col, 0.10 if not here else 0.22))
+		draw_circle(p, 18, Color(Tokens.BG, 0.85))
+		draw_circle(p, 18, Color(col, 0.9))
+		draw_arc(p, 23, 0, TAU, 40, Color(col, 0.5), 2.0, true)
+		if here:
+			draw_arc(p, 30, 0, TAU, 48, Tokens.ACCENT, 2.5, true)
+		if sel:
+			draw_arc(p, 37, 0, TAU, 48, Color.WHITE, 2.0, true)
+		# имена
+		var font := ThemeDB.fallback_font
+		draw_string(font, p + Vector2(-90, 46), str(sys.get("name", id)), HORIZONTAL_ALIGNMENT_CENTER, 180, 20, Tokens.TEXT)
+		draw_string(font, p + Vector2(-90, 66), faction, HORIZONTAL_ALIGNMENT_CENTER, 180, 14, Color(col, 0.85))
+		if here:
+			draw_string(font, p + Vector2(-90, 86), "вы здесь", HORIZONTAL_ALIGNMENT_CENTER, 180, 13, Color(Tokens.ACCENT, 0.9))
+
+
+func _draw_stars() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _star_seed
+	for i in range(90):
+		var x := rng.randf() * size.x
+		var y := rng.randf() * size.y
+		var r := rng.randf_range(0.6, 1.8)
+		var a := rng.randf_range(0.15, 0.6)
+		draw_circle(Vector2(x, y), r, Color(1, 1, 1, a))
+
+
+func _gui_input(ev: InputEvent) -> void:
+	var pos := Vector2.ZERO
+	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+		pos = ev.position
+	elif ev is InputEventScreenTouch and ev.pressed:
+		pos = ev.position
+	else:
+		return
+	for sys in _gateway.star_systems():
+		var id := str(sys.get("id", ""))
+		if _system_pos(id).distance_to(pos) <= 46.0:
+			_selected = id
+			_update_notice()
+			queue_redraw()
+			return
+	_selected = ""
+	_update_notice()
+	queue_redraw()

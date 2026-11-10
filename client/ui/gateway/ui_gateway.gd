@@ -83,6 +83,9 @@ func star_systems() -> Array:
 func jump_gates() -> Array:
 	return []
 
+func gate_links() -> Array:
+	return []
+
 func jump(_to: String) -> void:
 	pass
 

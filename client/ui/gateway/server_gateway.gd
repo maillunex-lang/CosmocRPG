@@ -31,6 +31,7 @@ var player_id := ""
 var join_name := ""
 var system: Dictionary = {}
 var systems: Array = []   # Э-1: все системы (звёздная карта)
+var links: Array = []     # Э-1: рёбра гиперпереходов (карта галактики)
 var gates: Array = []     # Э-1: точки прыжков текущей системы
 var layout: Dictionary = {}   # раскладка системы с сервера (зоны, тела, станции, месторождения) и параметры декора
 var visual: Dictionary = {}
@@ -181,6 +182,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			system = payload.get("system", {})
 			systems = payload.get("systems", []) if payload.get("systems") is Array else []
 			gates = payload.get("gates", []) if payload.get("gates") is Array else []
+			links = payload.get("links", []) if payload.get("links") is Array else []
 			layout = payload.get("layout", {}) if payload.get("layout") is Dictionary else {}
 			visual = payload.get("visual", {}) if payload.get("visual") is Dictionary else {}
 			alert_cleared.emit(ALERT_LINK)
@@ -207,6 +209,7 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 				visual = payload["visual"]
 			systems = payload.get("systems", systems) if payload.get("systems") is Array else systems
 			gates = payload.get("gates", []) if payload.get("gates") is Array else []
+			links = payload.get("links", links) if payload.get("links") is Array else links
 			_target_id = ""
 			_sent_move = Vector2.INF
 			system_changed.emit(payload)
@@ -493,6 +496,9 @@ func star_systems() -> Array:
 
 func jump_gates() -> Array:
 	return gates
+
+func gate_links() -> Array:
+	return links
 
 func jump(to: String) -> void:
 	_client.send_message("jump", {"to": to})

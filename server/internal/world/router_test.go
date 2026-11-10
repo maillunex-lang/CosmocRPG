@@ -35,7 +35,7 @@ func testUniverse(t *testing.T) (*Router, worldgen.Config) {
 	for _, sp := range cfg.Systems {
 		gates := make([]Gate, 0, len(sp.Jumps))
 		for _, j := range sp.Jumps {
-			gates = append(gates, Gate{To: j.To, Pos: Vec{X: j.Pos[0], Y: j.Pos[1]}})
+			gates = append(gates, Gate{To: j.To, Pos: [2]float64{j.Pos[0], j.Pos[1]}})
 		}
 		r.SetGates(sp.ID, gates)
 	}

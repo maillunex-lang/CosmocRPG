@@ -536,6 +536,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		}
 		payload["systems"] = h.opts.World.Systems()
 		payload["gates"] = h.opts.World.Gates(hw.System().ID)
+		payload["links"] = h.opts.World.Links()
 		reply(Message{Type: "system_changed", ID: m.ID, Payload: mustJSON(payload)})
 		if st, ok := h.opts.World.Snapshot(ss.pid); ok {
 			h.pushState(ss, st)
@@ -1171,6 +1172,7 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 	}
 	welcome["systems"] = h.opts.World.Systems()   // звёздная карта (Э-1)
 	welcome["gates"] = h.opts.World.Gates(sys.ID) // точки прыжков текущей системы
+	welcome["links"] = h.opts.World.Links()       // рёбра переходов для карты галактики
 	if h.opts.Pilot != nil {
 		pctx, pcancel := context.WithTimeout(ctx, 3*time.Second)
 		if ps, err := h.opts.Pilot.State(pctx, rec.ID); err == nil {

@@ -7,6 +7,10 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 
 signal toggled(collapsed: bool)
+signal peek_requested
+
+## Кнопка заголовка не разворачивает карточку, а просит открыть отдельное окно.
+var peek_only := false
 
 @export var title: String = "":
 	set(v):
@@ -45,11 +49,18 @@ func _ready() -> void:
 	_button.theme_type_variation = &"FlatButton"
 	_button.custom_minimum_size = Vector2(0, 48)  # удобная область касания
 	_button.focus_mode = Control.FOCUS_ALL
-	_button.pressed.connect(func() -> void: set_collapsed(not collapsed))
+	_button.pressed.connect(request_toggle)
 	_header.add_child(_button)
 	_box.add_child(_header)
 	_box.move_child(_header, 0)
 	_apply(false)
+
+
+func request_toggle() -> void:
+	if peek_only and collapsed:
+		peek_requested.emit()
+		return
+	set_collapsed(not collapsed)
 
 
 func set_collapsed(value: bool, animate: bool = true) -> void:
@@ -61,8 +72,12 @@ func set_collapsed(value: bool, animate: bool = true) -> void:
 
 
 func _apply(animate_open: bool) -> void:
-	_button.text = "Развернуть" if collapsed else "Свернуть"
-	_button.tooltip_text = "Развернуть «%s»" % title if collapsed else "Свернуть «%s»" % title
+	if peek_only:
+		_button.text = "Открыть"
+		_button.tooltip_text = "Открыть чат"
+	else:
+		_button.text = "Развернуть" if collapsed else "Свернуть"
+		_button.tooltip_text = "Развернуть «%s»" % title if collapsed else "Свернуть «%s»" % title
 	for c in _box.get_children():
 		if c == _header or not (c is CanvasItem):
 			continue

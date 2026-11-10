@@ -48,6 +48,7 @@ func (h *Handler) chatSettingsPut(w http.ResponseWriter, r *http.Request, u User
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "chat_settings", h.clientIP(r), map[string]any{"enabled": st.Enabled, "retention_days": st.RetentionDays, "min_interval_ms": st.MinIntervalMs})
+	h.changed("чат")
 	writeJSON(w, http.StatusOK, h.opts.Chat.Settings())
 }
 

@@ -49,3 +49,9 @@ Codex, feature/ai-civilization, дата2026-11-10: аiciv/bootstrap+gateway+rec
 ## Публикация AI checkpoint в main
 
 2026-11-10: владелец разрешил main. Отдельный worktree CosmocRPG-ai-main/integration/ai-civilization-main, merge feature0971d8a с origin/main588fde6 без конфликтов, код тождествен проверенному. AIC-020 IN_PROGRESS, economics BLOCKED; production/flags не включены. Для продолжения брать свежую main и учитывать SQL0022/0023/0024.
+
+## MAP-UX-20261110
+
+Codex: `codex/parallel-options`, worktree `/workspace/CosmocRPG-options`. Карта клиента: `client/ui/{map_screen,star_map_screen,map_preferences}.gd`, профильные тесты. Поиск систем, фильтры, локальное избранное, легенда. Корпорации заняты другим ИИ по сообщению владельца; их и AI не менять. IN_PROGRESS.
+
+MAP-UX checkpoint: реализация и профильные headless-проверки завершены (306 PASS), ожидает визуальной приёмки и решения об интеграции. Подробности docs/HANDOFF.md. Серверные области и корпорации не затронуты.

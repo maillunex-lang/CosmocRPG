@@ -20,6 +20,14 @@ const ZOOM_MIN := 1.0
 const ZOOM_MAX := 10.0
 const PAN_DRAG_PX := 8.0   # меньше — касание, больше — перетаскивание
 
+const Settings := preload("res://ui/ui_settings.gd")
+const FILTERS := {"station": "Станции", "deposit": "Добыча", "explore": "Исследование", "hostile": "Враги", "player": "Пилоты", "bodies": "Планеты", "zones": "Зоны"}
+var _filters: Dictionary = {}
+var _favorite: Button
+var _point_stars: Dictionary = {}
+var _favorites_signature := ""
+var _favorites: OptionButton
+
 var layout: Dictionary = {}
 var state: Dictionary = {}
 var selected := ""
@@ -45,17 +53,19 @@ var _moved := 0.0
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+	scroll.offset_left = -300
+	scroll.offset_right = -16
+	scroll.offset_top = 16
+	scroll.offset_bottom = -16
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
 	var side := VBoxContainer.new()
+	side.custom_minimum_size.x = 264
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side.add_theme_constant_override("separation", 8)
-	side.anchor_left = 1.0
-	side.anchor_right = 1.0
-	side.anchor_top = 0.0
-	side.anchor_bottom = 1.0
-	side.offset_left = -300
-	side.offset_right = -16
-	side.offset_top = 16
-	side.offset_bottom = -16
-	add_child(side)
+	scroll.add_child(side)
 	var title := Label.new()
 	title.text = "Карта системы"
 	title.theme_type_variation = &"TitleLabel"
@@ -76,6 +86,22 @@ func _ready() -> void:
 	Icons.apply(_auto, "rocket", Tokens.BG, 22)
 	_auto.pressed.connect(func() -> void: if selected != "": autopilot_requested.emit(selected))
 	side.add_child(_auto)
+	_favorite = ActionButton.new()
+	_favorite.pressed.connect(_toggle_favorite)
+	side.add_child(_favorite)
+	_favorites = OptionButton.new()
+	_favorites.item_selected.connect(_choose_favorite)
+	side.add_child(_favorites)
+	var filters := GridContainer.new()
+	filters.columns = 2
+	side.add_child(filters)
+	for key in FILTERS:
+		var check := CheckBox.new()
+		check.text = FILTERS[key]
+		check.button_pressed = Settings.get_bool("map_filter_" + key, true)
+		_filters[key] = check.button_pressed
+		check.toggled.connect(func(on: bool) -> void: set_filter(key, on))
+		filters.add_child(check)
 	side.add_child(_legend())
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -113,7 +139,7 @@ func _legend() -> Control:
 	var box := GridContainer.new()
 	box.columns = 2
 	for it in [["Станция", Tokens.TEXT], ["Планета", Color("#6f8fe8")], ["Добыча", ZONE_COLORS["mining"]], ["Опасно (PvE)", ZONE_COLORS["pve"]],
-			["Исследование", ZONE_COLORS["explore"]], ["Торговля", ZONE_COLORS["trade"]], ["Враг", Tokens.DANGER], ["Игрок", Tokens.ACCENT]]:
+			["Аномалия ◇", ZONE_COLORS["explore"]], ["Обломки □", Color("#9aa4ad")], ["Сигнал ●", Tokens.ACCENT], ["Исследование", ZONE_COLORS["explore"]], ["Торговля", ZONE_COLORS["trade"]], ["Враг", Tokens.DANGER], ["Игрок", Tokens.ACCENT]]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		var sw := ColorRect.new()
@@ -205,13 +231,13 @@ func _draw() -> void:
 	draw_circle(_center, radius() * _scale, Color(Tokens.SURFACE_SUNKEN, 0.9))
 	draw_arc(_center, radius() * _scale, 0, TAU, 128, Color(Tokens.ACCENT, 0.5), 2.0, true)
 	var font := UiTheme.make_font(600)
-	for z in layout.get("zones", []):
+	for z in layout.get("zones", []) if _filters.get("zones", true) else []:
 		var c: Color = ZONE_COLORS.get(str(z.get("type", "")), Tokens.TEXT_MUTED)
 		var zp := to_screen(_pos(z))
 		var zr := float(z.get("radius", 10.0)) * _scale
 		draw_circle(zp, zr, Color(c, 0.10))
 		draw_arc(zp, zr, 0, TAU, 48, Color(c, 0.55), 1.5, true)
-	for b in layout.get("bodies", []):
+	for b in layout.get("bodies", []) if _filters.get("bodies", true) else []:
 		var bp := to_screen(_pos(b))
 		var br := maxf(float(b.get("radius", 5.0)) * _scale, 3.0)
 		var col2: Array = b.get("color", [0.4, 0.5, 0.8])
@@ -220,7 +246,7 @@ func _draw() -> void:
 			draw_arc(bp, br * 1.5, 0, TAU, 32, Color(0.85, 0.8, 0.7, 0.6), 1.5, true)
 		if str(b.get("kind", "")) == "planet":
 			draw_string(font, bp + Vector2(-br, -br - 4), str(b.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Tokens.TEXT, 0.7))
-	for s in layout.get("stations", []):
+	for s in layout.get("stations", []) if _filters.get("station", true) else []:
 		var sp := to_screen(_pos(s))
 		draw_rect(Rect2(sp - Vector2(5, 5), Vector2(10, 10)), Tokens.TEXT)
 		draw_string(font, sp + Vector2(8, 4), str(s.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Tokens.TEXT)
@@ -228,6 +254,8 @@ func _draw() -> void:
 	# серверные объекты из состояния: месторождения, точки, враги, игроки
 	for o in state.get("objects", []):
 		var kind := str(o.get("kind", ""))
+		if not object_visible(kind):
+			continue
 		var p: Vector2 = o["pos"]
 		var sc := to_screen(p)
 		match kind:
@@ -250,6 +278,9 @@ func _draw() -> void:
 				continue
 		if kind != "station":
 			_pickables.append({"id": str(o.get("id", "")), "pos": p, "name": str(o.get("name", ""))})
+		if kind in ["anomaly", "derelict", "signal"] or str(o.get("id", "")) == selected:
+			draw_string(font, sc + Vector2(8, -8), str(o.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, 180, 12, Tokens.TEXT)
+	_refresh_info()
 	var me: Dictionary = state.get("ship", {})
 	# курс к цели: пунктир от корабля до выбранного объекта + дистанция посередине
 	if selected != "" and not me.is_empty():
@@ -397,15 +428,81 @@ func _refresh_info() -> void:
 			name_ = str(pk["name"])
 			if not me.is_empty():
 				dist_km = (me["pos"] as Vector2).distance_to(pk["pos"]) / 10.0
-	if name_ == "":
-		for s in layout.get("stations", []):
-			if str(s.get("id", "")) == selected:
-				name_ = str(s.get("name", ""))
-				if not me.is_empty():
-					dist_km = (me["pos"] as Vector2).distance_to(_pos(s)) / 10.0
+	_favorite.disabled = name_ == ""
+	_favorite.text = "★ Убрать точку" if _is_favorite(selected) else "☆ В избранные точки"
+	_refresh_favorites()
 	if selected == "" or name_ == "":
 		_info.text = "Нажмите на станцию, месторождение, точку исследования или врага. При увеличении карту можно перетаскивать."
 		_auto.disabled = true
 	else:
 		_info.text = "%s\nРасстояние: %.1f км" % [name_, dist_km] if dist_km >= 0.0 else name_
 		_auto.disabled = false
+
+
+func object_visible(kind: String) -> bool:
+	var category := kind
+	if kind in ["anomaly", "derelict", "signal"]:
+		category = "explore"
+	elif kind == "ai":
+		category = "player"
+	return bool(_filters.get(category, true))
+
+
+func set_filter(category: String, enabled: bool) -> void:
+	_filters[category] = enabled
+	Settings.set_bool("map_filter_" + category, enabled)
+	# До следующего кадра скрытые объекты тоже не должны выбираться.
+	_pickables.clear()
+	_auto.disabled = true
+	_refresh_info()
+	queue_redraw()
+
+
+func _favorite_key(id: String) -> String:
+	return "map_point_" + str(state.get("system", {}).get("id", layout.get("id", "local"))) + "_" + id
+
+
+func _toggle_favorite() -> void:
+	if selected.is_empty() or _favorite.disabled:
+		return
+	var key := _favorite_key(selected)
+	_point_stars[key] = not _is_favorite(selected)
+	Settings.set_bool(key, _point_stars[key])
+	_refresh_info()
+
+
+func _refresh_favorites() -> void:
+	var ids: Array = []
+	for point in _pickables:
+		if _is_favorite(str(point["id"])):
+			ids.append(point)
+	var signature := ""
+	for point in ids:
+		signature += str(point["id"]) + ":" + str(point["name"]) + "|"
+	if signature == _favorites_signature:
+		return
+	_favorites_signature = signature
+	_favorites.clear()
+	_favorites.add_item("Избранные точки (%d)" % ids.size())
+	for point in ids:
+		_favorites.add_item(str(point["name"]))
+		_favorites.set_item_metadata(_favorites.item_count - 1, point)
+	_favorites.disabled = ids.is_empty()
+
+
+func _choose_favorite(index: int) -> void:
+	if index <= 0:
+		return
+	var saved: Dictionary = _favorites.get_item_metadata(index)
+	for point in _pickables:
+		if point["id"] == saved["id"]:
+			_pan = -(point["pos"] as Vector2)
+			select(str(point["id"]))
+			return
+
+
+func _is_favorite(id: String) -> bool:
+	var key := _favorite_key(id)
+	if not _point_stars.has(key):
+		_point_stars[key] = Settings.get_bool(key, false)
+	return bool(_point_stars[key])

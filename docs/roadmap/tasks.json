@@ -77,7 +77,7 @@
    "module": "GALAXY",
    "priority": "P1",
    "status": "DONE",
-   "description": "Аврора/Меридиан/Красный Шторм, Router, jump; live-проверка 2026-11-09",
+   "description": "Аврора/Меридиан/Красный Шторм, Router, jump; live-проверка 2026-11-09 (фикс JSON-ключей Gate 2026-11-10, ERROR-SR-009)",
    "updated": "2026-11-09",
    "release": {
     "server": "PRODUCTION",
@@ -88,7 +88,8 @@
    ],
    "commits": [
     "c9da7a8",
-    "5c6f168"
+    "5c6f168",
+    "6479274"
    ]
   },
   {

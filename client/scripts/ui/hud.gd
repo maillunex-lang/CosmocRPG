@@ -300,6 +300,25 @@ func set_camera_mode_name(mode_name: String) -> void:
 	_reset_button.text = "Вид: " + mode_name
 
 
+var _restart_offer := false
+
+
+func _on_server_updated(reason: String) -> void:
+	if _restart_offer or _confirm.is_open():
+		return
+	_restart_offer = true
+	var why := reason.strip_edges()
+	if why == "":
+		why = "настройки"
+	var ok: bool = await _confirm.ask("Сервер обновился", "Уже применено: %s.\nПерезапустить игру и зайти заново?" % why, "Перезапустить")
+	if ok:
+		if gateway != null and gateway.has_method("close"):
+			gateway.close()
+		get_tree().change_scene_to_file("res://scenes/connect.tscn")
+		return
+	_restart_offer = false
+
+
 ## Привязка к шлюзу данных (демо или сервер).
 func bind(gw: UiGateway) -> void:
 	gateway = gw
@@ -316,6 +335,8 @@ func bind(gw: UiGateway) -> void:
 	if gw.has_chat():
 		gw.request_chat_history()   # история запрашивается при входе, до появления панели: запрашиваем ещё раз уже для неё
 	apply_state(gw.snapshot())
+	if gw.has_signal("server_updated"):
+		gw.server_updated.connect(_on_server_updated)
 
 
 ## Груз и кнопки добычи/продажи: появляются, только если корабль может добывать или везёт груз.

@@ -78,6 +78,9 @@ type Player struct {
 	starterEngine       *starterEngineItem
 	starterLoadout      *StarterLoadout
 	equipmentLease      *equipmentLease
+	purchaseLease       *purchaseLease
+	cargoRevision       int64
+	cargoUncertain      bool
 	persistentEquipment bool
 	boostRank           int
 	shipLevel           int // уровень корабля 1–50: масштабирует корпус, щит, энергию и трюм (rpg.Compute)
@@ -102,14 +105,17 @@ type Player struct {
 
 // Record — сохраняемое состояние игрока.
 type Record struct {
-	AI        bool   `json:"-"` // доверенная серверная метка
-	AICaptain string `json:"-"`
-	ID        string
-	Name      string
-	Pos       Vec
-	Dir       Vec
-	Skin      string // облик корабля ("" — по умолчанию)
-	Spec      string // специализация корабля ("" — по умолчанию)
+	CargoRevision  int64  `json:"-"`
+	SkipCargo      bool   `json:"-"`
+	CargoConfirmed bool   `json:"-"`
+	AI             bool   `json:"-"` // доверенная серверная метка
+	AICaptain      string `json:"-"`
+	ID             string
+	Name           string
+	Pos            Vec
+	Dir            Vec
+	Skin           string // облик корабля ("" — по умолчанию)
+	Spec           string // специализация корабля ("" — по умолчанию)
 
 	// персонаж (создаётся при первом входе)
 	Created   bool
@@ -268,8 +274,18 @@ func (w *World) Join(r Record) (*Player, bool) {
 		if p.ai != r.AI || p.aiCaptain != r.AICaptain {
 			return nil, false
 		}
-		if p.equipmentLease != nil {
+		if p.equipmentLease != nil || p.purchaseLease != nil {
 			return nil, false
+		}
+		if p.cargoUncertain {
+			if !r.CargoConfirmed {
+				return nil, false
+			}
+			if r.CargoRevision > p.cargoRevision {
+				p.hold = copyHold(r.Hold)
+				p.cargoRevision = r.CargoRevision
+			}
+			p.cargoUncertain = false
 		}
 		if !p.restoreStarter(r.StarterLoadout) {
 			return nil, false
@@ -312,6 +328,7 @@ func (w *World) Join(r Record) (*Player, bool) {
 	p.combatUntil = w.t + math.Min(equipmentCombatGrace, math.Max(0, r.CombatRemaining))
 	w.initShip(p, r.ShipType, r.Skin, r.Spec)
 	p.hold = sanitizeHold(r.Hold, p.spec.Cargo)
+	p.cargoRevision = r.CargoRevision
 	p.discovered = map[string]bool{}
 	w.players[r.ID] = p
 	return p, true
@@ -333,7 +350,7 @@ func (w *World) removePlayer(id string, gate *Vec) (Record, error) {
 	if p == nil {
 		return Record{}, ErrNoPlayer
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return Record{}, ErrEquipmentBusy
 	}
 	if gate != nil && p.Pos.Distance(*gate) > GateRadius {
@@ -361,7 +378,7 @@ func (w *World) Disconnect(id string, now time.Time) (Record, bool) {
 }
 
 func (p *Player) record() Record {
-	return Record{AI: p.ai, AICaptain: p.aiCaptain, ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
+	return Record{CargoRevision: p.cargoRevision, SkipCargo: p.cargoUncertain || p.purchaseLease != nil, AI: p.ai, AICaptain: p.aiCaptain, ID: p.ID, Name: p.Name, Pos: p.Pos, Dir: p.Dir, Skin: p.Skin, Spec: p.Spec,
 		PersistentEquipment: p.persistentEquipment, StarterLoadout: copyStarter(p.starterLoadout), Created: true, Gender: p.gender, PilotSpec: p.pilotSpec, ShipType: p.ShipType, Hold: copyHold(p.hold)}
 }
 
@@ -387,7 +404,7 @@ func (w *World) SetMove(id string, v Vec) bool {
 	if !ok {
 		return false
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return false
 	}
 	p.Move = v.limit(1)
@@ -473,7 +490,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 	w.t += dt
 	var removed []Record
 	for id, p := range w.players {
-		if !p.connected && p.equipmentLease == nil && now.Sub(p.lostAt) >= Grace {
+		if !p.connected && p.equipmentLease == nil && p.purchaseLease == nil && now.Sub(p.lostAt) >= Grace {
 			removed = append(removed, p.record())
 			delete(w.players, id)
 			continue
@@ -483,7 +500,7 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 			p.Speed, p.Move = 0, Vec{}
 			continue
 		}
-		if p.equipmentLease != nil {
+		if p.actionBusy() {
 			p.Speed = 0
 			continue // keep only this actor docked; damage/combat above still run
 		}

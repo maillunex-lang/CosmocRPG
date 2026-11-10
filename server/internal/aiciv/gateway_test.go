@@ -234,11 +234,11 @@ func TestGatewayUsesLiveValidatorsAndDurableReceipts(t *testing.T) {
 	if _, err = g.Execute(ctx, "bad-mine", "mine", json.RawMessage(fmt.Sprintf(`{"id":%q}`, deposit))); !errors.Is(err, ErrReplay) {
 		t.Fatal("action id reused", err)
 	}
-	if _, err = g.Execute(ctx, "buy", "buy", json.RawMessage(`{"resource":"iron_ore","amount":1}`)); !errors.Is(err, ErrUnavailable) {
+	if _, err = g.Execute(ctx, "repair", "repair", json.RawMessage(`{}`)); !errors.Is(err, ErrUnavailable) {
 		t.Fatal("economy gate bypassed", err)
 	}
 	// Прямой протокол тоже не должен обходить gate контроллера.
-	if err = g.write(ctx, ProtocolMessage{Type: "buy", ID: "bypass-buy", Payload: json.RawMessage(`{"resource":"iron_ore","amount":1}`)}); err != nil {
+	if err = g.write(ctx, ProtocolMessage{Type: "ship_upgrade", ID: "bypass-upgrade", Payload: json.RawMessage(`{}`)}); err != nil {
 		t.Fatal(err)
 	}
 	for {
@@ -246,7 +246,7 @@ func TestGatewayUsesLiveValidatorsAndDurableReceipts(t *testing.T) {
 		if err = g.read(ctx, &response); err != nil {
 			t.Fatal(err)
 		}
-		if response.ID == "bypass-buy" {
+		if response.ID == "bypass-upgrade" {
 			if response.Type != "error" || errorCode(response) != "capability_unavailable" {
 				t.Fatal("server gate bypass", response)
 			}
@@ -385,5 +385,72 @@ func TestGatewayRejectsExternalEndpointsBeforeIssuingToken(t *testing.T) {
 		if _, err := OpenGateway(context.Background(), nil, "captain", endpoint); err != ErrInput {
 			t.Fatal(endpoint, err)
 		}
+	}
+}
+
+func TestAIResourcePurchaseUsesCommonWallet(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	pool := testdb.Pool(t)
+	if _, err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	s := NewStore(pool)
+	cfg := worldgen.DefaultConfig()
+	w := world.New()
+	if err := w.ApplyLayout(worldgen.Generate(cfg.Systems[0], cfg), cfg); err != nil {
+		t.Fatal(err)
+	}
+	r := world.NewRouter(w)
+	r.Add(w)
+	players := world.NewPGStore(pool)
+	b := Bootstrapper{gatewayProfiles{}, s, r}
+	rec, err := b.EnsurePlayer(ctx, CharacterRequest{"ai-gateway-test", "КапитанАльфа", "m", "miner"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec.Pos, _ = w.ObjectPos(world.StationID)
+	if err = players.Save(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	qs := quest.NewPGStore(pool)
+	// Только fixture-финансирование; runtime ИИ никаких денег не создаёт.
+	if _, _, err = qs.GrantCredits(ctx, rec.ID, "fixture-funds", 1000); err != nil {
+		t.Fatal(err)
+	}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	q := quest.NewService(log, qs, w.ObjectPos)
+	if err = q.Init(ctx); err != nil {
+		t.Fatal(err)
+	}
+	h := ws.NewHandler(log, ws.Options{World: r, Store: &MarkedPlayers{Store: players, AI: s, Enabled: true}, AIActorGuard: s.AuthorizeSession, Quests: q, RequireCharacter: true, MaxMessage: 8192, RatePerSec: 200})
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	g, err := OpenGateway(ctx, s, "ai-gateway-test", "ws"+strings.TrimPrefix(srv.URL, "http"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	payload := json.RawMessage(`{"resource":"gas","amount":1}`)
+	for i := 0; i < 2; i++ {
+		result, err := g.Execute(ctx, "ai-purchase-one", "buy", payload)
+		if err != nil || result.Type != "ok" {
+			t.Fatal(result, err)
+		}
+	}
+	status, err := g.Execute(ctx, "check-purchase", "purchase_status", json.RawMessage(`{"resource":"gas","amount":1,"operation_id":"ai-purchase-one"}`))
+	if err != nil || status.Type != "ok" {
+		t.Fatal(status, err)
+	}
+	state, err := qs.LookupPurchase(ctx, rec.ID, "ai-purchase-one", "gas", 1)
+	if err != nil || !state.Found || state.Cargo.Hold["gas"] != 1 || state.Credits != 1000-state.Spent {
+		t.Fatal(state, err)
+	}
+	snap, _ := r.Snapshot(rec.ID)
+	if snap.Ship.Hold["gas"] != 1 {
+		t.Fatal("shared purchase missing from live ship", snap)
+	}
+	if _, err = g.Execute(ctx, "forged-key", "buy", json.RawMessage(`{"resource":"gas","amount":1,"operation_id":"different"}`)); err != ErrInput {
+		t.Fatal("gateway accepted unrelated economic key", err)
 	}
 }

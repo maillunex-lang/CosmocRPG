@@ -7,6 +7,7 @@ type Action string
 
 const (
 	Travel         Action = "travel"
+	Buy            Action = "buy"
 	Mine           Action = "mine"
 	Sell           Action = "sell"
 	Attack         Action = "attack"
@@ -33,7 +34,7 @@ func (c Capabilities) Authorize(a Action) error {
 	switch a {
 	case CorpLeadership, PermanentDeath, Enterprise, ExternalLLM:
 		return ErrPolicy
-	case Travel, Mine, Sell, Attack, Repair, Jump, Quest, Manufacture, Auction, Party:
+	case Travel, Buy, Mine, Sell, Attack, Repair, Jump, Quest, Manufacture, Auction, Party:
 		if c[a] {
 			return nil
 		}

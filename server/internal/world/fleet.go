@@ -46,7 +46,7 @@ func (w *World) SetShip(id, shipID string) (Record, error) {
 	if !ok {
 		return Record{}, ErrNoPlayer
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return Record{}, ErrEquipmentBusy
 	}
 	if p.deadUntil > w.t {

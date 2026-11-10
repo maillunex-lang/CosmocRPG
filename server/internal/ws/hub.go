@@ -83,16 +83,17 @@ type Handler struct {
 
 // session — игровая сессия: состояние рассылается через очередь, чтобы медленный клиент не тормозил мир.
 type session struct {
-	ai        bool
-	tokenHash [32]byte
-	conn      *websocket.Conn
-	cancel    context.CancelFunc
-	states    chan Message
-	pending   *world.Record // игрок вошёл, но ещё не создал персонажа
-	events    chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
-	pid       string
-	name      string       // игровое имя (для чата)
-	chat      chan Message // сообщения чата: отдельная очередь, чтобы не мешать снимкам состояния
+	purchaseSession string
+	ai              bool
+	tokenHash       [32]byte
+	conn            *websocket.Conn
+	cancel          context.CancelFunc
+	states          chan Message
+	pending         *world.Record // игрок вошёл, но ещё не создал персонажа
+	events          chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
+	pid             string
+	name            string       // игровое имя (для чата)
+	chat            chan Message // сообщения чата: отдельная очередь, чтобы не мешать снимкам состояния
 }
 
 // NewHandler создаёт обработчик.
@@ -134,7 +135,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ss := &session{conn: c, cancel: cancel, states: make(chan Message, 2), events: make(chan Message, 16), chat: make(chan Message, 64)}
+	ss := &session{purchaseSession: newSessionID(), conn: c, cancel: cancel, states: make(chan Message, 2), events: make(chan Message, 16), chat: make(chan Message, 64)}
 	defer h.leave(ss, log)
 
 	limiter := newLimiter(h.opts.RatePerSec)
@@ -162,7 +163,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "equipment_set", "equipment_get":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "equipment_set", "equipment_get":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -298,7 +299,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			return false
 		}
 		switch m.Type {
-		case "move", "target", "autopilot", "mine", "mine_stop", "attack", "pilot", "ships", "market":
+		case "move", "target", "autopilot", "mine", "mine_stop", "attack", "pilot", "ships", "market", "buy", "purchase_status":
 		default:
 			reply(errMsg(m.ID, "capability_unavailable", "команда не подключена для ИИ"))
 			return true
@@ -312,7 +313,9 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 	switch m.Type {
 	case "equipment_set", "equipment_get":
 		h.equipmentMsg(ctx, ss, m)
-	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "jump", "market", "repair", "buy", "ship_upgrade":
+	case "buy", "purchase_status":
+		h.purchaseMsg(ctx, ss, m)
+	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "jump", "market", "repair", "ship_upgrade":
 		h.gameShip(ctx, c, ss, m)
 	case "shop", "shop_buy", "shop_equip":
 		h.shopMsg(ctx, c, ss, m)
@@ -468,37 +471,6 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			return
 		}
 		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": "repair", "credits": total, "spent": cost})})
-	case "buy":
-		var p struct {
-			Resource string  `json:"resource"`
-			Amount   float64 `json:"amount"`
-		}
-		if json.Unmarshal(m.Payload, &p) != nil || p.Resource == "" || len(p.Resource) > 24 || p.Amount <= 0 || p.Amount > 1000 {
-			reply(errMsg(m.ID, "bad_message", "некорректная покупка"))
-			return
-		}
-		w := h.opts.World.For(ss.pid)
-		price, ok := w.ResourcePrice(p.Resource)
-		if !ok {
-			reply(errMsg(m.ID, "no_item", "этот товар не продаётся"))
-			return
-		}
-		cost := int64(math.Ceil(price * p.Amount))
-		total, err := h.opts.Quests.Spend(sctx, ss.pid, cost)
-		if err != nil {
-			code := "no_credits"
-			if err != quest.ErrNotEnough {
-				h.log.Error("покупка", "player", ss.pid, "err", err)
-				code = "internal"
-			}
-			reply(errMsg(m.ID, code, "не хватает кредитов"))
-			return
-		}
-		if err := w.AddCargo(ss.pid, p.Resource, p.Amount); err != nil {
-			reply(errMsg(m.ID, stationCode(err), stationText(err)))
-			return
-		}
-		reply(Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": "buy", "credits": total, "spent": cost})})
 	case "ship_upgrade":
 		w := h.opts.World.For(ss.pid)
 		shipType, ok := w.ShipTypeOf(ss.pid)
@@ -528,9 +500,9 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 			return
 		}
 		// покупка = гарантированный уровень: докидываем опыт до порога следующего уровня (идемпотентно по ключу)
-		if st.IntoLevel < st.ToNext {
+		if st.ToNext > 0 {
 			key := fmt.Sprintf("buy_level:%s:%d", shipType, st.Level)
-			if g, err := h.opts.Ships.Grant(sctx, ss.pid, shipType, key, "market", st.ToNext-st.IntoLevel); err == nil && g.Granted {
+			if g, err := h.opts.Ships.Grant(sctx, ss.pid, shipType, key, "market", st.ToNext); err == nil && g.Granted {
 				h.log.Info("корабль улучшен за кредиты", "player", ss.pid, "ship", shipType, "level", g.State.Level)
 			}
 		}
@@ -772,6 +744,10 @@ func (h *Handler) leave(ss *session, log *slog.Logger) {
 }
 
 func (h *Handler) save(rec world.Record) {
+	// Не ждать row-lock покупателя из общего цикла автосохранения/симуляции.
+	if rec.SkipCargo {
+		return
+	}
 	if h.opts.Store == nil {
 		return
 	}
@@ -814,7 +790,10 @@ func (h *Handler) Tick(n int, now time.Time) {
 			continue
 		}
 		if h.opts.Quests != nil {
-			h.evaluateQuests(t.s, t.pid, st)
+			pw := h.opts.World.For(t.pid)
+			if pw != nil && !pw.PersistenceBusy(t.pid) {
+				h.evaluateQuests(t.s, t.pid, st)
+			}
 		}
 		h.pushState(t.s, st)
 	}
@@ -1123,6 +1102,20 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 		return false
 	}
 	defer unlock()
+	if h.opts.Quests != nil {
+		cargoCtx, cargoCancel := context.WithTimeout(ctx, time.Second)
+		cargo, cargoErr := h.opts.Quests.PurchaseCargo(cargoCtx, rec.ID)
+		cargoCancel()
+		if cargoErr != nil {
+			reply(errMsg(m.ID, "purchase_unavailable", "не удалось подтвердить груз"))
+			return false
+		}
+		rec.CargoConfirmed = true
+		if cargo != nil && cargo.Revision >= rec.CargoRevision {
+			rec.Hold = cargo.Hold
+			rec.CargoRevision = cargo.Revision
+		}
+	}
 	if err := h.loadStarter(ctx, &rec); err != nil {
 		log.Error("ws: load equipment", "player", rec.ID, "err", err)
 		reply(errMsg(m.ID, "equipment_unavailable", "не удалось загрузить оснащение; повторите вход"))

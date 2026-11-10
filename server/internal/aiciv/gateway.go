@@ -105,7 +105,7 @@ func (g *Gateway) write(ctx context.Context, m ProtocolMessage) error {
 
 func canonicalCommand(kind string, payload json.RawMessage) ([]byte, error) {
 	switch kind {
-	case "move", "target", "autopilot", "mine", "mine_stop", "attack", "pilot", "ships", "market":
+	case "move", "target", "autopilot", "mine", "mine_stop", "attack", "pilot", "ships", "market", "buy", "purchase_status":
 	default:
 		return nil, ErrUnavailable
 	}
@@ -129,6 +129,26 @@ func canonicalCommand(kind string, payload json.RawMessage) ([]byte, error) {
 func (g *Gateway) Execute(ctx context.Context, id, kind string, payload json.RawMessage) (ProtocolMessage, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+	if len(payload) > 2048 || !validID(id) {
+		return ProtocolMessage{}, ErrInput
+	}
+	if kind == "buy" {
+		// Ключ общей покупки стабилен даже при неизвестном исходе внешнего AI receipt.
+		var p struct {
+			Resource  string  `json:"resource"`
+			Amount    float64 `json:"amount"`
+			Operation string  `json:"operation_id"`
+		}
+		if json.Unmarshal(payload, &p) != nil || (p.Operation != "" && p.Operation != id) {
+			return ProtocolMessage{}, ErrInput
+		}
+		p.Operation = id
+		var err error
+		payload, err = json.Marshal(p)
+		if err != nil {
+			return ProtocolMessage{}, ErrInput
+		}
+	}
 	request, err := canonicalCommand(kind, payload)
 	if err != nil {
 		return ProtocolMessage{}, err
@@ -162,7 +182,7 @@ func (g *Gateway) Execute(ctx context.Context, id, kind string, payload json.Raw
 		if m.ID != id {
 			continue
 		}
-		if m.Type != "ok" && m.Type != "error" && m.Type != "pilot" && m.Type != "ships" && m.Type != "market" {
+		if m.Type != "ok" && m.Type != "error" && m.Type != "pilot" && m.Type != "ships" && m.Type != "market" && m.Type != "purchase_status" {
 			return unknown()
 		}
 		result, err = json.Marshal(m)

@@ -64,4 +64,4 @@
 
 ## AIC-020: актуализация 2026-11-10
 
-Читать docs/ai/GATEWAY.md. Реальный bootstrap и WS controls уже реализованы в feature-ветке; gateway flag=false по умолчанию. Не включать автоматический spawn: director/глобальные квоты/замена старой FSM ещё AIC-030. Экономические команды AI запрещены до BETA-ECO-001/AIC-025. AI-only полномочия/постоянная смерть/LLM по-прежнему закрыты.
+Читать docs/ai/GATEWAY.md. Реальный bootstrap и WS controls уже реализованы в feature-ветке; gateway flag=false по умолчанию. Не включать автоматический spawn: director/глобальные квоты/замена старой FSM ещё AIC-030. Buy/purchase_status разрешены после BETA-ECO-001/AIC-026; остальные экономические команды AI закрыты AIC-025. Читать docs/ai/ATOMIC_PURCHASE.md; не включать общий director автоматически. AI-only полномочия/постоянная смерть/LLM по-прежнему закрыты.

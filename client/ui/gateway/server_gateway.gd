@@ -3,6 +3,8 @@ extends "res://ui/gateway/ui_gateway.gd"
 ## не считает. Протокол: docs/design/STAGE01_ONLINE_SPACE.md. Бой и способности сервер пока не знает:
 ## эти поля в состоянии отсутствуют, интерфейс их не показывает (данных нет, значит не выдумываем).
 
+const PurchaseIntent := preload("res://ui/gateway/purchase_intent.gd")
+
 const WsClient := preload("res://scripts/net/ws_client.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const PlayerIdentity := preload("res://ui/player_identity.gd")
@@ -33,6 +35,7 @@ var gates: Array = []     # Э-1: точки прыжков текущей си�
 var layout: Dictionary = {}   # раскладка системы с сервера (зоны, тела, станции, месторождения) и параметры декора
 var visual: Dictionary = {}
 
+var _purchase_intent := PurchaseIntent.new()
 var _client: Node
 var _state: Dictionary = {}
 var _target_id := ""
@@ -145,6 +148,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			_retry_in = -1.0
 			player_name = str(payload.get("name", ""))
 			player_id = str(payload.get("player_id", ""))
+			_purchase_intent.configure(url, player_id)
+			_check_pending_purchase()
 			_pilot = payload.get("pilot", {}) if payload.get("pilot") is Dictionary else {}
 			system = payload.get("system", {})
 			systems = payload.get("systems", []) if payload.get("systems") is Array else []
@@ -159,8 +164,13 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 		"market":
 			station_market.emit(payload)
 		"ok":
+			if payload.get("action", "") == "buy":
+				_purchase_intent.acknowledge(str(payload.get("operation_id", "")))
 			if payload.get("action", "") != "":
 				station_done.emit(payload)
+		"purchase_status":
+			if payload.get("found", true) == false:
+				_purchase_intent.acknowledge(str(payload.get("operation_id", "")))
 		"system_changed":
 			system = payload.get("system", {}) if payload.get("system") is Dictionary else {}
 			if payload.get("layout") is Dictionary:
@@ -227,6 +237,11 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 func _on_error(payload: Dictionary) -> void:
 	var code := str(payload.get("code", ""))
 	var text := str(payload.get("message", "ошибка"))
+	if not str(payload.get("operation_id", "")).is_empty():
+		if code in ["bad_message", "no_credits", "purchase_conflict", "hold_full", "not_at_station", "no_item", "dead", "equipment_busy"]:
+			_purchase_intent.acknowledge(str(payload["operation_id"]))
+		command_failed.emit("space", text)
+		return
 	if code in ["bad_nick", "nick_reserved", "nick_taken", "bad_gender", "bad_pilot_spec", "character_exists"]:
 		character_failed.emit(text)
 		return
@@ -461,7 +476,20 @@ func repair() -> void:
 	_client.send_message("repair", {})
 
 func buy(resource: String, amount: float) -> void:
-	_client.send_message("buy", {"resource": resource, "amount": amount})
+	if not _joined or _client == null or not _purchase_intent.configure(url, player_id):
+		command_failed.emit("space", "Не удалось подготовить покупку. Проверьте соединение.")
+		return
+	var request: Dictionary = _purchase_intent.prepare(resource, amount)
+	if request.is_empty():
+		_check_pending_purchase()
+		command_failed.emit("space", "Сначала дождитесь результата предыдущей покупки.")
+		return
+	_client.send_message("buy", request)
+
+func _check_pending_purchase() -> void:
+	var pending: Dictionary = _purchase_intent.pending()
+	if not pending.is_empty() and _client != null:
+		_client.send_message("purchase_status", pending)
 
 func ship_upgrade() -> void:
 	_client.send_message("ship_upgrade", {})

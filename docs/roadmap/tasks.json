@@ -153,7 +153,7 @@
    "module": "ECONOMY",
    "priority": "P1",
    "status": "DONE",
-   "description": "атомарное списание, идемпотентные начисления NEEDS_VERIFICATION: BETA-ECO-001 — покупка при полном трюме списывает кредиты, исправление TODO; прежний DONE — исторический статус доставки.",
+   "description": "Локальный рынок. Подтверждённый дефект отказа покупки исправлен BETA-ECO-001 в main; production/APK этого исправления ещё не выпущены. Остальные денежные handlers проверять отдельно.",
    "updated": "2026-11-09",
    "release": {
     "server": "PRODUCTION",
@@ -1128,7 +1128,7 @@
     "AIC-021"
    ],
    "spec": "QUESTJOB/AI.md#5-контракты-действий-псевдо-go-адаптировать-к-реальным-пакетам",
-   "acceptance": "Живая добыча через настоящий WS даёт cargo; ошибки дальности/модуля те же, что у людей; прямой buy WS отвергается; AI не занимает human slot.",
+   "acceptance": "Живая добыча через настоящий WS; общие проверки дальности/модуля; небезопасные repair/ship_upgrade отвергаются даже напрямую; safe buy подключён AIC-026; AI не занимает human slot.",
    "tests": [
     "docs/ai/GATEWAY.md",
     "go test -race с отдельной тестовой PostgreSQL"
@@ -1208,14 +1208,49 @@
    "title": "Сделать покупку атомарной при полном трюме и сбоях",
    "module": "ECONOMY",
    "priority": "P0",
-   "status": "TODO",
-   "description": "Подтверждённый дефект: buy gas1 при полном трюме вернул hold_full и списал11 кредитов. Воспроизводитель docs/ai/repro/full_hold_buy_test.go.txt. Нужен общий путь людей и AI, не отдельный AI wallet.",
+   "status": "DONE",
+   "description": "Исправлено: кошелёк, груз и receipt одной SQL-транзакцией; actor reservation без глобального IO, cargo revision защищает autosave, неизвестный commit сверяется через barrier; клиент сохраняет operation_id и при reconnect запрашивает статус.",
    "updated": "2026-11-10",
    "depends_on": [
     "PROTO-08"
    ],
    "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
    "acceptance": "Отказ не списывает деньги; одна операция при retry/CAS; SQL timeout/неизвестный commit/damage/race не создают потерь или бесплатного груза; профильные PG/race/WS тесты.",
+   "tests": [
+    "docs/ai/ATOMIC_PURCHASE.md",
+    "PG/race: rollback INSERT receipt, concurrent retries, stale save, lost commit ACK, unavailable recovery, row-lock tick",
+    "Go WS → PostgreSQL → Godot: reconnect без повторного списания"
+   ],
+   "components": [
+    "server/internal/economy",
+    "server/internal/quest",
+    "server/internal/world",
+    "server/internal/ws",
+    "client/ui/gateway/server_gateway.gd",
+    "server/internal/db/migrations/0025_atomic_purchases.sql"
+   ],
+   "release": {
+    "server": "IN_MAIN",
+    "apk": "NOT_RELEASED"
+   },
+   "owner": null,
+   "branch": "main"
+  },
+  {
+   "id": "AIC-025",
+   "title": "Разрешить AI-экономику только через атомарные общие команды",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "BLOCKED",
+   "description": "Покупка ресурсов подключена AIC-026; sell/repair/ship_upgrade остаются закрытыми. Ремонт и улучшение используют раздельные стадии debit/effect, необходимы общие атомарные команды; продажа требует отдельного аудита.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "BETA-ECO-001",
+    "BETA-ECO-003",
+    "BETA-ECO-004"
+   ],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Только после проверки общей атомарности, сохранения, receipt и безопасности каждой команды; без привилегий для AI.",
    "tests": [
     "docs/ai/GATEWAY.md",
     "go test -race с отдельной тестовой PostgreSQL"
@@ -1231,29 +1266,103 @@
    }
   },
   {
-   "id": "AIC-025",
-   "title": "Разрешить AI-экономику только через атомарные общие команды",
-   "module": "AI_PLAYERS",
+   "id": "BETA-ECO-002",
+   "title": "Исправить оставшийся XP платного уровня корабля",
+   "module": "ECONOMY",
    "priority": "P1",
-   "status": "BLOCKED",
-   "description": "buy/sell/repair/upgrade пока выключены; кроме устранения подтверждённой покупки требуется отдельная проверка каждого money-changing handler.",
+   "status": "DONE",
+   "description": "RED→GREEN: при XP100 списывались1000 кредитов без уровня. ToNext уже означает оставшийся XP; начисляется ToNext. Атомарность всей команды ещё BETA-ECO-004.",
+   "updated": "2026-11-10",
+   "depends_on": [],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "TestShipUpgradeUsesRemainingXP: XP100→150, уровень2 и один debit1000.",
+   "tests": [
+    "docs/ai/ATOMIC_PURCHASE.md"
+   ],
+   "components": [
+    "server/internal/ws/hub.go"
+   ],
+   "release": {
+    "server": "IN_MAIN",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "BETA-ECO-003",
+   "title": "Сделать ремонт атомарным и безопасным для повторов",
+   "module": "ECONOMY",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "По чтению кода debit и восстановление HP раздельны. Не выдавать AI capability до реализации общего пути; неисправность production не утверждается.",
    "updated": "2026-11-10",
    "depends_on": [
     "BETA-ECO-001"
    ],
    "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
-   "acceptance": "Только после проверки общей атомарности, сохранения, receipt и безопасности каждой команды; без привилегий для AI.",
+   "acceptance": "Общий receipt+wallet+HP протокол, неопределённый commit/reconnect/damage/повтор не дают бесплатного лечения или потери денег; PG/race и клиентский сценарий.",
    "tests": [
-    "docs/ai/GATEWAY.md",
-    "go test -race с отдельной тестовой PostgreSQL"
+    "docs/ai/ATOMIC_PURCHASE.md"
    ],
    "components": [
-    "server/internal/ws",
+    "server/internal/quest",
     "server/internal/world",
-    "server/internal/aiciv"
+    "server/internal/ws"
    ],
    "release": {
     "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "BETA-ECO-004",
+   "title": "Сделать платный уровень корабля атомарным",
+   "module": "ECONOMY",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Исправлена арифметика XP, но debit и Grant всё ещё отдельны; требуется общий retry/recovery протокол.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "BETA-ECO-001",
+    "BETA-ECO-002"
+   ],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Один debit и один уровень при retry/reconnect/неизвестном commit; отказ без потери денег; PG fault injection/race.",
+   "tests": [
+    "docs/ai/ATOMIC_PURCHASE.md"
+   ],
+   "components": [
+    "server/internal/quest",
+    "server/internal/shipxp",
+    "server/internal/ws"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   }
+  },
+  {
+   "id": "AIC-026",
+   "title": "Подключить безопасную покупку ресурсов к AI gateway",
+   "module": "AI_PLAYERS",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "Buy и purchase_status проходят общий WS и кошелёк; operation_id привязан к AI action_id. Никаких отдельных средств или автоматического spawn.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "AIC-022",
+    "BETA-ECO-001"
+   ],
+   "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
+   "acceptance": "Настоящий PG+WS AI покупает один раз, replay/status не списывают повторно; подмена operation_id и прямой ship_upgrade запрещены.",
+   "tests": [
+    "docs/ai/ATOMIC_PURCHASE.md"
+   ],
+   "components": [
+    "server/internal/aiciv",
+    "server/internal/ws"
+   ],
+   "release": {
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
    }
   }

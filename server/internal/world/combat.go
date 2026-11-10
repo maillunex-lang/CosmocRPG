@@ -83,7 +83,7 @@ func (w *World) SetSpec(id, spec string) (Record, error) {
 	if !ok {
 		return Record{}, ErrNoPlayer
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return Record{}, ErrEquipmentBusy
 	}
 	for _, s := range p.spec.Specs {
@@ -103,7 +103,7 @@ func (w *World) SetAttack(id string, on bool) error {
 	if !ok {
 		return ErrNoPlayer
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return ErrEquipmentBusy
 	}
 	if on {
@@ -171,7 +171,7 @@ func (w *World) UseAbility(id, ab string) error {
 	if !ok {
 		return ErrNoPlayer
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return ErrEquipmentBusy
 	}
 	if ab == StrizhBoostAbility {
@@ -395,7 +395,7 @@ func (w *World) abilityList(p *Player) []AbilityInfo {
 				info.UnavailableReason = err.Error()
 			}
 		}
-		if p.equipmentLease != nil {
+		if p.actionBusy() {
 			info.Enabled = false
 			info.UnavailableReason = ErrEquipmentBusy.Error()
 		}

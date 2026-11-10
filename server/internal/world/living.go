@@ -317,7 +317,7 @@ func (w *World) StartMining(id, depID string) error {
 	if !ok {
 		return ErrNoPlayer
 	}
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return ErrEquipmentBusy
 	}
 	if p.deadUntil > w.t {
@@ -356,7 +356,7 @@ func (w *World) StopMining(id string) {
 }
 
 func (w *World) stepMining(p *Player) {
-	if p.mining == "" {
+	if p.mining == "" || p.actionBusy() || p.cargoRevision == math.MaxInt64 {
 		return
 	}
 	cfg, ok := p.spec.Abilities["mine"]
@@ -376,6 +376,7 @@ func (w *World) stepMining(p *Player) {
 	if amt > 0 {
 		d.Amount -= amt
 		p.hold[d.Resource] += amt
+		p.cargoRevision++
 		w.emit(Event{Type: "mine", From: p.ID, To: d.ID, Amount: amt})
 		w.rewards = append(w.rewards, Reward{Player: p.ID, Key: fmt.Sprintf("mine:%d", time.Now().UnixNano()),
 			Kind: "mine", Ref: d.Resource, Amount: amt})
@@ -412,6 +413,12 @@ func (w *World) SellCargo(id string) (int64, error) {
 	if !ok {
 		return 0, ErrNoPlayer
 	}
+	if p.actionBusy() {
+		return 0, ErrEquipmentBusy
+	}
+	if p.cargoRevision == math.MaxInt64 {
+		return 0, ErrEquipmentBusy
+	}
 	if p.deadUntil > w.t {
 		return 0, ErrDead
 	}
@@ -427,6 +434,7 @@ func (w *World) SellCargo(id string) (int64, error) {
 	}
 	credits := int64(math.Round(total))
 	p.hold, p.mining = map[string]float64{}, ""
+	p.cargoRevision++
 	if credits > 0 {
 		w.rewards = append(w.rewards, Reward{Player: p.ID, Key: fmt.Sprintf("sell:%d", time.Now().UnixNano()), Kind: "sell", Credits: credits})
 	}
@@ -492,6 +500,12 @@ func (w *World) AddCargo(id, res string, amt float64) error {
 	if !ok {
 		return ErrNoPlayer
 	}
+	if p.actionBusy() {
+		return ErrEquipmentBusy
+	}
+	if p.cargoRevision == math.MaxInt64 {
+		return ErrEquipmentBusy
+	}
 	if p.deadUntil > w.t {
 		return ErrDead
 	}
@@ -506,6 +520,7 @@ func (w *World) AddCargo(id, res string, amt float64) error {
 		return ErrHoldFull
 	}
 	p.hold[res] += amt
+	p.cargoRevision++
 	return nil
 }
 

@@ -25,7 +25,7 @@ type EquipmentStatus struct {
 }
 
 func (w *World) equipmentCheck(p *Player) error {
-	if p.equipmentLease != nil {
+	if p.actionBusy() {
 		return ErrEquipmentBusy
 	}
 	if p.ShipType != DefaultShip {

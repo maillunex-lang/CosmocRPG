@@ -49,3 +49,11 @@ Codex, feature/ai-civilization, дата2026-11-10: аiciv/bootstrap+gateway+rec
 ## Публикация AI checkpoint в main
 
 2026-11-10: владелец разрешил main. Отдельный worktree CosmocRPG-ai-main/integration/ai-civilization-main, merge feature0971d8a с origin/main588fde6 без конфликтов, код тождествен проверенному. AIC-020 IN_PROGRESS, economics BLOCKED; production/flags не включены. Для продолжения брать свежую main и учитывать SQL0022/0023/0024.
+
+## BETA-ECO-001 — работа непосредственно в main
+
+2026-11-10, владелец выбрал main и исправление общей покупки. Codex: /workspace/CosmocRPG-main, ветка main; economy/quest purchase storage, world cargo reservation/revision, WS/client operation key, SQL0025 и регрессии. Другие worktree не переключаются. AI economics пока остаётся выключенной, production не трогать.
+
+## Checkpoint атомарной покупки — 2026-11-10
+
+BETA-ECO-001 и AIC-026 завершены: общий buy/status с receipt и восстановлением; BETA-ECO-002 исправляет XP остатка платного уровня. См. [техническую передачу](../ai/ATOMIC_PURCHASE.md). BETA-ECO-003/004 TODO, AIC-025 BLOCKED; ремонт/улучшение/продажа AI закрыты. Codex освобождает область после публикации main; production/APK не выпускались. Предыдущие утверждения «buy запрещён» — история до этого checkpoint.

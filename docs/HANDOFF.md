@@ -1,3 +1,11 @@
+# Последняя передача — атомарная покупка (2026-11-10)
+
+Codex, main в /workspace/CosmocRPG-main по поручению владельца. BETA-ECO-001: общий SQL wallet+hold+receipt, world reservation/revision, status/reconnect recovery, persistent Godot intent. AIC-026: safe buy/status через общий AI gateway; default flags off. BETA-ECO-002: исправлен остаток XP платного уровня (red→green). Ремонт/upgrade ещё требуют атомарности (BETA-ECO-003/004 TODO); sell AI закрыт, AIC-025 BLOCKED. Production/APK не выпущены.
+
+Проверки: полный PG/race 519 PASS/3 SKIP/24 пакета; финальные AI/WS с настоящим PG+Godot 74 PASS/0 SKIP. vet/build PASS. Финальные economy/db/quest/world с отдельной PG/race PASS; offline purchase intent PASS; форматирование и валидатор дорожной карты PASS. [Контракт и следующие шаги](ai/ATOMIC_PURCHASE.md). Чужая PvE-001 документация c297607 сохраняется при объединении; миграция0025 не конфликтует с main. CI нужно проверять по итоговому SHA, локальные PASS не означают CI success.
+
+---
+
 # Последняя передача — SR-100c-4 coordinator (2026-11-09)
 Ветка codex/sr100c-coordinator/baseb945efb, отдельный worktree. Corebc0aed9/WSaa7f950/UIa5bfd2e устраняют IO под общими world/Handler mutex: резервируется только actor, per-owner gate сериализует команды/join/leave, урон/другие players/ticks не останавливаются. Настоящий PG row-lock regression подтверждён. Полный Go+PG+Godot441 test/subtest/22 пакета PASS,0 FAIL;1 старый ambient skip, SQL/live Godot не пропущены. Hangar40/0, vet/build PASS. ERROR-SR-011 Resolved локально.4a/4b/4c DONE: main5b71ca7 и feature branch опубликованы без force, чужой FinalQuest.md сохранён. CI42656434874 pending, не success; смотреть последний main run после docs checkpoint. Свой PG контейнер остановлен и удалён. Подробный актуальный [HANDOFF](ships-rpg/HANDOFF.md), [roadmap](ships-rpg/ROADMAP.md), [ошибки](ships-rpg/ERROR_LOG.md), [тесты](ships-rpg/REGRESSION_TESTS.md). Root main checkout не менять, Kimi ERROR-SR-007 не закрывать. Production/APK не выпущены; SDK/прежние signing bindings отсутствуют, build при необходимости разрешён пользователем. Старые записи общей IO-задержки ниже относятся к прошлому checkpoint и заменены coordinator.
 

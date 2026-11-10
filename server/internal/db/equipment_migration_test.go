@@ -1,8 +1,8 @@
 package db
 
 import (
+	"bytes"
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
@@ -28,29 +28,37 @@ func TestEquipmentMigrationPreservesLegacyPlayerAndXP(t *testing.T) {
 	if equipmentSQL == "" {
 		t.Fatal("equipment migration missing")
 	}
-	players := world.NewPGStore(pool)
-	before, err := players.Resolve(ctx, "equipment-migration-legacy-01", "Legacy Pilot")
-	if err != nil {
+	// Старую схему заполняем старым SQL, а не runtime, который уже требует
+	// новые столбцы. Сравниваем все поля legacy row непосредственно до/после0020.
+	hash := world.TokenHash("equipment-migration-legacy-01")
+	pid := world.PublicID(hash)
+	if _, err := pool.Exec(ctx, `INSERT INTO players(token_hash,public_id,name) VALUES($1,$2,'Legacy Pilot')`, hash[:], pid); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `UPDATE players SET pilot_xp=1234 WHERE public_id=$1`, before.ID); err != nil {
+	if _, err := pool.Exec(ctx, `UPDATE players SET pilot_xp=1234 WHERE public_id=$1`, pid); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO player_ships(player_id,ship_type,ship_xp) VALUES($1,'FTR-001',567) ON CONFLICT(player_id,ship_type) DO UPDATE SET ship_xp=567`, before.ID); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO player_ships(player_id,ship_type,ship_xp) VALUES($1,'FTR-001',567) ON CONFLICT(player_id,ship_type) DO UPDATE SET ship_xp=567`, pid); err != nil {
+		t.Fatal(err)
+	}
+	var before, after []byte
+	if err := pool.QueryRow(ctx, `SELECT to_jsonb(p) FROM players p WHERE public_id=$1`, pid).Scan(&before); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, equipmentSQL); err != nil {
 		t.Fatal(err)
 	}
-	after, err := players.Resolve(ctx, "equipment-migration-legacy-01", "")
-	if err != nil || !reflect.DeepEqual(before, after) {
-		t.Fatalf("legacy player changed: before=%+v after=%+v err=%v", before, after, err)
-	}
-	var pilotXP, shipXP int64
-	if err := pool.QueryRow(ctx, `SELECT pilot_xp FROM players WHERE public_id=$1`, before.ID).Scan(&pilotXP); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT to_jsonb(p) FROM players p WHERE public_id=$1`, pid).Scan(&after); err != nil {
 		t.Fatal(err)
 	}
-	if err := pool.QueryRow(ctx, `SELECT ship_xp FROM player_ships WHERE player_id=$1 AND ship_type='FTR-001'`, before.ID).Scan(&shipXP); err != nil {
+	if !bytes.Equal(before, after) {
+		t.Fatalf("legacy row changed: before=%s after=%s", before, after)
+	}
+	var pilotXP, shipXP int64
+	if err := pool.QueryRow(ctx, `SELECT pilot_xp FROM players WHERE public_id=$1`, pid).Scan(&pilotXP); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT ship_xp FROM player_ships WHERE player_id=$1 AND ship_type='FTR-001'`, pid).Scan(&shipXP); err != nil {
 		t.Fatal(err)
 	}
 	if pilotXP != 1234 || shipXP != 567 {

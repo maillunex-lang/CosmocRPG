@@ -49,7 +49,7 @@ func (w *World) RestoreStarter(id string, s StarterLoadout) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	p := w.players[id]
-	if p == nil || p.equipmentLease != nil || !p.restoreStarter(&s) {
+	if p == nil || p.actionBusy() || !p.restoreStarter(&s) {
 		return false
 	}
 	p.refreshStarterEngine()

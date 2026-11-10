@@ -102,15 +102,16 @@ func (s *PGStore) Resolve(ctx context.Context, token, name string) (Record, erro
 	var created bool
 	var holdRaw []byte
 	var sysID string
+	var cargoRevision int64
 	err := s.pool.QueryRow(ctx, `
 		INSERT INTO players (token_hash, public_id, name, pos_x, pos_y, dir_x, dir_y) VALUES ($1, $7, $2, $3, $4, $5, $6)
 		ON CONFLICT (token_hash) DO UPDATE SET token_hash = players.token_hash
-		RETURNING name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec, ship_type, gender, pilot_spec, character_created, hold, current_system`,
-		h[:], rec.Name, rec.Pos.X, rec.Pos.Y, rec.Dir.X, rec.Dir.Y, rec.ID).Scan(&nm, &px, &py, &dx, &dy, &skin, &spec, &shipType, &gender, &pilot, &created, &holdRaw, &sysID)
+		RETURNING name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec, ship_type, gender, pilot_spec, character_created, hold, current_system,cargo_revision`,
+		h[:], rec.Name, rec.Pos.X, rec.Pos.Y, rec.Dir.X, rec.Dir.Y, rec.ID).Scan(&nm, &px, &py, &dx, &dy, &skin, &spec, &shipType, &gender, &pilot, &created, &holdRaw, &sysID, &cargoRevision)
 	if err != nil {
 		return Record{}, fmt.Errorf("игрок: %w", err)
 	}
-	return Record{ID: rec.ID, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec, ShipType: shipType, Gender: gender, PilotSpec: pilot, Created: created, Hold: parseHold(holdRaw), System: sysID}, nil
+	return Record{ID: rec.ID, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec, ShipType: shipType, Gender: gender, PilotSpec: pilot, Created: created, Hold: parseHold(holdRaw), System: sysID, CargoRevision: cargoRevision}, nil
 }
 
 func (s *PGStore) CreateCharacter(ctx context.Context, id, nick, gender, pilot string, st Starter) (Record, error) {
@@ -136,15 +137,16 @@ func (s *PGStore) byPublicID(ctx context.Context, pid string) (Record, error) {
 	var created bool
 	var holdRaw []byte
 	var sysID string
-	err := s.pool.QueryRow(ctx, `SELECT name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec, ship_type, gender, pilot_spec, character_created, hold, current_system FROM players WHERE public_id = $1`, pid).
-		Scan(&nm, &px, &py, &dx, &dy, &skin, &spec, &shipType, &gender, &pilot, &created, &holdRaw, &sysID)
+	var cargoRevision int64
+	err := s.pool.QueryRow(ctx, `SELECT name, pos_x, pos_y, dir_x, dir_y, ship_skin, ship_spec, ship_type, gender, pilot_spec, character_created, hold, current_system,cargo_revision FROM players WHERE public_id = $1`, pid).
+		Scan(&nm, &px, &py, &dx, &dy, &skin, &spec, &shipType, &gender, &pilot, &created, &holdRaw, &sysID, &cargoRevision)
 	if err != nil {
 		return Record{}, fmt.Errorf("игрок аккаунта: %w", err)
 	}
 	if sysID == "xi" {
 		sysID = "aurora" // прежняя система «Кси» переименована в Аврору (Э-1)
 	}
-	return Record{ID: pid, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec, ShipType: shipType, Gender: gender, PilotSpec: pilot, Created: created, Hold: parseHold(holdRaw), System: sysID}, nil
+	return Record{ID: pid, Name: nm, Pos: Vec{px, py}, Dir: Vec{dx, dy}, Skin: skin, Spec: spec, ShipType: shipType, Gender: gender, PilotSpec: pilot, Created: created, Hold: parseHold(holdRaw), System: sysID, CargoRevision: cargoRevision}, nil
 }
 
 func parseHold(raw []byte) map[string]float64 {
@@ -159,9 +161,11 @@ func (s *PGStore) Save(ctx context.Context, r Record) error {
 		UPDATE players SET pos_x = $2, pos_y = $3, dir_x = $4, dir_y = $5,
 			ship_skin = CASE WHEN $6 <> '' THEN $6 ELSE ship_skin END,
 			ship_spec = CASE WHEN $7 <> '' THEN $7 ELSE ship_spec END,
-			ship_type = CASE WHEN $8 <> '' THEN $8 ELSE ship_type END, hold = $9::jsonb,
+			ship_type = CASE WHEN $8 <> '' THEN $8 ELSE ship_type END,
+			hold = CASE WHEN NOT $12 AND cargo_revision<=$11 THEN $9::jsonb ELSE hold END,
+			cargo_revision = CASE WHEN NOT $12 THEN GREATEST(cargo_revision,$11) ELSE cargo_revision END,
 			current_system = CASE WHEN $10 <> '' THEN $10 ELSE current_system END, updated_at = now()
-		WHERE public_id = $1`, r.ID, r.Pos.X, r.Pos.Y, r.Dir.X, r.Dir.Y, r.Skin, r.Spec, r.ShipType, string(hold), r.System)
+		WHERE public_id = $1`, r.ID, r.Pos.X, r.Pos.Y, r.Dir.X, r.Dir.Y, r.Skin, r.Spec, r.ShipType, string(hold), r.System, r.CargoRevision, r.SkipCargo)
 	return err
 }
 
@@ -203,6 +207,12 @@ func (s *MemStore) Save(_ context.Context, r Record) error {
 	r.StarterLoadout = nil // equipment is stored independently, never by autosave
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if old, ok := s.recs[r.ID]; ok && (r.SkipCargo || old.CargoRevision > r.CargoRevision) {
+		r.Hold = old.Hold
+		r.CargoRevision = old.CargoRevision
+	}
+	r.SkipCargo = false
+	r.CargoConfirmed = false
 	s.recs[r.ID] = r
 	return nil
 }

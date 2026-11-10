@@ -127,3 +127,11 @@ EB-ERROR-002 checkpoint: после сообщения Cloud файлы и ко�
 ## AIC-ERR-001 — mine без кредитов не продвигал квест
 
 2026-11-10; AIC-024; источник TestMiningWithoutCreditsAdvancesQuestOnce, RED0/5 вместо2/5. Причина: grantRewards пропускал событие при GrantCredits(amount=0)==false. Исправление: EventOnce с общим event receipt+progress одной транзакцией, без вымышленных денег; восстановление goal→Complete при Join. Targeted Mem/PG+race PASS. Статус исправлено локально; доставка world→quest до записи по-прежнему не durable outbox. Файлы quest/{quest.go,store.go}, ws/hub.go, SQL0024.
+
+## BETA-ECO-001 — исправление и проверка 2026-11-10
+
+Статус: Resolved в коде, production/APK не выпущены. Общий debit+hold+receipt перенесён в одну SQL-транзакцию, world reservation/cargo revision защищают от гонки autosave. Lost commit сверяется через row-lock barrier; недоступный outcome блокирует cargo mutation до recovery. Активный TestAICivReproFullHoldBuy (purchase_regression_test.go) заменяет исторический red-артефакт. PG/race rollback/concurrency/reconnect и настоящий Godot PASS. Подробности: [ATOMIC_PURCHASE](../ai/ATOMIC_PURCHASE.md).
+
+## BETA-ECO-002 — деньги за уровень без уровня
+
+Дата: 2026-11-10. Подсистема WS/ship XP; задача BETA-ECO-002. Симптом воспроизведён TestShipUpgradeUsesRemainingXP: при XP100 credits уменьшаются1000, уровень1 остаётся. Причина подтверждена: ToNext уже оставшийся XP, но код сравнивал с IntoLevel и повторно вычитал его. Исправлено начисление ToNext; regression green (XP150, уровень2, debit1000). Статус: исправлено в коде, не production. Файл server/internal/ws/hub.go. Отдельная проблема двух стадий debit/Grant остаётся BETA-ECO-004, не считать устранённой этой арифметикой.

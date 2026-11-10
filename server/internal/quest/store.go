@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/economy"
 )
 
 // PGStore — хранилище в PostgreSQL.
@@ -189,12 +190,14 @@ func (s *PGStore) SpendCredits(ctx context.Context, pid string, amount int64) (b
 
 // MemStore — хранилище в памяти для тестов; повторяет семантику PGStore.
 type MemStore struct {
-	mu      sync.Mutex
-	credits map[string]int64
-	quests  map[string]map[string]*Progress
-	grants  map[string]bool
-	events  map[string]eventReceipt
-	Defs    []Def
+	purchases     map[string]memoryPurchase
+	purchaseCargo map[string]*economy.Cargo
+	mu            sync.Mutex
+	credits       map[string]int64
+	quests        map[string]map[string]*Progress
+	grants        map[string]bool
+	events        map[string]eventReceipt
+	Defs          []Def
 }
 
 // NewMemStore создаёт пустое хранилище.

@@ -410,7 +410,9 @@ func run() error {
 			// Several professions join so chat has different voices.
 			speaker := aiciv.NewChatSpeaker(chatSvc, log)
 			speaker.Push = wsHandler.PushChat
+			board := aiciv.NewBoard()
 			chorus := aiciv.NewChorus(speaker, log)
+			chorus.Board = board
 			go chorus.Run(ctx, 12*time.Second)
 			farm := &aiciv.FarmController{
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
@@ -418,6 +420,7 @@ func run() error {
 				World:     gameWorld,
 				Speaker:   speaker,
 				Chorus:    chorus,
+				Board:     board,
 				Res:       reservation,
 				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
 				Fallback:  []string{"dr1", "dr2"},

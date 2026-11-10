@@ -426,9 +426,9 @@ func run() error {
 				if err != nil || len(profiles) == 0 {
 					return
 				}
-				farm.RunOnce(ctx, []string{profiles[0].ID})
+				farm.RunGoalOnce(ctx, []string{profiles[0].ID})
 			}()
-			log.Info("AI civilization farm controller scheduled (snapshot target)")
+			log.Info("AI civilization goal runner scheduled (farm_credits chain)")
 		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)

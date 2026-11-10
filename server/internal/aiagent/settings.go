@@ -36,6 +36,15 @@ type Settings struct {
 	ChatAmbientEverySec    int      `json:"chat_ambient_every_sec"`    // ИИ пишут в общий чат сами раз в столько секунд (0 — не пишут сами)
 	ChatFollowChance       int      `json:"chat_follow_chance"`        // вероятность, что другой ИИ ответит на реплику ИИ, 0–100
 	DisabledCaptains       []string `json:"disabled_captains"`         // капитаны, которых не ставить в мир и не давать в чат
+	// Цивилизация через шлюз: настоящие входы в мир, чат и помощь. Правится из админки без перезапуска.
+	CivEnabled     bool `json:"civ_enabled"`
+	CivCast        int  `json:"civ_cast"`         // сколько капитанов держать в мире через шлюз, 1–8
+	CivChat        bool `json:"civ_chat"`         // многоголосый чат
+	CivTalkMin     int  `json:"civ_talk_min"`     // длина разговора, реплик
+	CivTalkMax     int  `json:"civ_talk_max"`
+	CivIntervalSec int  `json:"civ_interval_sec"` // пауза между репликами
+	CivRetreatPct  int  `json:"civ_retreat_pct"`  // отступление, когда корпус ниже этого процента
+	CivHelp        bool `json:"civ_help"`         // согласие в чате превращается в полёт
 }
 
 // DisabledSet возвращает множество отключённых капитанов.
@@ -51,11 +60,30 @@ func (s Settings) DisabledSet() map[string]bool {
 func DefaultSettings() Settings {
 	return Settings{Enabled: true, MinOnline: 20, MaxOnline: 50, AbsMax: 200, PlayersForMax: 10, SpawnPerMin: 12, DespawnPerMin: 30,
 		EmptyGraceSec: 30, ViewRadius: 450, Shares: map[string]int{"miner": 30, "trader": 20, "scout": 20, "patrol": 15, "support": 15},
-		ChatReplyEnabled: true, ChatReplyChance: 25, ChatDelayMinMs: 800, ChatDelayMaxMs: 2500, ChatCaptainCooldownSec: 30, ChatMaxPerMin: 30, ChatAmbientEverySec: 45, ChatFollowChance: 40}
+		ChatReplyEnabled: true, ChatReplyChance: 25, ChatDelayMinMs: 800, ChatDelayMaxMs: 2500, ChatCaptainCooldownSec: 30, ChatMaxPerMin: 30, ChatAmbientEverySec: 45, ChatFollowChance: 40,
+		CivEnabled: true, CivCast: 3, CivChat: true, CivTalkMin: 3, CivTalkMax: 15, CivIntervalSec: 12, CivRetreatPct: 30, CivHelp: true}
+}
+
+// fillCivDefaults подставляет цивилизацию, если клиент админки её ещё не прислал.
+func (s *Settings) fillCivDefaults() {
+	d := DefaultSettings()
+	untouched := s.CivCast == 0 && s.CivTalkMin == 0 && s.CivTalkMax == 0 && s.CivIntervalSec == 0 && s.CivRetreatPct == 0
+	if !untouched {
+		return
+	}
+	s.CivEnabled = d.CivEnabled
+	s.CivCast = d.CivCast
+	s.CivChat = d.CivChat
+	s.CivTalkMin = d.CivTalkMin
+	s.CivTalkMax = d.CivTalkMax
+	s.CivIntervalSec = d.CivIntervalSec
+	s.CivRetreatPct = d.CivRetreatPct
+	s.CivHelp = d.CivHelp
 }
 
 // Validate проверяет настройки и возвращает понятную ошибку.
-func (s Settings) Validate() error {
+func (s *Settings) Validate() error {
+	s.fillCivDefaults()
 	switch {
 	case s.AbsMax < 0 || s.AbsMax > 200:
 		return errors.New("потолок ИИ должен быть от 0 до 200")
@@ -85,6 +113,14 @@ func (s Settings) Validate() error {
 		return errors.New("самостоятельные реплики: 0 (выключено) или от 10 до 3600 секунд")
 	case s.ChatFollowChance < 0 || s.ChatFollowChance > 100:
 		return errors.New("вероятность ответа ИИ на ИИ — от 0 до 100")
+	case s.CivCast < 1 || s.CivCast > 8:
+		return errors.New("капитанов цивилизации — от 1 до 8")
+	case s.CivTalkMin < 1 || s.CivTalkMax < s.CivTalkMin || s.CivTalkMax > 30:
+		return errors.New("длина разговора — от 1 до 30 реплик, минимум не больше максимума")
+	case s.CivIntervalSec < 4 || s.CivIntervalSec > 120:
+		return errors.New("пауза между репликами — от 4 до 120 секунд")
+	case s.CivRetreatPct < 5 || s.CivRetreatPct > 90:
+		return errors.New("отступление — от 5 до 90 процентов корпуса")
 	}
 	for _, id := range s.DisabledCaptains {
 		if id == "" || len(id) > 48 {

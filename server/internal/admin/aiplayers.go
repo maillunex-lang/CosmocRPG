@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aiciv"
@@ -24,10 +25,27 @@ func (h *Handler) aiPlayersRoutes(mux *http.ServeMux) {
 
 // GET /api/ai-players — состояние, настройки и список капитанов с онлайн-статусом.
 func (h *Handler) aiPlayersGet(w http.ResponseWriter, r *http.Request, _ User) {
+	status := h.opts.Agent.Status()
+	caps := h.opts.Agent.Captains()
+	civErr := ""
+	if h.opts.Cast != nil {
+		want, online, last := h.opts.Cast.Census()
+		status.Online = online
+		status.Target = want
+		civErr = last
+		on := h.opts.Cast.OnlineSet()
+		now := time.Now()
+		for i := range caps {
+			if on[caps[i].ID] {
+				caps[i].Since = now
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":   h.opts.Agent.Status(),
-		"settings": h.opts.Agent.Settings(),
-		"captains": h.opts.Agent.Captains(),
+		"status":    status,
+		"settings":  h.opts.Agent.Settings(),
+		"captains":  caps,
+		"civ_error": civErr,
 	})
 }
 

@@ -268,7 +268,7 @@ jobs:
             echo "текст обновления длиннее 400 символов" >&2
             exit 1
           fi
-          install -d -m 700 "$RUNNER_TEMP/ssh" "$RUNNER_TEMP/bundle/tools" "$RUNNER_TEMP/bundle/client/assets"
+          install -d -m 700 "$RUNNER_TEMP/ssh" "$RUNNER_TEMP/bundle/tools" "$RUNNER_TEMP/bundle/client/assets" "$RUNNER_TEMP/bundle/docs"
           printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
           chmod 600 "$RUNNER_TEMP/ssh/id"
           if ! ssh-keygen -y -f "$RUNNER_TEMP/ssh/id" >/dev/null; then
@@ -281,7 +281,9 @@ jobs:
           remote="${VPS_USER}@${VPS_HOST}"
           cp tools/publish_release.sh "$RUNNER_TEMP/bundle/tools/publish_release.sh"
           cp client/project.godot "$RUNNER_TEMP/bundle/client/project.godot"
+          cp client/export_presets.cfg "$RUNNER_TEMP/bundle/client/export_presets.cfg"
           cp client/assets/update_public.pem "$RUNNER_TEMP/bundle/client/assets/update_public.pem"
+          cp docs/SECURITY.md "$RUNNER_TEMP/bundle/docs/SECURITY.md"
           cp dist/zvezdnye-rubezhi-release.apk "$RUNNER_TEMP/bundle/app.apk"
           printf '%s' "$notes" > "$RUNNER_TEMP/bundle/notes.txt"
           export BUNDLE_DIR="$RUNNER_TEMP/bundle"
@@ -292,6 +294,14 @@ jobs:
           cd "$HOME/apk-publish-bundle"
           test -f "$HOME/keys/cosmoc/manifest_private.pem"
           test -d "$HOME/apk-share"
+          if ! command -v apksigner >/dev/null 2>&1 || ! command -v aapt >/dev/null 2>&1; then
+            tools="$(find "$HOME/Android/Sdk/build-tools" -type f -name apksigner -printf '%h\\n' 2>/dev/null | sort | tail -1 || true)"
+            if [ -z "$tools" ] || [ ! -x "$tools/aapt" ]; then
+              echo "на сервере нет apksigner и aapt" >&2
+              exit 1
+            fi
+            export PATH="$tools:$PATH"
+          fi
           NOTES=$(cat notes.txt)
           APK_DIR="$HOME/apk-share" bash tools/publish_release.sh app.apk "$NOTES"
           rm -rf "$HOME/apk-publish-bundle"

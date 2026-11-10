@@ -8,7 +8,6 @@ var topicIDs = []string{"food", "sleep", "music", "home", "pet", "movie", "shift
 
 func banterLines(topic string, step int, arch Archetype, salt int) []string {
 	var out []string
-	out = append(out, tint(topic, arch)...)
 	beats, ok := threads[topic]
 	if !ok || len(beats) == 0 {
 		beats = threads["quiet"]
@@ -20,6 +19,10 @@ func banterLines(topic string, step int, arch Archetype, salt int) []string {
 		out = append(out, beats[step]...)
 	} else {
 		out = append(out, tails[(step+salt)%len(tails)])
+	}
+	// Personality colors a reply, it does not replace the topic.
+	if step%3 == 1 {
+		out = append(out, tint(topic, arch)...)
 	}
 	return rotate(uniqueNonEmpty(out), salt)
 }

@@ -17,7 +17,7 @@
 ## Сводка прогресса
 
 <!--GEN:SUMMARY-->
-Всего задач в реестре: **80** · DONE **27** · IN_PROGRESS **5** · BLOCKED **5** · TODO **40** · DEFERRED **3** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
+Всего задач в реестре: **84** · DONE **27** · IN_PROGRESS **5** · BLOCKED **5** · TODO **44** · DEFERRED **3** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
 <!--/GEN-->
 
 Правило подсчёта: прогресс = доля DONE-задач в `tasks.json`. Это **не** готовность игры — см. `roadmap/STATUS.md`.
@@ -36,6 +36,7 @@
 | CLASS-000 | P1 | Аудит боевых профессий записан, код не начат | — | DONE | `docs/ships-rpg/ROADMAP.md` |
 | CLASS-010 | P1 | Общий профиль боя без новых ролей | — | TODO | после подтверждения владельца, CLASS-020 |
 | CLASS-100 | P1 | Профессии по корпусам и три слоя талантов записаны | — | DONE | `docs/ships-rpg/ROADMAP.md` |
+| CLASS-160 | P1 | Боевая панель 4+1 | — | TODO | `QUESTJOB/CLASS-RPG.md` |
 | RADIO | P1 | Радио: М-1 в main, М-3 в отдельной ветке, М-2 ещё нет | свободен | IN_PROGRESS | `modules/CLIENT.md` |
 
 Полная очередь: `roadmap/NOW.md`. Свободные задачи: `roadmap/AGENT_TASKS.md`.

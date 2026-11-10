@@ -386,6 +386,11 @@ func run() error {
 	if cfg.FeatureAI {
 		studioSvc := aistudio.NewService(aistudio.NewPGStore(pool))
 		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log) // ИИ-1 живёт в Авроре (Э-1)
+		// AIC-030: координация со старым Manager — резервация капитанов новой системой
+		reservation := aiciv.NewReservation(10 * time.Minute)
+		agent.SetReservations(reservation)
+		// TODO: CivilizationDirector будет вызывать reservation.Reserve при взятии капитана под управление
+		log.Info("AI civilization reservation attached to old Manager")
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
 		dlg.Push = wsHandler.PushChat // реплики ИИ должны доходить до живых клиентов, а не только попадать в историю
@@ -473,30 +478,37 @@ func run() error {
 
 // cleanupSessions периодически удаляет просроченные сессии администраторов.
 func cleanupSessions(ctx context.Context, log *slog.Logger, store *admin.Store) {
-	t := time.NewTicker(time.Hour)
+	t := time.NewTicker(15 * time.Minute)
 	defer t.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if n, err := store.CleanupSessions(ctx); err != nil {
-				log.Error("очистка сессий администраторов", "err", err)
+			cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			if n, err := store.CleanupSessions(cctx); err != nil {
+				log.Error("очистка сессий", "err", err)
 			} else if n > 0 {
-				log.Info("удалены просроченные сессии администраторов", "count", n)
+				log.Info("удалены просроченные сессии", "count", n)
 			}
+			cancel()
 		}
 	}
 }
 
-// gameMux — публичные маршруты игрового порта: здоровье, WebSocket, ресурсы дизайна (/assets/) и музыка (/media/).
-func gameMux(db httpapi.Pinger, version string, ws http.Handler, d *design.Service, m *media.Service) *http.ServeMux {
-	mux := httpapi.NewMux(db, version, ws)
-	if d != nil {
-		mux.Handle("/assets/", d.PublicHandler())
+func gameMux(pool interface{}, version string, wsHandler *ws.Handler, designSvc *design.Service, mediaSvc *media.Service) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"status":"ok","version":"%s"}`, version)
+	})
+	mux.Handle("/ws", wsHandler)
+	if designSvc != nil {
+		mux.Handle("/design/", designSvc.Routes())
 	}
-	if m != nil {
-		mux.Handle("/media/", m.PublicHandler())
+	if mediaSvc != nil {
+		mux.Handle("/media/", mediaSvc.Routes())
 	}
 	return mux
 }

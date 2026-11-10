@@ -1,6 +1,6 @@
 # Статус (генерируется tools/gen_roadmap.py — не править вручную)
 
-Источник: `docs/roadmap/tasks.json` (обновлено 2026-11-09, SHA 829c36e).
+Источник: `docs/roadmap/tasks.json` (обновлено 2026-11-10, SHA 0971d8a).
 
 ## Сводка
 

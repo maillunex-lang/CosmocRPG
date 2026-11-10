@@ -529,3 +529,11 @@ SR-100b: run42616666345 для c9a3391 завершён, все4 jobs success (�
 Подзадачи AIC-021/022/023/024 отмечены DONE только по коду+локальным тестам; AIC-020 IN_PROGRESS, AIC-025 BLOCKED. Полные ограничения docs/ai/GATEWAY.md, проверки docs/ai/TESTS.md. SQL0023/0024 additive, проверить номера перед merge. Full Go race+PG506/24 PASS,3SKIP; затем профильные случаи PASS и оба Godot harness PASS; vet/build/format/roadmap60 PASS. Branch feature/ai-civilization, main/production не менялись.
 
 Дополнительно устранён общий blocker: mine с нулевыми кредитами не учитывался квестом. EventOnce receipt+progress атомарны; Join восстанавливает goal→reward после сбоя. Доставка world→quest до транзакции остаётся без durable outbox. Открыт воспроизводимый BETA-ECO-001: hold_full после debit11 (1000→989); AI buy выключен. Для продолжения экономики нужен общий atomic service, не привилегированный обход. Далее AIC-030 director для контролов + BETA-ECO-001 общая экономика; новые игровые системы/AI-003/011 по-прежнему выключены.
+
+## 2026-11-10 — разрешённая публикация AI checkpoint в main
+
+По ответу владельца «Давай в main» создан отдельный integration/ai-civilization-main worktree от свежей origin/main588fde6. Обычный merge feature/ai-civilization0971d8a прошёл без конфликтов; server/client/admin/infrastructure/workflows совпадают с проверенной feature-веткой, сторонние изменения не перезаписывались. Сохранён0f3ff41 и его оборудование. Номера SQL0022/0023/0024 уникальны; к production они в этой сессии не применяются.
+
+Результаты тестов переиспользованы для идентичного кода: full race+тестовыйPG506/24 PASS, три testSKIP; затем последние профильные случаи PASS, отдельно оба Godot harness PASS, vet/build PASS (docs/ai/TESTS.md). Повторять долгий suite при неизменном коде без причины не требуется. На объединённом дереве дополнительно проверены validator/format/diff/source anchors/миграции. AIC-020 остаётся IN_PROGRESS, AIC-025/BETA-ECO-001 не закрыты. Flags shadow/gateway выключены; новый population director не включён. Выпуск APK и production НЕ выполняются.
+
+Обычный push после повторного fetch, CI проверить по итоговому remoteSHA; не считать его успешным до подтверждения. При следующем deploy отдельно backup/проверка миграций/health, не включать новые AI flags до AIC-030/canary.

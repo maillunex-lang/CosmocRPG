@@ -3,8 +3,8 @@
  "project": "CosmocRPG",
  "branch": "main",
  "generated_by": "docs/roadmap-refactor-v2.0 (Kimi Code)",
- "updated": "2026-11-09",
- "last_verified_sha": "829c36e",
+ "updated": "2026-11-10",
+ "last_verified_sha": "0971d8a",
  "modules": [
   "GALAXY",
   "SHIPS",
@@ -810,7 +810,7 @@
    "module": "AI_PLAYERS",
    "priority": "P1",
    "status": "IN_PROGRESS",
-   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными.",
+   "description": "Родительский этап из docs/ai/IMPLEMENTATION.md. Не подменять спецификацию реализацией. Только существующие механики; отсутствующие остаются выключенными. Публикация checkpoint в main разрешена 2026-11-10; это не production и не включение всей AI-цивилизации.",
    "updated": "2026-11-09",
    "depends_on": [],
    "spec": "QUESTJOB/AI.md#ai-players-001--замена-ии-игроков-на-автономную-игровую-цивилизацию",
@@ -827,9 +827,13 @@
     "go build ./..."
    ],
    "release": {
-    "server": "NOT_RELEASED",
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "866d71a",
+    "0971d8a"
+   ]
   },
   {
    "id": "AIC-020",
@@ -837,7 +841,7 @@
    "module": "AI_PLAYERS",
    "priority": "P1",
    "status": "IN_PROGRESS",
-   "description": "Реальный player bootstrap, серверный AI marker, WS gateway controls и receipts реализованы в feature-ветке. Экономические команды закрыты; общий атомарный сервис покупки отсутствует, BETA-ECO-001 подтверждён. Полная замена старого AI ещё не выполнена.",
+   "description": "Реальный player bootstrap, серверный AI marker, WS gateway controls и receipts реализованы в feature-ветке. Экономические команды закрыты; общий атомарный сервис покупки отсутствует, BETA-ECO-001 подтверждён. Полная замена старого AI ещё не выполнена. Публикация checkpoint в main разрешена 2026-11-10; это не production и не включение всей AI-цивилизации.",
    "updated": "2026-11-10",
    "depends_on": [
     "AIC-010"
@@ -855,9 +859,13 @@
     "go test -race ./internal/aiciv ./internal/world ./internal/quest ./internal/ws с отдельной PostgreSQL"
    ],
    "release": {
-    "server": "NOT_RELEASED",
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "866d71a",
+    "0971d8a"
+   ]
   },
   {
    "id": "AIC-030",
@@ -1084,7 +1092,7 @@
    "module": "AI_PLAYERS",
    "priority": "P1",
    "status": "DONE",
-   "description": "Атомарный Bootstrapper проверяет Studio-ID, ник/пол/стартер; повтор и гонка сохраняют один players ID.",
+   "description": "Атомарный Bootstrapper проверяет Studio-ID, ник/пол/стартер; повтор и гонка сохраняют один players ID. Публикация checkpoint в main разрешена 2026-11-10; это не production и не включение всей AI-цивилизации.",
    "updated": "2026-11-10",
    "depends_on": [
     "AIC-010"
@@ -1101,9 +1109,12 @@
     "server/internal/aiciv"
    ],
    "release": {
-    "server": "NOT_RELEASED",
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "0971d8a"
+   ]
   },
   {
    "id": "AIC-022",
@@ -1111,7 +1122,7 @@
    "module": "AI_PLAYERS",
    "priority": "P1",
    "status": "DONE",
-   "description": "Lease с хешем токена, серверная метка, отказ expired/disabled и чужой привязке; controls через общий обработчик.",
+   "description": "Lease с хешем токена, серверная метка, отказ expired/disabled и чужой привязке; controls через общий обработчик. Публикация checkpoint в main разрешена 2026-11-10; это не production и не включение всей AI-цивилизации.",
    "updated": "2026-11-10",
    "depends_on": [
     "AIC-021"
@@ -1128,9 +1139,12 @@
     "server/internal/aiciv"
    ],
    "release": {
-    "server": "NOT_RELEASED",
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "0971d8a"
+   ]
   },
   {
    "id": "AIC-023",
@@ -1138,7 +1152,7 @@
    "module": "AI_PLAYERS",
    "priority": "P1",
    "status": "DONE",
-   "description": "Уникальный action_id/request_hash; completed replay, pending/uncertain fail closed, один dispatch на20 воркеров.",
+   "description": "Уникальный action_id/request_hash; completed replay, pending/uncertain fail closed, один dispatch на20 воркеров. Публикация checkpoint в main разрешена 2026-11-10; это не production и не включение всей AI-цивилизации.",
    "updated": "2026-11-10",
    "depends_on": [
     "AIC-021"
@@ -1155,9 +1169,12 @@
     "server/internal/aiciv"
    ],
    "release": {
-    "server": "NOT_RELEASED",
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "0971d8a"
+   ]
   },
   {
    "id": "AIC-024",
@@ -1165,7 +1182,7 @@
    "module": "QUESTS",
    "priority": "P1",
    "status": "DONE",
-   "description": "Общий EventOnce сохраняет event receipt и прогресс; Join восстанавливает незавершённую выплату. Не исправляет доставку события между world и БД при аварии.",
+   "description": "Общий EventOnce сохраняет event receipt и прогресс; Join восстанавливает незавершённую выплату. Не исправляет доставку события между world и БД при аварии. Публикация checkpoint в main разрешена 2026-11-10; это не production и не включение всей AI-цивилизации.",
    "updated": "2026-11-10",
    "depends_on": [],
    "spec": "QUESTJOB/AI.md#8-экономика-антиэксплойты-и-безопасность",
@@ -1179,9 +1196,12 @@
     "server/internal/ws"
    ],
    "release": {
-    "server": "NOT_RELEASED",
+    "server": "IN_MAIN",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "commits": [
+    "0971d8a"
+   ]
   },
   {
    "id": "BETA-ECO-001",

@@ -45,3 +45,7 @@ Codex, ветка feature/ai-civilization, отдельный worktree CosmocRPG
 ## AIC-020 checkpoint
 
 Codex, feature/ai-civilization, дата2026-11-10: аiciv/bootstrap+gateway+receipts; общие world character rules, серверная маркировка и WS guard; quest EventOnce и SQL0023/0024. Оснащение и его SQL/интерфейс не заменены. Новые миграции перепроверить по свежей main перед merge. Экономический RED BETA-ECO-001 в docs/ai/repro, не копировать в активный suite без начала исправления.
+
+## Публикация AI checkpoint в main
+
+2026-11-10: владелец разрешил main. Отдельный worktree CosmocRPG-ai-main/integration/ai-civilization-main, merge feature0971d8a с origin/main588fde6 без конфликтов, код тождествен проверенному. AIC-020 IN_PROGRESS, economics BLOCKED; production/flags не включены. Для продолжения брать свежую main и учитывать SQL0022/0023/0024.

@@ -23,11 +23,10 @@ Repository Secrets с теми же именами пока дублируют �
 ## Порядок запуска сборки
 
 1. Вкладка Actions → «Android release APK» → «Run workflow» → ветка `main` → Run.
-2. GitHub покажет статус `waiting`: job стоит на подтверждении окружения.
-3. Владелец открывает запуск → кнопка **«Approve and deploy»** (раздел Review pending deployments).
-4. Сборка: Godot 4.7.2 → Gradle → apksigner (проверки package ID `ru.cosmocrpg.game`,
+2. Подтверждение **«Approve and deploy»** больше не требуется: у окружения `android-signing` снят обязательный ревьюер. Секреты по-прежнему доступны только workflow с ветки `main`, не из запросов на слияние.
+3. Сборка стартует сразу: Godot 4.7.2 → Gradle → apksigner (проверки package ID `ru.cosmocrpg.game`,
    подписи v2/v3, отпечатка SHA-256) → артефакты (APK + cert-sha256.txt + SHA256SUMS + отчёты).
-5. Если в окружении `android-signing` заданы `VPS_SSH_KEY`, `VPS_HOST` и `VPS_USER`, тот же запуск заливает APK на VPS и вызывает `tools/publish_release.sh`. Игра видит обновление в `https://rikagro.ru/download/latest.json`. Игровой сервер и база при этом не перезапускаются. Ключ подписи манифеста остаётся только на VPS.
+4. Если в окружении `android-signing` заданы `VPS_SSH_KEY`, `VPS_HOST` и `VPS_USER`, тот же запуск заливает APK на VPS и вызывает `tools/publish_release.sh`. Игра видит обновление в `https://rikagro.ru/download/latest.json`. Игровой сервер и база при этом не перезапускаются. Ключ подписи манифеста остаётся только на VPS.
 
 ## Восстановление после ошибки
 

@@ -38,9 +38,9 @@ type Settings struct {
 	DisabledCaptains       []string `json:"disabled_captains"`         // капитаны, которых не ставить в мир и не давать в чат
 	// Цивилизация через шлюз: настоящие входы в мир, чат и помощь. Правится из админки без перезапуска.
 	CivEnabled     bool `json:"civ_enabled"`
-	CivCast        int  `json:"civ_cast"`         // сколько капитанов держать в мире через шлюз, 1–500
-	CivChat        bool `json:"civ_chat"`         // многоголосый чат
-	CivTalkMin     int  `json:"civ_talk_min"`     // длина разговора, реплик
+	CivCast        int  `json:"civ_cast"`     // сколько капитанов держать в мире через шлюз, 1–500
+	CivChat        bool `json:"civ_chat"`     // многоголосый чат
+	CivTalkMin     int  `json:"civ_talk_min"` // длина разговора, реплик
 	CivTalkMax     int  `json:"civ_talk_max"`
 	CivIntervalSec int  `json:"civ_interval_sec"` // пауза между репликами
 	CivRetreatPct  int  `json:"civ_retreat_pct"`  // отступление, когда корпус ниже этого процента

@@ -18,9 +18,14 @@ const FACTION_COLORS := {
 # Компоновка графа (доли размера экрана): стабильные позиции систем.
 const LAYOUT := {"aurora": Vector2(0.26, 0.44), "meridian": Vector2(0.66, 0.26), "redstorm": Vector2(0.62, 0.66)}
 
+const Settings := preload("res://ui/ui_settings.gd")
+
 var _gateway: UiGateway
 var _notice: Label
 var _jump_btn: ActionButton
+var _search: LineEdit
+var _fav_btn: ActionButton
+var _favorites_only := false
 var _selected := ""       # система, выбранная тапом
 var _star_seed := 7
 
@@ -46,6 +51,27 @@ func _ready() -> void:
 	close.custom_minimum_size = Vector2(150, 54)
 	close.pressed.connect(func() -> void: closed.emit())
 	head.add_child(close)
+
+	var bar := HBoxContainer.new()
+	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	bar.offset_left = 20
+	bar.offset_top = 84
+	bar.offset_right = -20
+	bar.offset_bottom = 136
+	bar.add_theme_constant_override("separation", 10)
+	add_child(bar)
+	_search = LineEdit.new()
+	_search.placeholder_text = "Поиск системы или фракции"
+	_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_search.text_changed.connect(func(_t: String) -> void: queue_redraw())
+	bar.add_child(_search)
+	_fav_btn = ActionButton.new()
+	_fav_btn.text = "★"
+	_fav_btn.tooltip_text = "Только избранные системы"
+	_fav_btn.toggle_mode = true
+	_fav_btn.custom_minimum_size = Vector2(64, 52)
+	_fav_btn.toggled.connect(func(on: bool) -> void: _favorites_only = on; queue_redraw())
+	bar.add_child(_fav_btn)
 
 	_notice = Label.new()
 	_notice.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -83,6 +109,28 @@ func _on_system_changed(_info: Dictionary) -> void:
 	_selected = ""
 	_rebuild()
 	set_process(true)
+
+
+## Поиск по имени/тегу/фракции без учёта регистра и пробелов (используется и тестами).
+static func matches_system(sys: Dictionary, query: String) -> bool:
+	var q := query.strip_edges().to_lower()
+	if q == "":
+		return true
+	return str(sys.get("name", "")).to_lower().contains(q) \
+		or str(sys.get("id", "")).to_lower().contains(q) \
+		or str(sys.get("faction", "")).to_lower().contains(q)
+
+
+func _visible_systems() -> Array:
+	var out := []
+	for sys in _gateway.star_systems():
+		var id := str(sys.get("id", ""))
+		if not matches_system(sys, _search.text):
+			continue
+		if _favorites_only and not Settings.get_bool("map_system_" + id, false):
+			continue
+		out.append(sys)
+	return out
 
 
 func _system_pos(sys_id: String) -> Vector2:
@@ -192,29 +240,42 @@ func _draw() -> void:
 		var pts := PackedVector2Array([gate_screen + Vector2(0, -9), gate_screen + Vector2(9, 0), gate_screen + Vector2(0, 9), gate_screen + Vector2(-9, 0)])
 		draw_colored_polygon(pts, col)
 		draw_arc(gate_screen, 13, 0, TAU, 20, Color(col, 0.5), 1.5, true)
-	# системы-узлы
+	# системы-узлы (поиск/избранное фильтруют: несовпавшие — призрачны)
+	var visible := _visible_systems()
+	var any_visible := false
 	for sys in _gateway.star_systems():
-		var id := str(sys.get("id", ""))
-		var p := _system_pos(id)
-		var here := id == current
-		var sel := id == _selected
-		var faction := str(sys.get("faction", ""))
-		var col: Color = FACTION_COLORS.get(faction, Tokens.TEXT_MUTED)
-		# свечение
-		draw_circle(p, 30, Color(col, 0.10 if not here else 0.22))
-		draw_circle(p, 18, Color(Tokens.BG, 0.85))
-		draw_circle(p, 18, Color(col, 0.9))
-		draw_arc(p, 23, 0, TAU, 40, Color(col, 0.5), 2.0, true)
-		if here:
-			draw_arc(p, 30, 0, TAU, 48, Tokens.ACCENT, 2.5, true)
-		if sel:
-			draw_arc(p, 37, 0, TAU, 48, Color.WHITE, 2.0, true)
-		# имена
-		var font := ThemeDB.fallback_font
-		draw_string(font, p + Vector2(-90, 46), str(sys.get("name", id)), HORIZONTAL_ALIGNMENT_CENTER, 180, 20, Tokens.TEXT)
-		draw_string(font, p + Vector2(-90, 66), faction, HORIZONTAL_ALIGNMENT_CENTER, 180, 14, Color(col, 0.85))
-		if here:
-			draw_string(font, p + Vector2(-90, 86), "вы здесь", HORIZONTAL_ALIGNMENT_CENTER, 180, 13, Color(Tokens.ACCENT, 0.9))
+		var idv := str(sys.get("id", ""))
+		var dimmed := not visible.has(sys)
+		if not dimmed:
+			any_visible = true
+		_draw_system_node(sys, idv == current, idv == _selected, dimmed)
+	if not any_visible:
+		var font0 := ThemeDB.fallback_font
+		draw_string(font0, Vector2(size.x * 0.5 - 260, size.y * 0.5), "Ничего не найдено — измените запрос", HORIZONTAL_ALIGNMENT_LEFT, 520, 20, Tokens.TEXT_MUTED)
+
+
+func _draw_system_node(sys: Dictionary, here: bool, sel: bool, dimmed: bool) -> void:
+	var id := str(sys.get("id", ""))
+	var p := _system_pos(id)
+	var faction := str(sys.get("faction", ""))
+	var col: Color = FACTION_COLORS.get(faction, Tokens.TEXT_MUTED)
+	var fade := 0.25 if dimmed else 1.0
+	# свечение
+	draw_circle(p, 30, Color(col, (0.10 if not here else 0.22) * fade))
+	draw_circle(p, 18, Color(Tokens.BG, 0.85 * fade))
+	draw_circle(p, 18, Color(col, 0.9 * fade))
+	draw_arc(p, 23, 0, TAU, 40, Color(col, 0.5 * fade), 2.0, true)
+	if here:
+		draw_arc(p, 30, 0, TAU, 48, Tokens.ACCENT, 2.5, true)
+	if sel and not dimmed:
+		draw_arc(p, 37, 0, TAU, 48, Color.WHITE, 2.0, true)
+	# имена
+	var font := ThemeDB.fallback_font
+	var name_col := Color(Tokens.TEXT_MUTED if dimmed else Tokens.TEXT)
+	draw_string(font, p + Vector2(-90, 46), str(sys.get("name", id)), HORIZONTAL_ALIGNMENT_CENTER, 180, 20, name_col)
+	draw_string(font, p + Vector2(-90, 66), faction, HORIZONTAL_ALIGNMENT_CENTER, 180, 14, Color(col, 0.85 * fade))
+	if here:
+		draw_string(font, p + Vector2(-90, 86), "вы здесь", HORIZONTAL_ALIGNMENT_CENTER, 180, 13, Color(Tokens.ACCENT, 0.9))
 
 
 func _draw_stars() -> void:
@@ -236,7 +297,7 @@ func _gui_input(ev: InputEvent) -> void:
 		pos = ev.position
 	else:
 		return
-	for sys in _gateway.star_systems():
+	for sys in _visible_systems():
 		var id := str(sys.get("id", ""))
 		if _system_pos(id).distance_to(pos) <= 46.0:
 			_selected = id

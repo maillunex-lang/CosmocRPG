@@ -24,13 +24,13 @@ type Order struct {
 
 // Decision is a reply that is not applied until the line is actually sent.
 type Decision struct {
-	Line     string
-	AskerID  string
+	Line      string
+	AskerID   string
 	AskerArch Archetype
-	Order    *Order
-	Bait     *Order // troll who asked runs away from the helper
-	Troll    bool
-	Refused  bool
+	Order     *Order
+	Bait      *Order // troll who asked runs away from the helper
+	Troll     bool
+	Refused   bool
 }
 
 type storedAsk struct {

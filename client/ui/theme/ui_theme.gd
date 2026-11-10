@@ -24,17 +24,26 @@ static func _fs(base: int, text_scale: float) -> int:
 	return maxi(1, int(round(base * text_scale)))
 
 
-static func _box(bg: Color, border: Color = Color(0, 0, 0, 0), radius: int = Tokens.RADIUS, margins: Vector4 = Vector4.ZERO) -> StyleBoxFlat:
+static func _box(bg: Color, border: Color = Color(0, 0, 0, 0), radius: int = Tokens.RADIUS, margins: Vector4 = Vector4.ZERO, lift: int = 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
 	s.border_color = border
-	s.set_border_width_all(Tokens.BORDER_WIDTH if border.a > 0.0 else 0)
+	var bw := Tokens.BORDER_WIDTH if border.a > 0.0 else 0
+	s.set_border_width_all(bw)
+	if lift > 0 and bw > 0:
+		s.border_width_top = bw + 1   # блик верхней кромки, как у стекла
 	s.set_corner_radius_all(radius)
 	s.content_margin_left = margins.x
 	s.content_margin_top = margins.y
 	s.content_margin_right = margins.z
 	s.content_margin_bottom = margins.w
 	s.anti_aliasing = true
+	s.border_blend = true
+	s.corner_detail = 8
+	if lift > 0:
+		s.shadow_color = Color(0.01, 0.05, 0.10, 0.55)
+		s.shadow_size = lift
+		s.shadow_offset = Vector2(0, 5)
 	return s
 
 
@@ -75,19 +84,19 @@ static func build(text_scale: float = 1.0) -> Theme:
 	t.set_color("font_color", "RareLabel", Tokens.RARE)
 
 	# --- Панели ---
-	t.set_stylebox("panel", "PanelContainer", _box(Color(Tokens.SURFACE, Tokens.PANEL_ALPHA), border, Tokens.RADIUS, Vector4(margin, margin, margin, margin)))
+	t.set_stylebox("panel", "PanelContainer", _box(Color(Tokens.SURFACE, Tokens.PANEL_ALPHA), Color(Tokens.TEXT, 0.22), Tokens.RADIUS, Vector4(margin, margin, margin, margin), 16))
 	_variation(t, &"CardPanel", &"PanelContainer")
-	t.set_stylebox("panel", "CardPanel", _box(Color(Tokens.SURFACE, Tokens.PANEL_ALPHA), border, Tokens.RADIUS, Vector4(margin, margin, margin, margin)))
+	t.set_stylebox("panel", "CardPanel", _box(Color(Tokens.SURFACE, Tokens.PANEL_ALPHA), Color(Tokens.TEXT, 0.22), Tokens.RADIUS, Vector4(margin, margin, margin, margin), 16))
 	_variation(t, &"RaisedPanel", &"PanelContainer")
-	t.set_stylebox("panel", "RaisedPanel", _box(Color(Tokens.SURFACE_RAISED, Tokens.PANEL_ALPHA), border, Tokens.RADIUS, Vector4(margin, margin, margin, margin)))
+	t.set_stylebox("panel", "RaisedPanel", _box(Color(Tokens.SURFACE_RAISED, 0.82), Color(Tokens.ACCENT, 0.45), Tokens.RADIUS, Vector4(margin, margin, margin, margin), 20))
 	t.set_constant("separation", "VBoxContainer", Tokens.SPACE_MD)
 	t.set_constant("separation", "HBoxContainer", Tokens.SPACE_MD)
 
 	# --- Кнопки ---
 	var bm := Vector4(Tokens.SPACE_LG, Tokens.SPACE_MD, Tokens.SPACE_LG, Tokens.SPACE_MD)
-	t.set_stylebox("normal", "Button", _box(Tokens.SURFACE_RAISED, border, Tokens.RADIUS, bm))
-	t.set_stylebox("hover", "Button", _box(Tokens.SURFACE_RAISED.lightened(0.12), Color(Tokens.ACCENT, 0.6), Tokens.RADIUS, bm))
-	t.set_stylebox("pressed", "Button", _box(Tokens.SURFACE.darkened(0.2), Tokens.ACCENT, Tokens.RADIUS, bm))
+	t.set_stylebox("normal", "Button", _box(Color(Tokens.SURFACE_RAISED, 0.82), Color(Tokens.TEXT, 0.28), Tokens.RADIUS, bm, 8))
+	t.set_stylebox("hover", "Button", _box(Color(Tokens.SURFACE_RAISED.lightened(0.12), 0.9), Color(Tokens.ACCENT, 0.75), Tokens.RADIUS, bm, 8))
+	t.set_stylebox("pressed", "Button", _box(Color(Tokens.SURFACE.darkened(0.15), 0.92), Tokens.ACCENT, Tokens.RADIUS, bm, 4))
 	t.set_stylebox("disabled", "Button", _box(Color(Tokens.SURFACE, 0.55), Color(Tokens.ACCENT, 0.12), Tokens.RADIUS, bm))
 	var focus := _box(Color(0, 0, 0, 0), Tokens.ACCENT, Tokens.RADIUS, bm)
 	focus.draw_center = false
@@ -102,7 +111,7 @@ static func build(text_scale: float = 1.0) -> Theme:
 	t.set_color("font_disabled_color", "Button", Tokens.TEXT_MUTED)
 
 	_variation(t, &"PrimaryButton", &"Button")
-	t.set_stylebox("normal", "PrimaryButton", _box(Tokens.ACCENT, Color(0, 0, 0, 0), Tokens.RADIUS, bm))
+	t.set_stylebox("normal", "PrimaryButton", _box(Tokens.ACCENT, Color(Tokens.TEXT, 0.35), Tokens.RADIUS, bm, 10))
 	t.set_stylebox("hover", "PrimaryButton", _box(Tokens.ACCENT.lightened(0.15), Color(0, 0, 0, 0), Tokens.RADIUS, bm))
 	t.set_stylebox("pressed", "PrimaryButton", _box(Tokens.ACCENT.darkened(0.2), Color(0, 0, 0, 0), Tokens.RADIUS, bm))
 	t.set_stylebox("disabled", "PrimaryButton", _box(Color(Tokens.ACCENT, 0.25), Color(0, 0, 0, 0), Tokens.RADIUS, bm))
@@ -111,7 +120,7 @@ static func build(text_scale: float = 1.0) -> Theme:
 	t.set_color("font_disabled_color", "PrimaryButton", Tokens.TEXT_MUTED)
 
 	_variation(t, &"DangerButton", &"Button")
-	t.set_stylebox("normal", "DangerButton", _box(Tokens.DANGER, Color(0, 0, 0, 0), Tokens.RADIUS, bm))
+	t.set_stylebox("normal", "DangerButton", _box(Tokens.DANGER, Color(Tokens.TEXT, 0.28), Tokens.RADIUS, bm, 10))
 	t.set_stylebox("hover", "DangerButton", _box(Tokens.DANGER.lightened(0.12), Color(0, 0, 0, 0), Tokens.RADIUS, bm))
 	t.set_stylebox("pressed", "DangerButton", _box(Tokens.DANGER.darkened(0.2), Color(0, 0, 0, 0), Tokens.RADIUS, bm))
 	t.set_stylebox("disabled", "DangerButton", _box(Color(Tokens.DANGER, 0.25), Color(0, 0, 0, 0), Tokens.RADIUS, bm))
@@ -133,7 +142,7 @@ static func build(text_scale: float = 1.0) -> Theme:
 
 	# --- Поле ввода ---
 	var lm := Vector4(Tokens.SPACE_LG, Tokens.SPACE_MD, Tokens.SPACE_LG, Tokens.SPACE_MD)
-	t.set_stylebox("normal", "LineEdit", _box(Tokens.SURFACE_SUNKEN, border, Tokens.RADIUS, lm))
+	t.set_stylebox("normal", "LineEdit", _box(Color(Tokens.SURFACE_SUNKEN, 0.9), Color(Tokens.TEXT, 0.2), Tokens.RADIUS, lm, 4))
 	var le_focus := _box(Tokens.SURFACE_SUNKEN, Tokens.ACCENT, Tokens.RADIUS, lm)
 	le_focus.set_border_width_all(2)
 	t.set_stylebox("focus", "LineEdit", le_focus)

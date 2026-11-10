@@ -288,6 +288,15 @@ func _toggle_menu() -> void:
 
 func _set_menu_open(open: bool) -> void:
 	_menu_popup.visible = open
+	var panel := _menu_popup.get_node_or_null("Panel") as CanvasItem
+	if panel == null:
+		return
+	if not open or UiSettings.reduce_motion():
+		panel.modulate.a = 1.0
+		return
+	panel.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(panel, "modulate:a", 1.0, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## Меню открыто (для тестов и жестов камеры).

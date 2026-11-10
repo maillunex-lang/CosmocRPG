@@ -198,6 +198,7 @@ func _ready() -> void:
 		b.disabled = true
 	_attack.variant = ActionButton.Variant.DANGER
 	_build_skills()
+	_dock_skills()
 
 	# иконки боевого кластера и верхнего правого угла: интерфейс легче читается
 	Icons.apply(_attack, "zap", Tokens.DANGER, 22)
@@ -293,8 +294,9 @@ func _setup_chat(gw: UiGateway) -> void:
 	chat_panel.name = "ChatPanel"
 	_chat_lines.get_parent().add_child(chat_panel)
 	chat_panel.bind(gw)
-	_chat_lines.visible = not gw.has_chat()
-	chat_panel.visible = gw.has_chat()
+	var online := not (gw.has_method("is_demo") and gw.is_demo())
+	_chat_lines.visible = not online
+	chat_panel.visible = online
 	chat_panel.unread_changed.connect(func(n: int) -> void:
 		_chat_card.title = "Чат" if n <= 0 else "Чат · %d" % n)
 	chat_panel.expand_requested.connect(func() -> void: chat_requested.emit())
@@ -386,7 +388,7 @@ func bind(gw: UiGateway) -> void:
 	%DemoLabel.visible = gw.is_demo()
 	_system_button.visible = gw.is_demo()
 	_setup_chat(gw)   # панель чата создаётся при привязке к шлюзу (с 0.3.2 вызов был забыт: в игре оставалась демо-заглушка)
-	if gw.has_chat():
+	if not (gw.has_method("is_demo") and gw.is_demo()):
 		gw.request_chat_history()   # история запрашивается при входе, до появления панели: запрашиваем ещё раз уже для неё
 	apply_state(gw.snapshot())
 	if gw.has_signal("server_updated"):
@@ -455,6 +457,77 @@ func _apply_cargo(state: Dictionary, target: Dictionary, ship: Dictionary) -> vo
 	_sell_button.tooltip_text = "" if bool(ship.get("in_safe", false)) else "Продавать груз можно только у станции"
 
 
+
+func _dock_skills() -> void:
+	var right := _attack.get_parent()
+	_skills_grid.reparent(right, false)
+	right.move_child(_skills_grid, _attack.get_index())
+	_skills_grid.size_flags_horizontal = Control.SIZE_SHRINK_END
+	if _skills_grid is GridContainer:
+		(_skills_grid as GridContainer).columns = 2
+	_auto_skills.reparent(right, false)
+	right.move_child(_auto_skills, _attack.get_index())
+	_auto_skills.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_auto_skills.custom_minimum_size = Vector2(52, 52)
+	_auto_skills.text = "Авто"
+	_round_button(_auto_skills, 52)
+	for b in _skill_buttons:
+		_round_button(b, 74)
+	_paint_auto()
+
+
+func _round_button(b: Button, side: float) -> void:
+	b.custom_minimum_size = Vector2(side, side)
+	b.clip_text = true
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.add_theme_font_size_override("font_size", 13 if side < 60 else 15)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Tokens.SURFACE, 0.78)
+	sb.border_color = Color(Tokens.ACCENT, 0.55)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(int(side * 0.5))
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	var hover := sb.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(Tokens.ACCENT, 0.28)
+	var pressed := sb.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(Tokens.ACCENT, 0.45)
+	var disabled := sb.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color(Tokens.BG, 0.55)
+	disabled.border_color = Color(Tokens.TEXT_MUTED, 0.25)
+	b.add_theme_stylebox_override("normal", sb)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("disabled", disabled)
+	b.add_theme_stylebox_override("focus", sb)
+
+
+func _paint_auto() -> void:
+	if _auto_skills == null:
+		return
+	var on := _auto_skills.button_pressed
+	var sb := StyleBoxFlat.new()
+	sb.set_corner_radius_all(26)
+	sb.set_border_width_all(2)
+	sb.content_margin_left = 2
+	sb.content_margin_right = 2
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	if on:
+		sb.bg_color = Color(0.96, 0.97, 1.0, 0.96)
+		sb.border_color = Color(1, 1, 1, 0.95)
+	else:
+		sb.bg_color = Color(0.28, 0.31, 0.36, 0.88)
+		sb.border_color = Color(0.55, 0.58, 0.64, 0.45)
+	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+		_auto_skills.add_theme_stylebox_override(state_name, sb)
+	_auto_skills.add_theme_color_override("font_color", Color(0.12, 0.14, 0.18) if on else Color(0.75, 0.78, 0.82))
+	_auto_skills.add_theme_color_override("font_disabled_color", Color(0.55, 0.58, 0.62))
+	_auto_skills.add_theme_font_size_override("font_size", 12)
+
+
 func _build_skills() -> void:
 	for i in 4:
 		var b := ActionButton.new()
@@ -477,6 +550,14 @@ func _build_skills() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _auto_skills != null and _auto_skills.button_pressed and not _auto_skills.disabled and not UiSettings.reduce_motion():
+		var pulse := 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 220.0)
+		_auto_skills.modulate = Color(1.0, 1.0, 1.0, 0.82 + 0.18 * pulse)
+		_auto_skills.scale = Vector2.ONE * (1.0 + 0.04 * pulse)
+		_auto_skills.pivot_offset = _auto_skills.size * 0.5
+	elif _auto_skills != null:
+		_auto_skills.modulate = Color(0.72, 0.75, 0.8) if not _auto_skills.button_pressed else Color.WHITE
+		_auto_skills.scale = Vector2.ONE
 	if gateway == null:
 		return
 	# ручное управление с клавиатуры (проверка на компьютере): W A S D плюс джойстик
@@ -651,12 +732,13 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 		if fill != null:
 			fill.anchor_right = clampf(cd / maxf(float(s["cooldown"]), 0.001), 0.0, 1.0) if cd > 0.0 else 0.0
 			fill.offset_right = 0.0
-		b.text = ("%s\n%d с" % [s["name"], int(ceil(cd))]) if cd > 0.0 else ("%s\n%d" % [s["name"], int(s["energy_cost"])])
+		var skill_name := str(s["name"])
+		b.text = str(int(ceil(cd))) if cd > 0.0 else skill_name
+		b.tooltip_text = "%s · энергия %d · перезарядка %d с" % [skill_name, int(s["energy_cost"]), int(s["cooldown"])]
 		var blocked: bool = not bool(s.get("enabled", true)) or bool(ship.get("dead", false)) or cd > 0.0 or float(ship.get("energy", 0.0)) < float(s["energy_cost"])
 		if s["needs_target"]:
 			blocked = blocked or not has_target or friendly or not state.get("target_in_range", false)
 		b.disabled = blocked
-		b.tooltip_text = "Энергия: %d, перезарядка: %d с" % [int(s["energy_cost"]), int(s["cooldown"])]
 		if not bool(s.get("enabled", true)):
 			b.tooltip_text = "Навык не изучен" if str(s.get("unavailable_reason", "")) == "ability_not_learned" else "Требуется установленный модуль"
 
@@ -669,7 +751,9 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 	_autopilot.disabled = not has_target and not guided and not state.get("autopilot", false)
 	_set_toggle(_autopilot, "Автопилот", bool(state.get("autopilot", false)))
 	_auto_skills.disabled = not combat_ok
-	_set_toggle(_auto_skills, "Авто" if combat_ok else "Авто · скоро", bool(state.get("auto_skills", false)))
+	_auto_skills.set_pressed_no_signal(bool(state.get("auto_skills", false)))
+	_auto_skills.text = "Авто"
+	_paint_auto()
 
 
 func _set_toggle(b: ActionButton, label: String, on: bool) -> void:

@@ -642,8 +642,8 @@ func open_hold() -> Control:
 	add_child(layer)
 	layer.add_child(hold)
 	hold.theme = theme
-	if hold.has_method("bind"):
-		hold.bind(gateway.snapshot() if gateway != null else {})
+	if hold.has_method("bind") and gateway != null:
+		hold.bind(gateway)
 	hold.closed.connect(func() -> void: layer.queue_free())
 	return hold
 

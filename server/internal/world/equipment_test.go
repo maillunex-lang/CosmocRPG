@@ -138,14 +138,18 @@ func TestEquipmentDoesNotRewriteLearnedRankOrCombatResources(t *testing.T) {
 	}
 }
 
-func TestCanRefitAllowsOtherHullsOnlyAtStation(t *testing.T) {
+func TestCanRefitAnywhereExceptWhenDead(t *testing.T) {
 	w, p := dockedEngine(t)
 	w.initShip(p, "TMP-MINE", "", "")
+	p.Pos.X += EquipmentDockRadius + 40
+	p.Attacking = true
+	p.Move = Vec{X: 1}
+	p.Speed = 4
 	if err := w.CanRefit(p.ID); err != nil {
-		t.Fatalf("у станции модули можно менять и не на Стриже: %v", err)
+		t.Fatalf("модули меняются в любом месте, даже в бою: %v", err)
 	}
-	p.Pos.X += EquipmentDockRadius + 1
-	if err := w.CanRefit(p.ID); err != ErrNoStable {
-		t.Fatalf("вдали от станции: %v", err)
+	p.deadUntil = w.t + 10
+	if err := w.CanRefit(p.ID); err != ErrDead {
+		t.Fatalf("уничтоженный корабль: %v", err)
 	}
 }

@@ -47,11 +47,11 @@ func (h *Handler) fittingMsg(ctx context.Context, ss *session, m Message) {
 		reply(errMsg(m.ID, "bad_message", "укажите слот, модуль и ревизию"))
 		return
 	}
-	if p.Op != "equip" && p.Op != "unequip" {
-		reply(errMsg(m.ID, "bad_message", "можно только вставить или снять модуль"))
+	if p.Op != "equip" && p.Op != "unequip" && p.Op != "engineer" {
+		reply(errMsg(m.ID, "bad_message", "можно вставить, снять или заточить модуль"))
 		return
 	}
-	if st.Ship.Type == fitting.ShipStrizh && p.Slot == "tech-1" {
+	if p.Op != "engineer" && st.Ship.Type == fitting.ShipStrizh && p.Slot == "tech-1" {
 		reply(errMsg(m.ID, "engine_slot_locked", "штатный двигатель снимается своей кнопкой"))
 		return
 	}
@@ -134,6 +134,9 @@ func fittingCode(err error) string {
 	if errors.Is(err, fitting.ErrConflict) {
 		return "equipment_revision_conflict"
 	}
+	if errors.Is(err, fitting.ErrCredits) {
+		return "not_enough_credits"
+	}
 	return "fitting_unavailable"
 }
 
@@ -146,7 +149,15 @@ func fittingText(err error) string {
 	case "not_owned":
 		return "этого модуля нет в инвентаре"
 	case "equipment_revision_conflict":
-		return "оснащение уже изменилось; откройте ангар ещё раз"
+		return "оснащение уже изменилось; откройте трюм ещё раз"
+	case "not_enough_credits":
+		return "Не хватает кредитов на заточку."
+	case "engineering_max":
+		return "Дальше точить нельзя: это предел."
+	case "engineering_level":
+		return "Для заточки нужен уровень пилота и инженерии."
+	case "item_in_use":
+		return "Модуль надет на другой корабль."
 	default:
 		return "не удалось изменить оснащение"
 	}

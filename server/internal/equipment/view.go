@@ -8,10 +8,11 @@ import (
 
 // ItemView — модуль, который можно показать в ангаре. Характеристики считает каталог, не клиент.
 type ItemView struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Category  string `json:"category"`
-	Prototype string `json:"prototype"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Category    string `json:"category"`
+	Prototype   string `json:"prototype"`
+	Engineering int    `json:"engineering,omitempty"`
 }
 
 // SlotView — слот корпуса. Locked: штатный двигатель Стрижа меняется прежней кнопкой.
@@ -106,5 +107,5 @@ func itemView(c *fitting.Catalog, item fitting.Item) ItemView {
 	if m, ok := c.Module(item.Prototype); ok {
 		name, category = m.Name, m.Category
 	}
-	return ItemView{ID: item.ID, Name: name, Category: category, Prototype: item.Prototype}
+	return ItemView{ID: item.ID, Name: name, Category: category, Prototype: item.Prototype, Engineering: item.Engineering}
 }

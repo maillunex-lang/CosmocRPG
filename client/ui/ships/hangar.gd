@@ -557,7 +557,7 @@ func _refresh_fitting() -> void:
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary.text = "Масса %.0f/%.0f т · реактор %.0f/%.0f" % [float(_fitting.get("mass_tons", 0)), float(_fitting.get("mass_budget_tons", 0)), float(_fitting.get("power_draw_mw", 0)), float(_fitting.get("power_capacity_mw", 0))]
 	if not can:
-		summary.text += "\nМенять модули можно у станции, стоя на месте и вне боя."
+		summary.text += "\nСейчас модуль не меняется: корабль уничтожен или оснащение ещё сохраняется."
 	_fit_box.add_child(summary)
 	var revision := int(_fitting.get("revision", 0))
 	var pilot_revision := int(_fitting.get("pilot_revision", 0))

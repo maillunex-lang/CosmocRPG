@@ -38,7 +38,7 @@ type Settings struct {
 	DisabledCaptains       []string `json:"disabled_captains"`         // капитаны, которых не ставить в мир и не давать в чат
 	// Цивилизация через шлюз: настоящие входы в мир, чат и помощь. Правится из админки без перезапуска.
 	CivEnabled     bool `json:"civ_enabled"`
-	CivCast        int  `json:"civ_cast"`         // сколько капитанов держать в мире через шлюз, 1–8
+	CivCast        int  `json:"civ_cast"`         // сколько капитанов держать в мире через шлюз, 1–500
 	CivChat        bool `json:"civ_chat"`         // многоголосый чат
 	CivTalkMin     int  `json:"civ_talk_min"`     // длина разговора, реплик
 	CivTalkMax     int  `json:"civ_talk_max"`
@@ -113,8 +113,8 @@ func (s *Settings) Validate() error {
 		return errors.New("самостоятельные реплики: 0 (выключено) или от 10 до 3600 секунд")
 	case s.ChatFollowChance < 0 || s.ChatFollowChance > 100:
 		return errors.New("вероятность ответа ИИ на ИИ — от 0 до 100")
-	case s.CivCast < 1 || s.CivCast > 8:
-		return errors.New("капитанов цивилизации — от 1 до 8")
+	case s.CivCast < 1 || s.CivCast > 500:
+		return errors.New("капитанов цивилизации — от 1 до 500")
 	case s.CivTalkMin < 1 || s.CivTalkMax < s.CivTalkMin || s.CivTalkMax > 30:
 		return errors.New("длина разговора — от 1 до 30 реплик, минимум не больше максимума")
 	case s.CivIntervalSec < 4 || s.CivIntervalSec > 120:

@@ -157,6 +157,7 @@ func on_history(general: Array, dms: Array, _settings: Dictionary) -> void:
 	_general = general.slice(maxi(0, general.size() - MAX_LINES))
 	_dms = dms.slice(maxi(0, dms.size() - MAX_LINES))
 	_redraw()
+	preview_changed.emit(preview_text())
 
 
 func on_message(m: Dictionary) -> void:
@@ -176,6 +177,18 @@ func on_message(m: Dictionary) -> void:
 		_refresh_tabs()
 		unread_changed.emit(unread + dm_unread)
 	_redraw()
+	preview_changed.emit(preview_text())
+
+
+func preview_text() -> String:
+	if _general.is_empty():
+		return ""
+	var m: Dictionary = _general.back()
+	var who := str(m.get("from_name", "")).strip_edges()
+	var text := str(m.get("text", "")).strip_edges()
+	if who == "":
+		return text
+	return "%s: %s" % [who, text]
 
 
 func _select_tab(t: String) -> void:

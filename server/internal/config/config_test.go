@@ -88,3 +88,29 @@ func TestAdminSettings(t *testing.T) {
 		t.Fatalf("off должен выключать админ-API: %+v err=%v", off, err)
 	}
 }
+
+func TestCivilizationShadowRequiresAI(t *testing.T) {
+	_, err := Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test", "COSMOC_AI_CIVILIZATION_SHADOW": "true"}))
+	if err == nil {
+		t.Fatal("shadow enabled without AI")
+	}
+	c, err := Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test", "COSMOC_AI_CIVILIZATION_SHADOW": "true", "COSMOC_FEATURE_AI": "true"}))
+	if err != nil || !c.FeatureAICivilizationShadow {
+		t.Fatal(c, err)
+	}
+}
+
+func TestCivilizationGatewayExplicitOptIn(t *testing.T) {
+	c, err := Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test"}))
+	if err != nil || c.FeatureAICivilizationGateway {
+		t.Fatal("gateway default enabled", c, err)
+	}
+	_, err = Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test", "COSMOC_AI_CIVILIZATION_GATEWAY": "true"}))
+	if err == nil {
+		t.Fatal("gateway enabled without AI")
+	}
+	c, err = Load(env(map[string]string{"COSMOC_DATABASE_URL": "postgres://test", "COSMOC_AI_CIVILIZATION_GATEWAY": "true", "COSMOC_FEATURE_AI": "true"}))
+	if err != nil || !c.FeatureAICivilizationGateway {
+		t.Fatal(c, err)
+	}
+}

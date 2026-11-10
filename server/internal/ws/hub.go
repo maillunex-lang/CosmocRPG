@@ -65,6 +65,7 @@ type Options struct {
 	ShipPassports *shipcatalog.PassportCatalog // optional read-only RPG metadata; first integration is FTR-001 only
 	OnChat        func(chat.Message)           // наблюдатель отправленных сообщений (ответы ИИ-капитанов); может быть nil
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
+	AIActorGuard     func(context.Context, string, [32]byte) error // проверка lease перед каждой AI-командой
 	RequireCharacter bool
 }
 
@@ -82,14 +83,16 @@ type Handler struct {
 
 // session — игровая сессия: состояние рассылается через очередь, чтобы медленный клиент не тормозил мир.
 type session struct {
-	conn    *websocket.Conn
-	cancel  context.CancelFunc
-	states  chan Message
-	pending *world.Record // игрок вошёл, но ещё не создал персонажа
-	events  chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
-	pid     string
-	name    string       // игровое имя (для чата)
-	chat    chan Message // сообщения чата: отдельная очередь, чтобы не мешать снимкам состояния
+	ai        bool
+	tokenHash [32]byte
+	conn      *websocket.Conn
+	cancel    context.CancelFunc
+	states    chan Message
+	pending   *world.Record // игрок вошёл, но ещё не создал персонажа
+	events    chan Message  // редкие события (выполнение контракта): не выбрасываются как устаревшие снимки
+	pid       string
+	name      string       // игровое имя (для чата)
+	chat      chan Message // сообщения чата: отдельная очередь, чтобы не мешать снимкам состояния
 }
 
 // NewHandler создаёт обработчик.
@@ -236,6 +239,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "bad_token", "некорректный токен"))
 			return true
 		}
+		ss.tokenHash = world.TokenHash(p.Token)
 		var rec world.Record
 		if h.opts.Store != nil {
 			sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -253,6 +257,10 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			if n := world.CleanName(p.Name); n != "" {
 				rec.Name = n
 			}
+		}
+		if strings.HasPrefix(p.Token, world.AIServiceTokenPrefix) && !rec.AI {
+			reply(errMsg(m.ID, "ai_gateway_unavailable", "вход ИИ не настроен"))
+			return false
 		}
 		if h.opts.Store != nil && h.opts.RequireCharacter && !rec.Created {
 			// персонаж не создан: в мир не пускаем, предлагаем создать (ник, пол, направление пилота)
@@ -284,6 +292,18 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		reply(errMsg(m.ID, "replaced", "сессия заменена"))
 		return false
 	}
+	if ss.ai {
+		if h.opts.AIActorGuard == nil || h.opts.AIActorGuard(ctx, ss.pid, ss.tokenHash) != nil {
+			reply(errMsg(m.ID, "ai_session_invalid", "сессия ИИ недействительна"))
+			return false
+		}
+		switch m.Type {
+		case "move", "target", "autopilot", "mine", "mine_stop", "attack", "pilot", "ships", "market":
+		default:
+			reply(errMsg(m.ID, "capability_unavailable", "команда не подключена для ИИ"))
+			return true
+		}
+	}
 	pw := h.opts.World.For(ss.pid)
 	if pw == nil {
 		reply(errMsg(m.ID, "not_joined", "вы не в мире"))
@@ -308,7 +328,11 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "bad_message", "некорректное движение"))
 			return true
 		}
-		pw.SetMove(ss.pid, world.Vec{X: p.X, Y: p.Y})
+		if !pw.SetMove(ss.pid, world.Vec{X: p.X, Y: p.Y}) {
+			reply(errMsg(m.ID, "bad_move", "движение недоступно"))
+		} else {
+			h.aiAck(ctx, c, ss, m)
+		}
 	case "target":
 		var p struct {
 			ID string `json:"id"`
@@ -319,6 +343,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		}
 		if !pw.SetTarget(ss.pid, p.ID) {
 			reply(errMsg(m.ID, "bad_target", "такой цели нет"))
+		} else {
+			h.aiAck(ctx, c, ss, m)
 		}
 	case "autopilot":
 		var p struct {
@@ -330,6 +356,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		}
 		if !pw.SetAutopilot(ss.pid, p.On) {
 			reply(errMsg(m.ID, "no_target", "для автопилота выберите цель"))
+		} else {
+			h.aiAck(ctx, c, ss, m)
 		}
 	}
 	return true
@@ -364,6 +392,8 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		}
 		if err := w.SetAttack(ss.pid, p.On); err != nil {
 			fail(err)
+		} else {
+			h.aiAck(ctx, c, ss, m)
 		}
 	case "ability":
 		var p struct {
@@ -386,9 +416,12 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		}
 		if err := w.StartMining(ss.pid, p.ID); err != nil {
 			fail(err)
+		} else {
+			h.aiAck(ctx, c, ss, m)
 		}
 	case "mine_stop":
 		w.StopMining(ss.pid)
+		h.aiAck(ctx, c, ss, m)
 	case "market":
 		// Э-2: цены покупки ресурсов, стоимость ремонта и улучшения у станции
 		prices := map[string]float64{}
@@ -970,6 +1003,12 @@ func (h *Handler) grantRewards(rs []world.Reward) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	for _, r := range rs {
+		if r.Kind == "mine" && r.Credits == 0 {
+			if r.Amount > 0 && r.Amount <= math.MaxInt32 && !math.IsNaN(r.Amount) && !math.IsInf(r.Amount, 0) {
+				h.completeQuests(r.Player, h.opts.Quests.EventOnce(ctx, r.Player, r.Key, "mine", r.Ref, int(r.Amount)))
+			}
+			continue
+		}
 		granted, total, err := h.opts.Quests.Grant(ctx, r.Player, r.Key, r.Credits)
 		if err != nil {
 			h.log.Error("награда локации", "player", r.Player, "key", r.Key, "err", err)
@@ -1089,6 +1128,13 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 		reply(errMsg(m.ID, "equipment_unavailable", "не удалось загрузить оснащение; повторите вход"))
 		return false
 	}
+	if rec.AI {
+		if h.opts.AIActorGuard == nil || h.opts.AIActorGuard(ctx, rec.ID, ss.tokenHash) != nil {
+			reply(errMsg(m.ID, "ai_session_invalid", "вход ИИ недоступен"))
+			return false
+		}
+	}
+	ss.ai = rec.AI
 	// тот же игрок с другого устройства: старая сессия закрывается
 	h.mu.Lock()
 	old := h.active[rec.ID]
@@ -1183,20 +1229,9 @@ func (h *Handler) createCharacter(ctx context.Context, c *websocket.Conn, ss *se
 		reply(errMsg(m.ID, "bad_message", "некорректный запрос"))
 		return true
 	}
-	nick, err := world.CleanNick(p.Nick)
-	if err == nil && !world.ValidGender(p.Gender) {
-		err = world.ErrBadGender
-	}
-	st, ok := h.opts.World.Starter(p.PilotSpec)
-	if err == nil && !ok {
-		err = world.ErrBadPilotSpec
-	}
-	var rec world.Record
-	if err == nil {
-		sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		rec, err = h.opts.Store.CreateCharacter(sctx, ss.pending.ID, nick, p.Gender, p.PilotSpec, st)
-		cancel()
-	}
+	sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	rec, err := world.CreatePilot(sctx, h.opts.Store, h.opts.World, ss.pending.ID, p.Nick, p.Gender, p.PilotSpec)
+	cancel()
 	if err != nil {
 		code := err.Error()
 		text := map[string]string{
@@ -1611,4 +1646,11 @@ func (h *Handler) currentShipPassport(w *world.World, pid string) (shipcatalog.S
 		}
 	}
 	return shipcatalog.ShipPassport{}, false
+}
+
+// Подтверждение AI-intent идёт после общего валидатора. Не является claim награды.
+func (h *Handler) aiAck(ctx context.Context, c *websocket.Conn, ss *session, m Message) {
+	if ss.ai {
+		_ = writeJSON(ctx, c, Message{Type: "ok", ID: m.ID, Payload: mustJSON(map[string]any{"action": m.Type})})
+	}
 }

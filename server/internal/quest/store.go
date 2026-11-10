@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -192,6 +193,7 @@ type MemStore struct {
 	credits map[string]int64
 	quests  map[string]map[string]*Progress
 	grants  map[string]bool
+	events  map[string]eventReceipt
 	Defs    []Def
 }
 
@@ -271,4 +273,107 @@ func (m *MemStore) Advance(_ context.Context, pid string, d Def, n int) (int, er
 		p.Progress += n
 	}
 	return p.Progress, nil
+}
+
+// Сохранённый результат не переносится на квесты, появившиеся позже события.
+type eventReceipt struct {
+	hash     [32]byte
+	progress map[string]int
+}
+
+var ErrEventConflict = errors.New("quest_event_payload_conflict")
+
+func (s *PGStore) AdvanceOnce(ctx context.Context, pid, key string, hash [32]byte, defs []Def, n int) (map[string]int, error) {
+	if n <= 0 || key == "" || len(key) > 128 {
+		return nil, ErrEventConflict
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	tag, err := tx.Exec(ctx, `INSERT INTO quest_event_receipts(player_id,event_key,request_hash) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, pid, key, hash[:])
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]int{}
+	if tag.RowsAffected() == 0 {
+		var previous []byte
+		var raw []byte
+		if err = tx.QueryRow(ctx, `SELECT request_hash,progresses FROM quest_event_receipts WHERE player_id=$1 AND event_key=$2`, pid, key).Scan(&previous, &raw); err != nil {
+			return nil, err
+		}
+		if string(previous) != string(hash[:]) {
+			return nil, ErrEventConflict
+		}
+		if err = json.Unmarshal(raw, &out); err != nil {
+			return nil, err
+		}
+		return out, nil
+	}
+	ordered := append([]Def(nil), defs...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].ID < ordered[j].ID })
+	for _, d := range ordered {
+		var progress int
+		err = tx.QueryRow(ctx, `UPDATE player_quest_progress SET progress=progress+LEAST($4::bigint,(goal-progress)::bigint)
+   WHERE player_id=$1 AND quest_id=$2 AND quest_version=$3 AND state='active' RETURNING progress`, pid, d.ID, d.Version, n).Scan(&progress)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		out[d.ID] = progress
+	}
+	raw, err := json.Marshal(out)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE quest_event_receipts SET progresses=$3 WHERE player_id=$1 AND event_key=$2`, pid, key, raw); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+func (m *MemStore) AdvanceOnce(_ context.Context, pid, key string, hash [32]byte, defs []Def, n int) (map[string]int, error) {
+	if n <= 0 || key == "" || len(key) > 128 {
+		return nil, ErrEventConflict
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.events == nil {
+		m.events = map[string]eventReceipt{}
+	}
+	index := pid + "|" + key
+	if old, ok := m.events[index]; ok {
+		if old.hash != hash {
+			return nil, ErrEventConflict
+		}
+		out := map[string]int{}
+		for k, v := range old.progress {
+			out[k] = v
+		}
+		return out, nil
+	}
+	out := map[string]int{}
+	for _, d := range defs {
+		p := m.quests[pid][d.ID]
+		if p == nil || p.Version != d.Version || p.State != "active" {
+			continue
+		}
+		if n >= p.Goal-p.Progress {
+			p.Progress = p.Goal
+		} else {
+			p.Progress += n
+		}
+		out[d.ID] = p.Progress
+	}
+	m.events[index] = eventReceipt{hash, out}
+	copy := map[string]int{}
+	for k, v := range out {
+		copy[k] = v
+	}
+	return copy, nil
 }

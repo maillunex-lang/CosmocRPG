@@ -119,3 +119,11 @@ EB-ERROR-002 checkpoint: после сообщения Cloud файлы и ко�
 ## BETA-TEST-002 — тест продажи принимал XP за квест
 
 Дата: 2026-11-09; PROTO-05B; подсистема ws/test. TestShipLevelRestoredOnSwapAndXPFromSell воспроизводимо падал: Gained=100 без ship — фактически событие XP за first_flight у станции. Тест считал первое сообщение xp наградой продажи. Исправление: выбирать source=sell, сохранять проверки ship XP/смены корпуса; общий pilot XP может включать квест. Targeted race PASS. Это исправление теста, не изменение наград игры. Два таймаута account-тестов в раннем параллельном прогоне не повторились изолированно; причина не установлена, не считать исправленными дефектами игры.
+
+## BETA-ECO-001 — списание при отказе покупки
+
+2026-11-10; PROTO-08/AIC-025; подсистема WS/экономика. Локальный воспроизводитель с полным трюмом: buy gas1 → hold_full, кредиты1000→989. Причина подтверждена: Quests.Spend выполняется раньше AddCargo, ошибка AddCargo не компенсируется. Статус OPEN; новый AI gateway отвергает buy на уровне сервера и контроллера. Исправление для людей/AI требует общего атомарного command path, не временной скрытой компенсации. Воспроизводитель docs/ai/repro/full_hold_buy_test.go.txt — намеренно RED, сохранён вне active suite. Production не проверялся и не изменялся.
+
+## AIC-ERR-001 — mine без кредитов не продвигал квест
+
+2026-11-10; AIC-024; источник TestMiningWithoutCreditsAdvancesQuestOnce, RED0/5 вместо2/5. Причина: grantRewards пропускал событие при GrantCredits(amount=0)==false. Исправление: EventOnce с общим event receipt+progress одной транзакцией, без вымышленных денег; восстановление goal→Complete при Join. Targeted Mem/PG+race PASS. Статус исправлено локально; доставка world→quest до записи по-прежнему не durable outbox. Файлы quest/{quest.go,store.go}, ws/hub.go, SQL0024.

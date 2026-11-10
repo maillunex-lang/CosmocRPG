@@ -471,3 +471,58 @@ func TestProgressWriteFailureDoesNotAdvanceClient(t *testing.T) {
 		t.Fatalf("unpersisted progress exposed: %+v", v)
 	}
 }
+
+func TestEventReceiptRestartAndPendingCompletion(t *testing.T) {
+	for _, backend := range []string{"memory", "postgres"} {
+		t.Run(backend, func(t *testing.T) {
+			ctx := context.Background()
+			var st Store = NewMemStore()
+			pid := "event-receipt-player"
+			if backend == "postgres" {
+				_, pg, id := pgSetup(t)
+				st, pid = pg, id
+			}
+			s := newSvc(st)
+			if err := s.Join(ctx, pid); err != nil {
+				t.Fatal(err)
+			}
+			s.Evaluate(ctx, pid, station)
+			s.Event(ctx, pid, "kill", "", 1)
+			s.EventOnce(ctx, pid, "mine-partial", "mine", "iron_ore", 2)
+			s = newSvc(st)
+			if err := s.Join(ctx, pid); err != nil {
+				t.Fatal(err)
+			}
+			s.EventOnce(ctx, pid, "mine-partial", "mine", "iron_ore", 2)
+			v, _ := s.View(pid)
+			if v.Quests[0].Progress != 2 {
+				t.Fatal("event replay advanced progress", v)
+			}
+			// Сохраняем событие в обход completeOne, моделируя точку аварии до награды.
+			d := Catalog()[2]
+			hash := [32]byte{1}
+			if _, err := st.AdvanceOnce(ctx, pid, "mine-final", hash, []Def{d}, 3); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := st.AdvanceOnce(ctx, pid, "mine-final", [32]byte{2}, []Def{d}, 3); err != ErrEventConflict {
+				t.Fatal("payload mismatch accepted", err)
+			}
+			s = newSvc(st)
+			if err := s.Join(ctx, pid); err != nil {
+				t.Fatal(err)
+			}
+			v, _ = s.View(pid)
+			if len(v.Quests) != 1 || v.Quests[0].ID != "first_deal" || v.Credits != 2000 {
+				t.Fatal("pending completion not restored", v)
+			}
+			s = newSvc(st)
+			if err := s.Join(ctx, pid); err != nil {
+				t.Fatal(err)
+			}
+			v, _ = s.View(pid)
+			if v.Credits != 2000 {
+				t.Fatal("duplicate recovery reward", v)
+			}
+		})
+	}
+}

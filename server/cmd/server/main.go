@@ -18,6 +18,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/account"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/admin"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aiciv"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/config"
@@ -354,9 +355,17 @@ func run() error {
 		corpSvc = corp.NewService(corp.NewPGStore(pool), quests.Spend)
 	}
 
+	aiState := aiciv.NewStore(pool)
+	markedPlayers := &aiciv.MarkedPlayers{Store: playerStore, AI: aiState, Enabled: cfg.FeatureAICivilizationGateway}
+	aiGuard := func(ctx context.Context, pid string, hash [32]byte) error {
+		if !cfg.FeatureAICivilizationGateway {
+			return aiciv.ErrDisabled
+		}
+		return aiState.AuthorizeSession(ctx, pid, hash)
+	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: universe, Store: playerStore, Equipment: equipment.NewPGStore(pool), ShipPassports: &passports, Quests: quests, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
+		World: universe, Store: markedPlayers, AIActorGuard: aiGuard, Equipment: equipment.NewPGStore(pool), ShipPassports: &passports, Quests: quests, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
 	if cfg.FeatureAI {
@@ -376,6 +385,11 @@ func run() error {
 			return chat.Person{ID: c.ID, Name: c.Name, AI: true}, true
 		}
 		go agent.Run(ctx, 2*time.Second)
+		if cfg.FeatureAICivilizationShadow {
+			shadow := &aiciv.Shadow{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiciv.NewStore(pool), Log: log}
+			go shadow.Run(ctx)
+			log.Info("AI civilization shadow: без действий, имущества и нового spawn")
+		}
 		log.Info("ИИ-игроки включены (COSMOC_FEATURE_AI), реплики в чате (ИИ-2)")
 	}
 	worldDone := make(chan struct{})

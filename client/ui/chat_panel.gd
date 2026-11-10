@@ -10,6 +10,7 @@ const Icons := preload("res://ui/icons.gd")
 const INLINE_LOG_HEIGHT := 96.0   # в карточке журнал компактный (она делит экран с заданиями и профилем); крупно — в окне чата
 
 signal unread_changed(count: int)
+signal preview_changed(text: String)
 ## Игрок просит открыть окно чата поверх игры (R-61).
 signal expand_requested
 

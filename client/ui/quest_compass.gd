@@ -78,18 +78,20 @@ func _ray(origin: Vector2, dir: Vector2, rect: Rect2) -> Vector2:
 	var best := 1.0e9
 	var hit := origin + dir * 90.0
 	if absf(dir.x) > 0.0001:
-		for x in [rect.position.x, rect.end.x]:
-			var t := (x - origin.x) / dir.x
+		var xs: Array[float] = [rect.position.x, rect.end.x]
+		for x in xs:
+			var t: float = (x - origin.x) / dir.x
 			if t > 0.0:
-				var y := origin.y + dir.y * t
+				var y: float = origin.y + dir.y * t
 				if y >= rect.position.y and y <= rect.end.y and t < best:
 					best = t
 					hit = Vector2(x, y)
 	if absf(dir.y) > 0.0001:
-		for y in [rect.position.y, rect.end.y]:
-			var t2 := (y - origin.y) / dir.y
+		var ys: Array[float] = [rect.position.y, rect.end.y]
+		for y in ys:
+			var t2: float = (y - origin.y) / dir.y
 			if t2 > 0.0:
-				var x := origin.x + dir.x * t2
+				var x: float = origin.x + dir.x * t2
 				if x >= rect.position.x and x <= rect.end.x and t2 < best:
 					best = t2
 					hit = Vector2(x, y)

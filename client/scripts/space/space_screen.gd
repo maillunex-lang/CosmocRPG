@@ -199,10 +199,9 @@ func _update_compass() -> void:
 
 
 func _quest_aim(snap: Dictionary) -> Dictionary:
-	var quests: Array = snap.get("quests", [])
-	if quests.is_empty() or typeof(quests[0]) != TYPE_DICTIONARY:
+	var q := QuestHints.guide_quest(snap)
+	if q.is_empty():
 		return {"ok": false}
-	var q: Dictionary = quests[0]
 	var title := str(q.get("title", "Задание"))
 	if title.length() > 18:
 		title = title.substr(0, 17) + "…"
@@ -260,6 +259,10 @@ func _quest_aim(snap: Dictionary) -> Dictionary:
 	if units < 4.0:
 		return {"ok": false}
 	return {"ok": true, "pos": pos, "meters": units * 100.0, "title": title}
+
+
+func _quest_object_id(q: Dictionary, snap: Dictionary) -> String:
+	return QuestHints.object_id(snap, q)
 
 
 func _update_ship_labels(_delta: float, me: Node3D) -> void:

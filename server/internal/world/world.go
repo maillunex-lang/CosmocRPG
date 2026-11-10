@@ -4,11 +4,13 @@
 package world
 
 import (
-	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 	"math"
+	"math/rand"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/maillunex-lang/CosmocRPG/server/internal/worldgen"
 )
 
 // Параметры мира (см. docs/design/STAGE01_ONLINE_SPACE.md).
@@ -232,16 +234,18 @@ type World struct {
 	arrived []Arrival
 
 	// живые локации
-	deposits []*deposit
-	safe     []safeZone
-	rewards  []Reward
-	ais      []*aiShip          // ИИ-капитаны (R-42): не игроки, не сохраняются, не влияют на экономику
-	aiByID   map[string]*aiShip // они же по идентификатору
-	aiView   float64            // радиус видимости ИИ-кораблей для игрока (область интереса)
-	layout   worldgen.Layout
-	wcfg     worldgen.Config
-	radius   float64 // радиус системы: из раскладки, иначе Radius
-	live     *liveEvent
+	deposits    []*deposit
+	safe        []safeZone
+	rewards     []Reward
+	ais         []*aiShip          // ИИ-капитаны (R-42): не игроки, не сохраняются, не влияют на экономику
+	aiByID      map[string]*aiShip // они же по идентификатору
+	aiView      float64            // радиус видимости ИИ-кораблей для игрока (область интереса)
+	layout      worldgen.Layout
+	wcfg        worldgen.Config
+	radius      float64 // радиус системы: из раскладки, иначе Radius
+	live        *liveEvent
+	eventRNG    *rand.Rand
+	lastEventID string
 }
 
 // New создаёт мир с одной системой и станцией.

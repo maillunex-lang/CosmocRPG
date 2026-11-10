@@ -720,5 +720,9 @@ func _apply_event(state: Dictionary) -> void:
 		_event_label.visible = false
 		return
 	var e: Dictionary = ev
+	var left := int(e.get("left", 0))
+	var when := "%d с" % left
+	if left >= 60:
+		when = "%d мин" % int(left / 60.0)
 	_event_label.visible = true
-	_event_label.text = "%s · %d с\n%s" % [str(e.get("title", "")), int(e.get("left", 0)), str(e.get("text", ""))]
+	_event_label.text = "%s · %s\n%s" % [str(e.get("title", "")), when, str(e.get("text", ""))]

@@ -401,6 +401,30 @@ func (m *Manager) Captains() []OnlineCaptain {
 	return out
 }
 
+// KeepSettings подхватывает настройки и профили студии и не ставит корабли в мир.
+// Старый цикл Run больше не запускается: простые корабли мешали цивилизации.
+func (m *Manager) KeepSettings(ctx context.Context, every time.Duration) {
+	if every <= 0 {
+		every = 2 * time.Second
+	}
+	load := func() {
+		m.mu.Lock()
+		m.refresh(ctx)
+		m.mu.Unlock()
+	}
+	load()
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			load()
+		}
+	}
+}
+
 // Run выполняет шаги с заданным интервалом, пока контекст не отменён.
 func (m *Manager) Run(ctx context.Context, every time.Duration) {
 	t := time.NewTicker(every)

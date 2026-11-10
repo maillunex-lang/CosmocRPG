@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -840,6 +841,28 @@ func nearestHostile(npcs []*npc, from Vec) *npc {
 	return best
 }
 
+func wingLeader(w *World, self *Player) *Player {
+	if w == nil || self == nil {
+		return nil
+	}
+	ids := make([]string, 0, len(w.players))
+	for id := range w.players {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	var lead *Player
+	for _, id := range ids {
+		o := w.players[id]
+		if o == nil || o == self || o.ai || o.wing || o.deadUntil > w.t {
+			continue
+		}
+		if lead == nil || dist(o.Pos, self.Pos) < dist(lead.Pos, self.Pos) {
+			lead = o
+		}
+	}
+	return lead
+}
+
 type actorInfo struct {
 	id, name, kind, ship, skin, profession, behavior string
 	ai                                               bool
@@ -899,9 +922,9 @@ func newCorridor(id, kind string) *World {
 		hull float64
 	}
 	spots := []spot{
-		{0, Vec{X: 28}, "Дозорный зала", 40},
-		{1, Vec{X: 86}, "Страж створа", 40},
-		{2, Vec{X: 168}, "Хранитель награды", 55},
+		{0, Vec{X: 28}, "Дозорный зала", 90},
+		{1, Vec{X: 86}, "Страж створа", 110},
+		{2, Vec{X: 168}, "Хранитель награды", 150},
 	}
 	if kind == "loot" {
 		spots[1].name = "Грузчик-мародёр"

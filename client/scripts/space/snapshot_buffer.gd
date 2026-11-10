@@ -35,7 +35,9 @@ func clear() -> void:
 
 ## Добавить снимок. sim_t — игровое время, local_t — локальное время получения. Повтор и более старое время игнорируются.
 func push(sim_t: float, local_t: float, pos: Vector2, dir: Vector2) -> bool:
-	if not _t.is_empty() and sim_t <= _t[_t.size() - 1] + 1e-6:
+	if not _t.is_empty() and sim_t + 0.5 < _t[_t.size() - 1]:
+		clear()
+	elif not _t.is_empty() and sim_t <= _t[_t.size() - 1] + 1e-6:
 		return false
 	if not _pos.is_empty() and pos.distance_to(_pos[_pos.size() - 1]) > TELEPORT:
 		clear()

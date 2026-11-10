@@ -137,6 +137,7 @@ func _ready() -> void:
 	_hud.chat_requested.connect(func() -> void: open_chat(ChatOverlay.Mode.FULL))
 	_hud.hold_requested.connect(open_hold)
 	_hud.friends_requested.connect(open_friends)
+	_hud.raids_requested.connect(open_raids)
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -329,6 +330,11 @@ func ship_view(id: String) -> Node3D:
 
 ## Декор строится один раз, когда сервер прислал раскладку системы (в демо раскладки нет: остаётся прежний космос).
 func _on_system_changed(_info: Dictionary) -> void:
+	_last_sim_time = -1.0
+	for id in _ships.keys():
+		var v: Node = _ships[id]
+		if v != null and v.get("buffer") != null:
+			v.buffer.clear()
 	_rebuild_decor()
 
 
@@ -701,9 +707,6 @@ func open_settings() -> Control:
 		elif opt == FrameStats.SETTING_KEY:
 			stats.set_shown(v))
 	st.closed.connect(func() -> void: layer.queue_free())
-	st.raids_requested.connect(func() -> void:
-		layer.queue_free()
-		open_raids())
 	return st
 
 

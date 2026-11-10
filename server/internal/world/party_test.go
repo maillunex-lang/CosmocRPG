@@ -62,8 +62,11 @@ func TestPartySkirmishWithAIShip(t *testing.T) {
 	now := time.Now()
 	var rewards []Reward
 	back := false
-	for i := 0; i < 160; i++ {
+	for i := 0; i < 280; i++ {
 		if strings.HasPrefix(r.SystemID("human"), "inst-") {
+			if w := r.For("human"); w != nil {
+				w.SetMove("human", Vec{X: 1})
+			}
 			for _, rec := range r.Records() {
 				if rec.ID == "human" && rec.Pos != homePos {
 					t.Fatalf("в сохранение ушла позиция стычки %+v", rec.Pos)
@@ -91,7 +94,7 @@ func TestPartySkirmishWithAIShip(t *testing.T) {
 			back = true
 			break
 		}
-		if i == 159 {
+		if i == 279 {
 			if w := r.For("human"); w != nil {
 				t.Fatalf("не вернулись из %s, врагов %d", w.System().ID, w.HostilesLeft())
 			}

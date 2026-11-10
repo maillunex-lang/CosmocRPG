@@ -10,7 +10,6 @@ const FrameStats := preload("res://ui/debug/frame_stats.gd")
 const AutoBattle := preload("res://ui/auto_battle.gd")
 
 signal option_changed(name: String, value: bool)
-signal raids_requested
 signal closed
 
 ## Описание переключателей: ключ, подпись, пояснение, значение по умолчанию.
@@ -67,7 +66,6 @@ func _ready() -> void:
 		if o["key"] == "auto_retaliate":
 			box.add_child(_auto_target_row())
 	box.add_child(_music_section())
-	box.add_child(_raids_section())
 	var close := ActionButton.new()
 	close.text = "Закрыть"
 	close.variant = ActionButton.Variant.PRIMARY
@@ -172,27 +170,6 @@ func _apply_music() -> void:
 	var m := _music()
 	if m != null and m.has_method("apply_mix"):
 		m.apply_mix()
-
-
-func _raids_section() -> Control:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-	var t := Label.new()
-	t.text = "Коридоры Рубежа"
-	t.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
-	col.add_child(t)
-	var a := Label.new()
-	a.text = "Три закрытых вылета: казна, арсенал и трюм. Отряд собирается здесь и прыгает только после согласия каждого."
-	a.theme_type_variation = &"MutedLabel"
-	a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(a)
-	var b := ActionButton.new()
-	b.text = "Открыть коридоры"
-	b.variant = ActionButton.Variant.PRIMARY
-	b.custom_minimum_size = Vector2(0, 56)
-	b.pressed.connect(func() -> void: raids_requested.emit())
-	col.add_child(b)
-	return col
 
 
 func _music_section() -> Control:

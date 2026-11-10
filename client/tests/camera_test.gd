@@ -676,3 +676,7 @@ func _snapshot_tests() -> void:
 	cl.push(1.1, 1.1, Vector2(1, 0), Vector2(1, 0))
 	cl.push(1.2, 51.2, Vector2(2, 0), Vector2(1, 0))  # локальное время скакнуло на 50 с
 	_check(cl.sample(51.2 + 0.0)["valid"], "буфер переживает скачок локальных часов")
+	var rewind := SnapshotBuffer.new(0.0)
+	rewind.push(120.0, 120.0, Vector2(400, 0), Vector2(1, 0))
+	rewind.push(0.4, 120.4, Vector2(6, 0), Vector2(1, 0))
+	_check(rewind.count() == 1 and rewind.sample(120.4)["pos"].x == 6.0, "новый мир с обнулёнными часами не отбрасывается")

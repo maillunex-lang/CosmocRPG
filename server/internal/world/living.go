@@ -184,6 +184,9 @@ func (w *World) DrainRewards() []Reward {
 }
 
 func (w *World) inSafe(p Vec) bool {
+	if w.lane != nil {
+		return false
+	}
 	for _, s := range w.safe {
 		if dist(p, s.Pos) <= s.Radius {
 			return true

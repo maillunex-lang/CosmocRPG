@@ -588,11 +588,25 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		if p.wing {
 			p.Autopilot = false
 			p.HasWaypoint = false
-			if n := nearestHostile(w.npcs, p.Pos); n != nil {
+			lead := wingLeader(w, p)
+			n := nearestHostile(w.npcs, p.Pos)
+			if w.lane != nil && n != nil && (n.room > w.lane.open || (lead != nil && n.Pos.X > lead.Pos.X+36)) {
+				n = nil
+			}
+			if n != nil {
 				p.Target = n.ID
 				p.Attacking = true
 				d := n.Pos.sub(p.Pos)
 				if d.length() > 26 {
+					p.Move = d.normalized()
+				} else {
+					p.Move = Vec{}
+				}
+			} else if lead != nil {
+				p.Attacking = false
+				p.Target = ""
+				d := lead.Pos.sub(p.Pos)
+				if d.length() > 22 {
 					p.Move = d.normalized()
 				} else {
 					p.Move = Vec{}

@@ -32,6 +32,7 @@ signal settings_requested   # пункт меню «Настройки»
 signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
 signal hold_requested
 signal friends_requested
+signal raids_requested
 signal quest_log_requested   # карточка «Задания»: описание и маршрут
 signal guide_autopilot_requested   # автопилот без выбранной цели: вести к заданию
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
@@ -445,9 +446,15 @@ func _order_menu() -> void:
 	friends.pressed.connect(func() -> void: _set_menu_open(false); friends_requested.emit())
 	Icons.apply(friends, "user", Tokens.ACCENT, 22)
 	box.add_child(friends)
+	var raids := ActionButton.new()
+	raids.name = "RaidsMenuButton"
+	raids.text = "Коридоры"
+	raids.pressed.connect(func() -> void: _set_menu_open(false); raids_requested.emit())
+	Icons.apply(raids, "swords", Tokens.RARE, 22)
+	box.add_child(raids)
 	var order: Array[Node] = [
 		%StationMenuButton, fly, %HangarMenuButton, %ProfileMenuButton,
-		%ShopMenuButton, %CorporationMenuButton, %StarMapMenuButton, %ChatMenuButton,
+		%ShopMenuButton, %CorporationMenuButton, raids, %StarMapMenuButton, %ChatMenuButton,
 		friends, %StorageMenuButton, %SettingsMenuButton, %ExitButton,
 		%MailMenuButton,
 	]

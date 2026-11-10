@@ -14,11 +14,12 @@ import (
 type GoalKind string
 
 const (
-	GoalFarmCredits GoalKind = "farm_credits" // combat: find → approach → attack → retreat
+	GoalFarmCredits GoalKind = "farm_credits"  // combat: find → approach → attack → retreat
 	GoalMineAndSell GoalKind = "mine_and_sell" // find deposit → approach → mine → sell
-	GoalTradeRun    GoalKind = "trade_run"    // move between stations (placeholder chain)
-	GoalExplore     GoalKind = "explore"      // visit points / deposits
-	GoalIdleDock    GoalKind = "idle_dock"    // stay near station
+	GoalTradeRun    GoalKind = "trade_run"     // move between stations (placeholder chain)
+	GoalExplore     GoalKind = "explore"       // visit points / deposits
+	GoalIdleDock    GoalKind = "idle_dock"     // stay near station
+	GoalJump        GoalKind = "jump"          // fly to a gate and change system
 )
 
 // StepKind is one concrete action in a chain.
@@ -35,6 +36,21 @@ const (
 	StepHold       StepKind = "hold"
 )
 
+// Galaxy переносит капитана между системами. nil — капитан остаётся, где вошёл.
+type Galaxy interface {
+	Place(pid, system string, pos world.Vec) error
+	SetPos(pid string, pos world.Vec) bool
+	SystemID(pid string) string
+	Gates(system string) []world.Gate
+	Jump(pid, to string) (world.Record, world.Vec, error)
+}
+
+// QuestMind — текущий контракт игрока. nil — только профессия.
+type QuestMind interface {
+	Focus(pid string) (kind, system, target string, done int, ok bool)
+	Note(ctx context.Context, pid, kind, ref string)
+}
+
 // GoalRunner executes a long-term goal as an ordered chain of steps.
 // Chat is owned by Chorus so several agents can answer each other.
 type GoalRunner struct {
@@ -46,6 +62,8 @@ type GoalRunner struct {
 	LowHull float64
 	Name    string
 	Clans   *corp.Service
+	Galaxy  Galaxy
+	Quests  QuestMind
 }
 
 func (r *GoalRunner) hullLimit() float64 {
@@ -74,6 +92,8 @@ type agentState struct {
 	target    string
 	targetPos [2]float64
 	playerID  string
+	jumpTo    string
+	settled   bool
 	clanAt    time.Time
 }
 
@@ -104,6 +124,7 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 			if !ok {
 				continue
 			}
+			r.followLife(captainID, &st, snap)
 			if r.helpOn() && r.Board != nil {
 				if ord, ok := r.Board.OrderFor(captainID, time.Now()); ok {
 					r.execPact(ctx, g, ord, snap)
@@ -121,8 +142,12 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 				r.stepMine(ctx, g, captainID, &st, snap)
 			case GoalExplore:
 				r.stepExplore(ctx, g, captainID, &st, snap)
-			default: // trade_run and idle_dock: hold near station
-				_ = IssueMove(ctx, g, "hold", 0, 0)
+			case GoalJump:
+				r.stepJump(ctx, g, &st, snap)
+			case GoalTradeRun:
+				r.stepTrade(ctx, g, &st, snap)
+			default:
+				r.stepTrade(ctx, g, &st, snap)
 			}
 		}
 	}
@@ -226,6 +251,115 @@ func (r *GoalRunner) waitRecover(ctx context.Context, g *Gateway, captainID stri
 		_ = IssueMove(ctx, g, "resume", 0, 0)
 		st.step = StepFindTarget
 	}
+}
+
+func (r *GoalRunner) followLife(captainID string, st *agentState, snap world.State) {
+	kind, qsys, target, done, have := "", "", "", 0, false
+	if r.Quests != nil {
+		kind, qsys, target, done, have = r.Quests.Focus(st.playerID)
+	}
+	current := ""
+	if r.Galaxy != nil {
+		current = r.Galaxy.SystemID(st.playerID)
+	}
+	plan := LifeOf(captainID, done, have, kind, qsys, target, current, st.goal)
+	if plan.Goal != "" && plan.Goal != st.goal {
+		st.goal = plan.Goal
+		st.step = StepFindTarget
+	}
+	st.jumpTo = plan.JumpTo
+	if st.settled || r.Galaxy == nil || r.World == nil {
+		return
+	}
+	st.settled = true
+	if plan.JumpTo == "" && plan.System != "" && plan.System != current {
+		if err := r.Galaxy.Place(st.playerID, plan.System, world.Vec{}); err != nil {
+			if r.Log != nil {
+				r.Log.Error("AI place", "captain", captainID, "system", plan.System, "err", err)
+			}
+			return
+		}
+		if next, ok := r.World.Snapshot(st.playerID); ok {
+			snap = next
+		}
+	}
+	r.scatterIfStacked(st.playerID, captainID, snap)
+}
+
+func (r *GoalRunner) scatterIfStacked(playerID, captainID string, snap world.State) {
+	station, ok := stationPos(snap)
+	if !ok || r.Galaxy == nil {
+		return
+	}
+	me := snap.Ship.Pos
+	fromStation := math.Hypot(me[0]-station[0], me[1]-station[1])
+	fromOrigin := math.Hypot(me[0], me[1])
+	if fromStation > 80 && fromOrigin > 40 {
+		return
+	}
+	r.Galaxy.SetPos(playerID, Scatter(captainID, station))
+}
+
+func stationPos(st world.State) ([2]float64, bool) {
+	for _, o := range st.Objects {
+		if o.Kind == "station" && o.ID != "" {
+			return o.Pos, true
+		}
+	}
+	return [2]float64{}, false
+}
+
+func (r *GoalRunner) stepTrade(ctx context.Context, g *Gateway, st *agentState, snap world.State) {
+	station, ok := stationPos(snap)
+	if !ok {
+		_ = IssueMove(ctx, g, "hold", 0, 0)
+		return
+	}
+	dx, dy := station[0]-snap.Ship.Pos[0], station[1]-snap.Ship.Pos[1]
+	d := math.Hypot(dx, dy)
+	if d < 50 {
+		_ = IssueSell(ctx, g, "sell")
+		away := Scatter(st.playerID+"out", station)
+		_ = IssueMove(ctx, g, "leave", away.X-snap.Ship.Pos[0], away.Y-snap.Ship.Pos[1])
+		return
+	}
+	_ = IssueMove(ctx, g, "station", dx/d, dy/d)
+}
+
+func (r *GoalRunner) stepJump(ctx context.Context, g *Gateway, st *agentState, snap world.State) {
+	if r.Galaxy == nil || st.jumpTo == "" {
+		r.stepTrade(ctx, g, st, snap)
+		return
+	}
+	sys := r.Galaxy.SystemID(st.playerID)
+	var gate *world.Gate
+	for _, item := range r.Galaxy.Gates(sys) {
+		if item.To == st.jumpTo {
+			item := item
+			gate = &item
+			break
+		}
+	}
+	if gate == nil {
+		_ = IssueMove(ctx, g, "hold", 0, 0)
+		return
+	}
+	dx, dy := gate.Pos[0]-snap.Ship.Pos[0], gate.Pos[1]-snap.Ship.Pos[1]
+	d := math.Hypot(dx, dy)
+	if d > 55 {
+		_ = IssueMove(ctx, g, "gate", dx/d, dy/d)
+		return
+	}
+	if _, _, err := r.Galaxy.Jump(st.playerID, gate.To); err != nil {
+		if r.Log != nil {
+			r.Log.Error("AI jump", "player", st.playerID, "to", gate.To, "err", err)
+		}
+		return
+	}
+	if r.Quests != nil {
+		r.Quests.Note(ctx, st.playerID, "jump", gate.To)
+	}
+	st.step = StepFindTarget
 }
 
 func nearestDeposit(st world.State, me [2]float64) (string, [2]float64) {

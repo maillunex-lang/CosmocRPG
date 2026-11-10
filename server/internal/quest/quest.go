@@ -351,6 +351,37 @@ func (s *Service) Pending(pid, kind, system string) (Def, bool) {
 	return Def{}, false
 }
 
+// Focus — текущий контракт и сколько уже закрыто. ok=false, если игрок ещё не загружен.
+func (s *Service) Focus(pid string) (kind, system, target string, done int, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ps := s.players[pid]
+	if ps == nil {
+		return "", "", "", 0, false
+	}
+	for _, q := range ps.data.Quests {
+		if q.State == "completed" {
+			done++
+		}
+	}
+	for _, q := range ps.data.Quests {
+		if q.State != "active" || (q.Goal > 0 && q.Progress >= q.Goal) {
+			continue
+		}
+		d, found := s.def(q.QuestID, q.Version)
+		if !found {
+			continue
+		}
+		return d.Kind, d.System, d.Target, done, true
+	}
+	return "", "", "", done, true
+}
+
+// Note записывает действие ИИ в контракты так же, как действие человека.
+func (s *Service) Note(ctx context.Context, pid, kind, ref string) {
+	s.Event(ctx, pid, kind, ref, 1)
+}
+
 func (s *Service) event(ctx context.Context, pid, key, system, kind, ref string, n int) []Completion {
 	if n <= 0 {
 		return nil

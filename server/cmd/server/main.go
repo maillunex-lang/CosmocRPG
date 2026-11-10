@@ -440,10 +440,12 @@ func run() error {
 				port = "8080"
 			}
 			farm := &aiciv.FarmController{
-				Clans: corpSvc,
+				Clans:     corpSvc,
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
 				Store:     aiState,
-				World:     gameWorld,
+				World:     universe,
+				Galaxy:    universe,
+				Quests:    quests,
 				Speaker:   speaker,
 				Chorus:    chorus,
 				Board:     board,

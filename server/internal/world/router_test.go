@@ -1,6 +1,7 @@
 package world
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -131,5 +132,29 @@ func TestRouterAggregate(t *testing.T) {
 	}
 	if len(r.Gates(cfg.Systems[0].ID)) == 0 {
 		t.Fatal("нет точек прыжка у Авроры")
+	}
+}
+
+func TestRouterPlaceScattersAI(t *testing.T) {
+	r, cfg := testUniverse(t)
+	from, to := cfg.Systems[0].ID, cfg.Systems[2].ID
+	if _, ok := r.Join(Record{ID: "ai1", Name: "Кира", Created: true, AI: true, AICaptain: "cpt-0001", System: from, Pos: Vec{}}); !ok {
+		t.Fatal("join")
+	}
+	if err := r.Place("ai1", to, Vec{X: 10, Y: 20}); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.SystemID("ai1"); got != to {
+		t.Fatalf("система %s", got)
+	}
+	if !r.SetPos("ai1", Vec{X: 400, Y: -200}) {
+		t.Fatal("setpos")
+	}
+	st, ok := r.Snapshot("ai1")
+	if !ok {
+		t.Fatal("нет снимка")
+	}
+	if math.Hypot(st.Ship.Pos[0]-400, st.Ship.Pos[1]+200) > 1 {
+		t.Fatalf("позиция %+v", st.Ship.Pos)
 	}
 }

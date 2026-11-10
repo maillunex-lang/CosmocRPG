@@ -66,7 +66,7 @@ export function AiPlayers({ username, onBack, onLoggedOut }: { username: string;
     setSaving(true);
     aiPlayersApi.saveSettings(settings).then(
       () => {
-        setNotice("Число применено. Капитаны зайдут в Аврору у станции.");
+        setNotice("Число применено. Капитаны зайдут в разные точки и займутся своим контрактом.");
         setSaving(false);
         reload();
       },
@@ -134,7 +134,7 @@ export function AiPlayers({ username, onBack, onLoggedOut }: { username: string;
             />
           </div>
           <p>Цель сейчас на сервере: {data.status.target}. Живых игроков: {data.status.players}. Профилей: {data.status.profiles}.</p>
-          <p>Капитаны появляются в системе Аврора, рядом со станцией. В другом секторе их не видно — вернитесь в Аврору.</p>
+          <p>Новые капитаны начинают в Авроре, но не в одной точке: кто у станции, кто в поясе, кто дальше. Контракт решает занятие. После прыжков они живут в Меридиане и Красном Шторме. Если вы в другом секторе, их там не видно.</p>
           <label className="check">
             <input type="checkbox" checked={draft.civ_enabled} onChange={(e) => setDraft({ ...draft, civ_enabled: e.target.checked })} />
             Выпускать капитанов в мир

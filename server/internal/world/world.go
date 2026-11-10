@@ -19,7 +19,7 @@ const (
 	Radius        = 400.0 // радиус системы по умолчанию (без раскладки), ед.
 	AutopilotStop = 10.0  // автопилот останавливается на таком расстоянии от цели, ед.
 	MaxPlayers    = 50
-	MaxAI         = 500 // отдельный потолок ИИ-капитанов, не живых игроков
+	MaxAI         = 500              // отдельный потолок ИИ-капитанов, не живых игроков
 	Grace         = 10 * time.Second // сколько корабль остаётся в мире после обрыва связи
 	StationID     = "st1"
 )
@@ -344,7 +344,26 @@ func (w *World) Join(r Record) (*Player, bool) {
 	return p, true
 }
 
-// Disconnect помечает связь потерянной; корабль исчезнет через Grace.
+// MoveAI сразу переставляет корабль ИИ. Людей не двигает.
+func (w *World) MoveAI(id string, pos Vec) bool {
+	if !pos.finite() {
+		return false
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p := w.players[id]
+	if p == nil || !p.ai {
+		return false
+	}
+	if l := pos.length(); w.radius > 0 && l > w.radius*0.92 {
+		pos = pos.normalized().mul(w.radius * 0.92)
+	}
+	p.Pos = pos
+	p.Move = Vec{}
+	p.HasWaypoint = false
+	return true
+}
+
 // Remove безвозвратно убирает игрока из мира и возвращает его запись (гиперпереход, Э-1).
 func (w *World) Remove(id string) (Record, bool) {
 	r, err := w.removePlayer(id, nil)

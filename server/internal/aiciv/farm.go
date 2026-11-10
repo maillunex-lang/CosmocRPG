@@ -32,6 +32,8 @@ type FarmController struct {
 	LowHull    float64
 	Log        *slog.Logger
 	Clans      *corp.Service
+	Galaxy     Galaxy
+	Quests     QuestMind
 	censusOnce sync.Once
 	census     *castCensus
 }
@@ -130,7 +132,7 @@ func (f *FarmController) RunCast(ctx context.Context, members []CastMember) {
 		if f.Log != nil {
 			f.Log.Info("AI civilization: agent joined", "captain", m.ID, "name", name, "goal", string(goal), "player", playerID)
 		}
-		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name, Clans: f.Clans}
+		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name, Clans: f.Clans, Galaxy: f.Galaxy, Quests: f.Quests}
 		go runner.RunGoal(ctx, g, m.ID, playerID, goal)
 		open = append(open, g)
 	}
@@ -311,7 +313,7 @@ func (f *FarmController) runOne(ctx context.Context, m CastMember) {
 				}
 			}
 		}()
-		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name, Clans: f.Clans}
+		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name, Clans: f.Clans, Galaxy: f.Galaxy, Quests: f.Quests}
 		runner.RunGoal(ctx, g, m.ID, playerID, goal)
 		g.Close()
 		f.noteLeave(m.ID)

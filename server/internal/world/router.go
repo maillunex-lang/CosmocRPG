@@ -205,6 +205,57 @@ func (r *Router) Jump(pid, to string) (Record, Vec, error) {
 	return rec, spawn, nil
 }
 
+// Place переносит игрока в другую систему без точки прыжка. Нужен ИИ, чтобы
+// капитан с уже пройденным сюжетом не появлялся у всех на станции Авроры.
+func (r *Router) Place(pid, system string, pos Vec) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	target := r.worlds[system]
+	if target == nil {
+		return ErrNoSystem
+	}
+	from := r.byPlayer[pid]
+	if from == nil {
+		return ErrNoSystem
+	}
+	if from == target {
+		return nil
+	}
+	rec, err := from.removePlayer(pid, nil)
+	if err != nil {
+		return err
+	}
+	rec.System = system
+	rec.Pos = pos
+	if _, ok := target.Join(rec); !ok {
+		return ErrNoSystem
+	}
+	r.byPlayer[pid] = target
+	return nil
+}
+
+// SetPos двигает только корабль ИИ в его текущей системе.
+func (r *Router) SetPos(pid string, pos Vec) bool {
+	w := r.For(pid)
+	if w == nil {
+		return false
+	}
+	return w.MoveAI(pid, pos)
+}
+
+// SystemID — система, в которой игрок сейчас. Пусто, если его нет в мире.
+func (r *Router) SystemID(pid string) string {
+	w := r.For(pid)
+	if w == nil {
+		return ""
+	}
+	id := w.System().ID
+	if id == "" {
+		return "aurora"
+	}
+	return id
+}
+
 // Records собирает записи всех игроков всех систем.
 func (r *Router) Records() []Record {
 	r.mu.Lock()

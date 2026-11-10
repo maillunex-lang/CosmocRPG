@@ -386,6 +386,65 @@ func run() error {
 	if cfg.FeatureAI {
 		studioSvc := aistudio.NewService(aistudio.NewPGStore(pool))
 		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log) // ИИ-1 живёт в Авроре (Э-1)
+		// AIC-030: координация со старым Manager — резервация капитанов новой системой
+		reservation := aiciv.NewReservation(10 * time.Minute)
+		agent.SetReservations(reservation)
+		log.Info("AI civilization reservation attached to old Manager")
+		if cfg.FeatureAICivilizationGateway {
+			dir := aiciv.NewDirector(reservation, 8, log)
+			// candidatesFn: real captain IDs from active AI Studio version.
+			// Director reserves them so old Manager does not spawn them as FSM.
+			go dir.Run(ctx, 15*time.Second, func() []string {
+				profiles, err := aiagent.StudioSource{Svc: studioSvc}.Profiles(ctx)
+				if err != nil {
+					log.Error("director: studio profiles", "err", err)
+					return nil
+				}
+				ids := make([]string, 0, len(profiles))
+				for _, p := range profiles {
+					ids = append(ids, p.ID)
+				}
+				return ids
+			})
+			log.Info("AI civilization Director started (gateway flag, studio candidates)")
+			// Several professions join so chat has different voices.
+			speaker := aiciv.NewChatSpeaker(chatSvc, log)
+			speaker.Push = wsHandler.PushChat
+			board := aiciv.NewBoard()
+			chorus := aiciv.NewChorus(speaker, log)
+			chorus.Board = board
+			go chorus.Run(ctx, 12*time.Second)
+			farm := &aiciv.FarmController{
+				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
+				Store:     aiState,
+				World:     gameWorld,
+				Speaker:   speaker,
+				Chorus:    chorus,
+				Board:     board,
+				Res:       reservation,
+				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
+				Fallback:  []string{"dr1", "dr2"},
+				Log:       log,
+			}
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(3 * time.Second):
+				}
+				profiles, err := aiagent.StudioSource{Svc: studioSvc}.Profiles(ctx)
+				if err != nil || len(profiles) == 0 {
+					return
+				}
+				cast := aiciv.PickCast(profiles, 3)
+				members := make([]aiciv.CastMember, 0, len(cast))
+				for _, p := range cast {
+					members = append(members, aiciv.CastMember{ID: p.ID, Name: p.Name, Goal: aiciv.GoalForProfile(p)})
+				}
+				farm.RunCast(ctx, members)
+			}()
+			log.Info("AI civilization cast scheduled (up to 3 voices)")
+		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
 		dlg.Push = wsHandler.PushChat // реплики ИИ должны доходить до живых клиентов, а не только попадать в историю

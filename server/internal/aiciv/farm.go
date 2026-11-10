@@ -2,6 +2,7 @@ package aiciv
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"time"
@@ -22,6 +23,7 @@ type FarmController struct {
 	Speaker   *ChatSpeaker
 	Chorus    *Chorus
 	Board     *Board
+	Live      *Live
 	Res       *Reservation
 	Endpoint  string
 	Fallback  []string
@@ -117,7 +119,7 @@ func (f *FarmController) RunCast(ctx context.Context, members []CastMember) {
 		if f.Log != nil {
 			f.Log.Info("AI civilization: agent joined", "captain", m.ID, "name", name, "goal", string(goal), "player", playerID)
 		}
-		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Log: f.Log, LowHull: f.LowHull, Name: name}
+		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Live: f.Live, Log: f.Log, LowHull: f.LowHull, Name: name}
 		go runner.RunGoal(ctx, g, m.ID, playerID, goal)
 		open = append(open, g)
 	}
@@ -141,6 +143,74 @@ func (f *FarmController) keepReserved(ctx context.Context, members []CastMember)
 			for _, m := range members {
 				f.Res.Reserve(m.ID)
 			}
+		}
+	}
+}
+
+
+// Supervise keeps the cast aligned with admin knobs. Changing the count reconnects captains.
+func (f *FarmController) Supervise(ctx context.Context, src func(n int) []CastMember) {
+	if f == nil || src == nil {
+		return
+	}
+	var cancel context.CancelFunc
+	sig := ""
+	stop := func() {
+		if cancel != nil {
+			cancel()
+			cancel = nil
+		}
+	}
+	defer stop()
+	wait := time.NewTimer(3 * time.Second)
+	select {
+	case <-ctx.Done():
+		return
+	case <-wait.C:
+	}
+	apply := func() {
+		k := DefaultKnobs()
+		if f.Live != nil {
+			k = f.Live.Get()
+		}
+		want := 0
+		if k.Enabled {
+			want = k.Cast
+		}
+		next := fmt.Sprintf("%t:%d", k.Enabled, want)
+		if next == sig && (cancel != nil || want == 0) {
+			return
+		}
+		if want == 0 {
+			stop()
+			sig = next
+			if f.Log != nil {
+				f.Log.Info("AI civilization cast stopped")
+			}
+			return
+		}
+		members := src(want)
+		if len(members) == 0 {
+			return
+		}
+		stop()
+		sig = next
+		cctx, ccancel := context.WithCancel(ctx)
+		cancel = ccancel
+		if f.Log != nil {
+			f.Log.Info("AI civilization cast", "captains", len(members))
+		}
+		go f.RunCast(cctx, members)
+	}
+	apply()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			apply()
 		}
 	}
 }

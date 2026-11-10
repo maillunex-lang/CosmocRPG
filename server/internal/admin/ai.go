@@ -97,8 +97,8 @@ func (h *Handler) aiGenerate(w http.ResponseWriter, r *http.Request, u User) {
 	if req.Seed == 0 {
 		req.Seed = 20261108
 	}
-	if req.Count < 1 || req.Count > 400 {
-		writeErr(w, http.StatusBadRequest, "количество капитанов: от 1 до 400")
+	if req.Count < 1 || req.Count > 500 {
+		writeErr(w, http.StatusBadRequest, "количество капитанов: от 1 до 500")
 		return
 	}
 	res, ver, err := h.opts.AI.Generate(r.Context(), u.Username, req.Seed, req.Count)
@@ -474,7 +474,7 @@ func (h *Handler) aiPrompt(w http.ResponseWriter, r *http.Request, _ User) {
 	case 10, 25, 50:
 		note = fmt.Sprintf("Обучай партию из %d капитанов, перечисленных в manifest.json. Работай только с ними.", size)
 	case 300:
-		note = "Полный пакет на 300 капитанов. Работай по очереди с группами по 25 капитанов, не теряя единый стиль и не повторяясь между группами."
+		note = "Полный пакет на 500 капитанов. Работай по очереди с группами по 25 капитанов, не теряя единый стиль и не повторяясь между группами."
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"prompt": aistudio.MasterPrompt(note)})
 }

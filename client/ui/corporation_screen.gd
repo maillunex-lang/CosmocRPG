@@ -23,6 +23,8 @@ var _leave: Button
 var _refresh: Button
 var _corp_title: Label
 var _treasury: Label
+var _task: Label
+var _alliance: Label
 var _members: VBoxContainer
 var _confirm: Control
 
@@ -162,6 +164,19 @@ func _on_data(data: Dictionary) -> void:
 	if not corp.is_empty():
 		_corp_title.text = "[%s] %s" % [str(corp.get("tag", "")), str(corp.get("name", ""))]
 		_treasury.text = "Казна: %s кредитов" % str(int(corp.get("treasury", 0)))
+		var task: Dictionary = data.get("task", {}) if data.get("task") is Dictionary else {}
+		if task.is_empty():
+			_task.text = ""
+		else:
+			_task.text = "Задание клана: %s (%d/%d)" % [str(task.get("title", "")), int(task.get("progress", 0)), int(task.get("goal", 0))]
+		var alliance: Dictionary = data.get("alliance", {}) if data.get("alliance") is Dictionary else {}
+		if alliance.is_empty():
+			_alliance.text = ""
+		else:
+			var governor := str(alliance.get("governor_name", ""))
+			if governor == "":
+				governor = str(alliance.get("governor", ""))
+			_alliance.text = "Союз: %s · кланов %d/3 · управляющий %s" % [str(alliance.get("name", "")), int(alliance.get("clans", 0)), governor]
 		var members: Array = data.get("members", []) if data.get("members") is Array else []
 		if not data.has("members"):
 			_label(_members, "Состав загружается…")

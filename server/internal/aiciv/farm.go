@@ -19,6 +19,7 @@ type FarmController struct {
 	Bootstrap *Bootstrapper
 	Store     *Store
 	World     WorldView
+	Speaker   *ChatSpeaker
 	Endpoint  string
 	Fallback  []string
 	LowHull   float64
@@ -89,7 +90,7 @@ func (f *FarmController) RunGoalOnce(ctx context.Context, candidates []string, g
 	if f.Log != nil {
 		f.Log.Info("AI civilization: agent joined, starting goal", "captain", id, "player", playerID)
 	}
-	runner := &GoalRunner{World: f.World, Store: f.Store, Log: f.Log, LowHull: f.LowHull}
+	runner := &GoalRunner{World: f.World, Store: f.Store, Speaker: f.Speaker, Name: "AI-" + id, Log: f.Log, LowHull: f.LowHull}
 	if goal == "" { goal = GoalFarmCredits }
 	go runner.RunGoal(ctx, g, id, playerID, goal)
 	Hold(ctx, g)

@@ -618,6 +618,9 @@ func open_settings() -> Control:
 		elif opt == FrameStats.SETTING_KEY:
 			stats.set_shown(v))
 	st.closed.connect(func() -> void: layer.queue_free())
+	st.hud_editor_requested.connect(func() -> void:
+		layer.queue_free()
+		_hud.open_hud_editor())
 	return st
 
 

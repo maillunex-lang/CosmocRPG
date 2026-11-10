@@ -43,8 +43,18 @@ func gameClock(now time.Time) time.Time {
 }
 
 // OnShift — пора ли этому капитану быть в мире.
+// Окно смены чуть шире общего, и у каждого свой сдвиг: не все входят и выходят в одну минуту.
 func OnShift(id string, now time.Time) bool {
-	return windowOpen(ShiftOf(id), gameClock(now))
+	local := gameClock(now).Add(-time.Duration(slideMin(id)) * time.Minute)
+	return windowOpen(ShiftOf(id), local)
+}
+
+// slideMin сдвигает личные часы на −45…+45 минут. Один и тот же капитан всегда с тем же сдвигом.
+func slideMin(id string) int {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte("slide:"))
+	_, _ = h.Write([]byte(id))
+	return int(h.Sum32()%91) - 45
 }
 
 func windowOpen(shift Shift, local time.Time) bool {
@@ -52,16 +62,16 @@ func windowOpen(shift Shift, local time.Time) bool {
 	weekend := local.Weekday() == time.Saturday || local.Weekday() == time.Sunday
 	switch shift {
 	case ShiftLark:
-		return between(mins, 7*60, 12*60)
+		return between(mins, 6*60+40, 12*60+40)
 	case ShiftDay:
-		return between(mins, 11*60, 18*60)
+		return between(mins, 10*60+40, 18*60+40)
 	case ShiftEvening:
-		return between(mins, 17*60, 23*60+30)
+		return between(mins, 16*60+40, 24*60)
 	default:
-		if mins >= 22*60 || mins < 7*60 {
+		if mins >= 21*60+30 || mins < 7*60+40 {
 			return true
 		}
-		return weekend && between(mins, 11*60, 16*60)
+		return weekend && between(mins, 10*60+40, 16*60+40)
 	}
 }
 

@@ -21,8 +21,10 @@ type Def struct {
 	Version int
 	Title   string
 	Text    string
-	Kind    string  // reach | kill | mine | sell | jump
-	Target  string  // идентификатор объекта/ресурса/системы
+	Kind    string  // reach | kill | mine | sell | jump | deliver | visit | talk
+	Target  string  // идентификатор объекта/ресурса/вида точки
+	System  string  // система, если задание привязано к ней; пусто — любая
+	Marker  string  // подсказка карты: station | anomaly | derelict | signal
 	Radius  float64 // дистанция выполнения, ед. (reach)
 	Goal    int
 	Reward  Reward
@@ -32,7 +34,8 @@ type Def struct {
 // Reward — награда (пока только кредиты; остальные виды добавятся расширением).
 type Reward struct{ Credits int64 }
 
-// Catalog — цепочка начала кампании (Акт I, глава 1 «Сигнал из пустоты» — вертикальный срез, Э-3).
+// Catalog — играбельный срез акта I: Аврора, Меридиан и закрытие главы «Красный Шторм».
+// Это не все 82 задания FinalQuest и не открытие главы 4.
 func Catalog() []Def {
 	return []Def{
 		{ID: "first_flight", Version: 1, Title: "Первый полёт",
@@ -55,6 +58,42 @@ func Catalog() []Def {
 			Text: "Совершите гиперпереход из Авроры в Меридиан.",
 			Kind: "jump", Target: "meridian", Goal: 1, After: "first_deal",
 			Reward: Reward{Credits: 1000}},
+		{ID: "meridian_delivery", Version: 1, Title: "Груз для Меридиана",
+			Text: "Привезите 5 единиц железной руды на станцию Меридиана.",
+			Kind: "deliver", Target: "iron_ore", System: "meridian", Marker: "station", Goal: 5, After: "first_jump",
+			Reward: Reward{Credits: 1200}},
+		{ID: "meridian_trace", Version: 1, Title: "След в пустоте",
+			Text: "Найдите гравитационную аномалию в Меридиане.",
+			Kind: "visit", Target: "anomaly", System: "meridian", Marker: "anomaly", Goal: 1, After: "meridian_delivery",
+			Reward: Reward{Credits: 900}},
+		{ID: "meridian_report", Version: 1, Title: "Доклад на станции",
+			Text: "Вернитесь на станцию Меридиана и сдайте доклад.",
+			Kind: "visit", Target: "station", System: "meridian", Marker: "station", Goal: 1, After: "meridian_trace",
+			Reward: Reward{Credits: 700}},
+		{ID: "meridian_voice", Version: 1, Title: "Голос диспетчера",
+			Text: "На станции Меридиана поговорите с диспетчером Ворой Кесс.",
+			Kind: "talk", Target: "vora", System: "meridian", Marker: "station", Goal: 1, After: "meridian_report",
+			Reward: Reward{Credits: 400}},
+		{ID: "storm_jump", Version: 1, Title: "Ворота Шторма",
+			Text: "Совершите гиперпереход из Меридиана в Красный Шторм.",
+			Kind: "jump", Target: "redstorm", Goal: 1, After: "meridian_voice",
+			Reward: Reward{Credits: 1000}},
+		{ID: "storm_wreck", Version: 1, Title: "Обломки у поля",
+			Text: "Осмотрите обломки в Красном Шторме. Вора Кесс просила не верить пометке «мусор».",
+			Kind: "visit", Target: "derelict", System: "redstorm", Marker: "derelict", Goal: 1, After: "storm_jump",
+			Reward: Reward{Credits: 1100}},
+		{ID: "storm_dispatch", Version: 1, Title: "Голос рубежа",
+			Text: "Вернитесь на форпост Красного Шторма и поговорите с диспетчером Кирой Роан.",
+			Kind: "talk", Target: "kira", System: "redstorm", Marker: "station", Goal: 1, After: "storm_wreck",
+			Reward: Reward{Credits: 500}},
+		{ID: "storm_contour", Version: 1, Title: "Старый контур",
+			Text: "Осмотрите старый ретрансляционный контур в Красном Шторме. На карте он отмечен как аномалия. Это след данных, не корабль «Арго».",
+			Kind: "visit", Target: "anomaly", System: "redstorm", Marker: "anomaly", Goal: 1, After: "storm_dispatch",
+			Reward: Reward{Credits: 1000}},
+		{ID: "storm_report", Version: 1, Title: "Граница известного",
+			Text: "Вернитесь на форпост и сдайте отчёт Вере Элл. Подтвердите транзит метаданных и не сходящийся импульс. Местонахождение «Арго» не утверждайте.",
+			Kind: "talk", Target: "vera", System: "redstorm", Marker: "station", Goal: 1, After: "storm_contour",
+			Reward: Reward{Credits: 800}},
 	}
 }
 
@@ -95,6 +134,12 @@ type Store interface {
 // ErrNotEnough — недостаточно кредитов (ремонт, покупка; Э-2).
 var ErrNotEnough = errors.New("no_credits")
 
+// ErrNoDialogue — сейчас не с кем говорить или разговор не в этой системе.
+var ErrNoDialogue = errors.New("no_dialogue")
+
+// ErrBadChoice — такого ответа в текущей реплике нет.
+var ErrBadChoice = errors.New("bad_choice")
+
 // View — то, что видит клиент.
 type View struct {
 	Credits int64       `json:"credits"`
@@ -108,6 +153,9 @@ type QuestView struct {
 	Text     string `json:"text"`
 	Progress int    `json:"progress"`
 	Goal     int    `json:"goal"`
+	System   string `json:"system,omitempty"`
+	Marker   string `json:"marker,omitempty"`
+	Kind     string `json:"kind,omitempty"`
 }
 
 // Completion — событие выполнения контракта.
@@ -133,6 +181,7 @@ type Service struct {
 
 type playerState struct {
 	data PlayerData
+	line string // текущая реплика разговора; пусто — начало сцены
 }
 
 // NewService создаёт сервис. pos возвращает положение объекта мира (станции).
@@ -229,7 +278,10 @@ func (s *Service) View(pid string) (View, bool) {
 		if !ok {
 			continue
 		}
-		v.Quests = append(v.Quests, QuestView{ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal})
+		v.Quests = append(v.Quests, QuestView{
+			ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal,
+			System: d.System, Marker: d.Marker, Kind: d.Kind,
+		})
 	}
 	return v, true
 }
@@ -291,7 +343,13 @@ func (s *Service) activateFollowers(ctx context.Context, pid, doneID string) str
 // Event учитывает серверное событие (kill/mine/sell/jump) в активных контрактах игрока.
 // Возвращает завершённые контракты (с Next — названием следующего).
 func (s *Service) Event(ctx context.Context, pid, kind, ref string, n int) []Completion {
-	return s.event(ctx, pid, "", kind, ref, n)
+	return s.event(ctx, pid, "", "", kind, ref, n)
+}
+
+// EventAt — то же событие, но только для заданий указанной системы.
+// Доставка и посещение не засчитываются без системы: иначе груз можно было бы сдать не там.
+func (s *Service) EventAt(ctx context.Context, pid, system, kind, ref string, n int) []Completion {
+	return s.event(ctx, pid, "", system, kind, ref, n)
 }
 
 // EventOnce — только для подтверждённых событий сервера с постоянным ключом.
@@ -300,9 +358,34 @@ func (s *Service) EventOnce(ctx context.Context, pid, key, kind, ref string, n i
 	if key == "" || len(key) > 128 {
 		return nil
 	}
-	return s.event(ctx, pid, key, kind, ref, n)
+	return s.event(ctx, pid, key, "", kind, ref, n)
 }
-func (s *Service) event(ctx context.Context, pid, key, kind, ref string, n int) []Completion {
+
+// Pending возвращает активное задание этого вида в системе, если прогресс ещё не добран.
+func (s *Service) Pending(pid, kind, system string) (Def, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ps := s.players[pid]
+	if ps == nil {
+		return Def{}, false
+	}
+	for _, q := range ps.data.Quests {
+		if q.State != "active" || (q.Goal > 0 && q.Progress >= q.Goal) {
+			continue
+		}
+		d, ok := s.def(q.QuestID, q.Version)
+		if !ok || d.Kind != kind {
+			continue
+		}
+		if d.System != "" && d.System != system {
+			continue
+		}
+		return d, true
+	}
+	return Def{}, false
+}
+
+func (s *Service) event(ctx context.Context, pid, key, system, kind, ref string, n int) []Completion {
 	if n <= 0 {
 		return nil
 	}
@@ -318,7 +401,7 @@ func (s *Service) event(ctx context.Context, pid, key, kind, ref string, n int) 
 			continue
 		}
 		d, ok := s.def(q.QuestID, q.Version)
-		if ok && d.Kind == kind && (d.Target == "" || d.Target == ref) {
+		if ok && d.Kind == kind && (d.System == "" || d.System == system) && (d.Target == "" || d.Target == ref) {
 			matching = append(matching, d)
 		}
 	}

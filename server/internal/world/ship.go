@@ -188,6 +188,16 @@ type AbilityInfo struct {
 	Active            bool    `json:"active"`
 }
 
+// Arrival — первое прибытие игрока к именованной точке этой сессии.
+type Arrival struct {
+	Player string
+	System string
+	ID     string
+	Name   string
+	Kind   string
+	Pos    Vec
+}
+
 // Event — боевое или визуальное событие для клиентов (сервер решает, клиент только показывает).
 type Event struct {
 	Type   string  `json:"type"` // fire | hit_shield | hit_hull | death | respawn | boost | intercept | scan | dock

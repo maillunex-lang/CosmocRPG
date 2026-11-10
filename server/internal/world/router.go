@@ -238,6 +238,17 @@ func (r *Router) DrainEvents() []Event {
 	return out
 }
 
+// DrainArrivals собирает первые прибытия всех систем.
+func (r *Router) DrainArrivals() []Arrival {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []Arrival
+	for _, id := range r.order {
+		out = append(out, r.worlds[id].DrainArrivals()...)
+	}
+	return out
+}
+
 // DrainRewards собирает награды всех систем.
 func (r *Router) DrainRewards() []Reward {
 	r.mu.Lock()

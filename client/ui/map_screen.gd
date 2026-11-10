@@ -8,6 +8,7 @@ const Tokens := preload("res://ui/theme/tokens.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const Icons := preload("res://ui/icons.gd")
+const QuestHints := preload("res://ui/quest_hints.gd")
 
 signal target_selected(id: String)
 signal autopilot_requested(id: String)
@@ -251,6 +252,8 @@ func _draw() -> void:
 		draw_rect(Rect2(sp - Vector2(5, 5), Vector2(10, 10)), Tokens.TEXT)
 		draw_string(font, sp + Vector2(8, 4), str(s.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Tokens.TEXT)
 		_pickables.append({"id": str(s.get("id", "")), "pos": _pos(s), "name": str(s.get("name", ""))})
+		if QuestHints.marker(state) == "station":
+			draw_arc(sp, 16, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
 	# серверные объекты из состояния: месторождения, точки, враги, игроки
 	for o in state.get("objects", []):
 		var kind := str(o.get("kind", ""))
@@ -278,6 +281,8 @@ func _draw() -> void:
 				continue
 		if kind != "station":
 			_pickables.append({"id": str(o.get("id", "")), "pos": p, "name": str(o.get("name", ""))})
+		if QuestHints.marker(state) == kind:
+			draw_arc(sc, 14, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
 		if kind in ["anomaly", "derelict", "signal"] or str(o.get("id", "")) == selected:
 			draw_string(font, sc + Vector2(8, -8), str(o.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, 180, 12, Tokens.TEXT)
 	_refresh_info()
@@ -433,6 +438,9 @@ func _refresh_info() -> void:
 	_refresh_favorites()
 	if selected == "" or name_ == "":
 		_info.text = "Нажмите на станцию, месторождение, точку исследования или врага. При увеличении карту можно перетаскивать."
+		var hint := QuestHints.prefix(state)
+		if hint != "":
+			_info.text = hint + "\n" + _info.text
 		_auto.disabled = true
 	else:
 		_info.text = "%s\nРасстояние: %.1f км" % [name_, dist_km] if dist_km >= 0.0 else name_

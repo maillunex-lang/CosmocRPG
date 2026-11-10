@@ -69,6 +69,11 @@ signal pilot_updated(pilot: Dictionary)
 signal system_changed(info: Dictionary)   # Э-1: гиперпереход завершён {system, layout, spawn...}
 signal station_market(data: Dictionary)   # Э-2: цены станции {prices, repair_cost, upgrade_cost}
 signal station_done(data: Dictionary)     # Э-2: операция станции выполнена {action, credits, spent...}
+signal dialogue_opened(data: Dictionary)  # реплика NPC: говорящий, текст, ответы
+
+
+func talk(_choice: String) -> void:
+	pass
 
 
 ## Игровая настройка (например, автоответ на атаку). В демо без сервера ничего не делает.

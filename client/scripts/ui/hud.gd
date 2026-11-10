@@ -619,7 +619,8 @@ func _apply_lists(state: Dictionary) -> void:
 			l.add_theme_color_override("font_color", Tokens.TEXT)
 			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			l.custom_minimum_size.x = 220
-			l.tooltip_text = l.text
+			var tip := str(q.get("text", ""))
+			l.tooltip_text = tip if tip != "" else l.text
 			_quests_list.add_child(l)
 	var chat: Array = state.get("chat", [])
 	var csig := JSON.stringify(chat)

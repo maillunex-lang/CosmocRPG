@@ -64,6 +64,7 @@ var _corp_wait := 0.0
 const CORP_TIMEOUT := 10.0
 
 var _ability_ids: Array = []   # слот способности (кнопка HUD) -> идентификатор на сервере
+var _locations: Array = []     # журнал прибытий этой сессии и с сервера
 
 
 func is_demo() -> bool:
@@ -222,6 +223,14 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 		"quest_completed":
 			var reward: Dictionary = payload.get("reward", {})
 			notification.emit("Задание выполнено: %s. Награда: %d кредитов" % [str(payload.get("title", "")), int(reward.get("credits", 0))])
+		"location_arrived":
+			_remember_location(payload, true)
+		"location_journal":
+			for item in payload.get("visits", []):
+				if item is Dictionary:
+					_remember_location(item, false)
+		"dialogue":
+			dialogue_opened.emit(payload)
 		"reward":
 			var credits := int(payload.get("credits", 0))
 			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
@@ -424,10 +433,29 @@ func _apply_state(p: Dictionary) -> void:
 		_state["credits"] = int(p["credits"])
 	var quests: Array = []
 	for q in p.get("quests", []):
-		quests.append({"id": str(q.get("id", "")), "title": str(q.get("title", "")), "progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
+		quests.append({"id": str(q.get("id", "")), "title": str(q.get("title", "")), "text": str(q.get("text", "")),
+			"marker": str(q.get("marker", "")), "system": str(q.get("system", "")), "kind": str(q.get("kind", "")),
+			"progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
 	_state["quests"] = quests
+	_state["locations"] = _locations.duplicate(true)
 	_auto_battle_tick()
 	state_updated.emit(_state)
+
+
+func _remember_location(payload: Dictionary, announce: bool) -> void:
+	var id := str(payload.get("id", ""))
+	var system_id := str(payload.get("system", ""))
+	if id == "":
+		return
+	for loc in _locations:
+		if str(loc.get("id", "")) == id and str(loc.get("system", "")) == system_id:
+			return
+	_locations.append({"id": id, "name": str(payload.get("name", id)), "kind": str(payload.get("kind", "")), "system": system_id})
+	if announce:
+		notification.emit("Прибыли: %s" % str(payload.get("name", id)))
+	if not _state.is_empty():
+		_state["locations"] = _locations.duplicate(true)
+		state_updated.emit(_state)
 
 
 # --- команды ---
@@ -502,6 +530,9 @@ func gate_links() -> Array:
 
 func jump(to: String) -> void:
 	_client.send_message("jump", {"to": to})
+
+func talk(choice: String) -> void:
+	_client.send_message("talk", {"choice": choice})
 
 func request_market() -> void:
 	_client.send_message("market", {})

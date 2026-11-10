@@ -309,6 +309,9 @@ func _enter_world() -> void:
 	var music := get_node_or_null("/root/Music")
 	if music != null and music.has_method("configure"):
 		music.configure(url)
+	var sfx := get_node_or_null("/root/Sfx")
+	if sfx != null and sfx.has_method("configure"):
+		sfx.configure(url)
 	gw.adopt(_client, url)
 
 

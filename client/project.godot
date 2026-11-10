@@ -12,6 +12,7 @@ config/icon="res://icon.svg"
 ContentBoot="*res://ui/content_boot.gd"
 TouchScroll="*res://ui/touch_scroll.gd"
 Music="*res://audio/music_player.gd"
+Sfx="*res://audio/sfx_player.gd"
 
 [cosmoc]
 

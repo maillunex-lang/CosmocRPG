@@ -17,6 +17,7 @@ const RESOURCE_COLORS := {"iron_ore": Color("#b08968"), "crystals": Color("#7fe3
 const ShipVisual := preload("res://ui/ships/ship_visual.gd")
 const ShipDef := preload("res://ui/ships/ship_def.gd")
 const SnapshotBuffer := preload("res://scripts/space/snapshot_buffer.gd")
+const SfxRules := preload("res://audio/sfx.gd")
 
 var object_id := ""
 var kind := ""
@@ -316,6 +317,8 @@ func update_interp(local_now: float) -> void:
 			if _last_dir != Vector2.ZERO:
 				_turn = lerpf(_turn, angle_difference(_last_dir.angle(), heading.angle()) / dt, clampf(dt * 8.0, 0.0, 1.0))
 			visual.update_motion(dt, _speed_frac, -_turn, boosting)
+		if me:
+			_engine_sound()
 		_last_t = local_now
 		_last_pos = world_pos
 		_last_dir = heading
@@ -350,3 +353,17 @@ func set_selected(on: bool) -> void:
 
 func is_selected() -> bool:
 	return _ring != null and _ring.visible
+
+
+func _exit_tree() -> void:
+	if me:
+		_engine_sound(false)
+
+
+func _engine_sound(active: bool = true) -> void:
+	var sfx := get_node_or_null("/root/Sfx")
+	if sfx != null and sfx.has_method("set_engine"):
+		if active:
+			sfx.set_engine(SfxRules.engine_active(_speed_frac, boosting), _speed_frac, boosting)
+		else:
+			sfx.set_engine(false, 0.0, false)

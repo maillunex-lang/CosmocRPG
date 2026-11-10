@@ -23,10 +23,12 @@ const StationScreen := preload("res://ui/station_screen.gd")
 const ChatOverlay := preload("res://ui/chat_overlay.gd")
 const MapScreen := preload("res://ui/map_screen.gd")
 const SettingsScreen := preload("res://ui/settings_screen.gd")
+const DialogueCard := preload("res://ui/dialogue_card.gd")
 const Nameplates := preload("res://ui/nameplates.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
 const WorldDecor := preload("res://scripts/space/world_decor.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
+const SfxRules := preload("res://audio/sfx.gd")
 
 signal exit_requested
 
@@ -128,6 +130,10 @@ func _ready() -> void:
 	gateway.state_updated.connect(_on_state)
 	gateway.combat_event.connect(_on_combat_event)
 	gateway.state_updated.connect(_on_state_for_overlays)
+	var talk := DialogueCard.new()
+	talk.name = "DialogueCard"
+	add_child(talk)
+	talk.bind(gateway)
 	var t_state := Time.get_ticks_msec()
 	_on_state(gateway.snapshot())
 	stats.mark("мир+фон", float(Time.get_ticks_msec() - t_state))
@@ -598,6 +604,20 @@ func _on_combat_event(e: Dictionary) -> void:
 		"scan":
 			if from_v != null:
 				from_v.play("Scan", float(e.get("radius", 20.0)) / 2.0)
+	var role := SfxRules.cue_for(str(e.get("type", "")), from_id, to_id, _self_ids())
+	if role != "":
+		var sfx := get_node_or_null("/root/Sfx")
+		if sfx != null and sfx.has_method("play"):
+			sfx.play(role)
+
+
+func _self_ids() -> Array:
+	var ids: Array = ["me"]
+	if gateway != null and gateway.has_method("own_id"):
+		var oid := str(gateway.own_id())
+		if oid != "":
+			ids.append(oid)
+	return ids
 
 
 ## Идентификатор игрока в событиях сервера — публичный id; свой корабль в сцене хранится под ME.

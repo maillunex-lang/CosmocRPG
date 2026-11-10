@@ -282,19 +282,17 @@ func TestEventKindsAndChain(t *testing.T) {
 	if got := s.Event(ctx, "p2", "sell", "", 1); len(got) != 1 || got[0].Next != "За границей" {
 		t.Fatalf("sell: %+v", got)
 	}
-	if got := s.Event(ctx, "p2", "jump", "meridian", 1); len(got) != 1 || got[0].Next != "" {
+	if got := s.Event(ctx, "p2", "jump", "meridian", 1); len(got) != 1 || got[0].Next != "Груз для Меридиана" {
 		t.Fatalf("jump: %+v", got)
 	}
-	// View показывает активные: после финального прыжка активных нет — цепочка пройдена целиком
-	if v, _ := s.View("p2"); len(v.Quests) != 0 {
-		t.Fatalf("активные после финала: %+v", v.Quests)
+	if v, _ := s.View("p2"); len(v.Quests) != 1 || v.Quests[0].ID != "meridian_delivery" {
+		t.Fatalf("после прыжка открыта доставка: %+v", v.Quests)
 	}
-	// перезаход: заново не выдаётся, все пять в журнале завершённых
 	s.Leave("p2")
 	if err := s.Join(ctx, "p2"); err != nil {
 		t.Fatal(err)
 	}
-	if v, _ := s.View("p2"); len(v.Quests) != 0 || v.Credits != 3600 {
+	if v, _ := s.View("p2"); len(v.Quests) != 1 || v.Quests[0].ID != "meridian_delivery" || v.Credits != 3600 {
 		t.Fatalf("после перезахода: %+v", v)
 	}
 }
@@ -411,7 +409,7 @@ func TestTwoPilotCampaignRestart(t *testing.T) {
 			t.Fatal(err)
 		}
 		v, _ := s.View(pid)
-		if len(v.Quests) != 0 || v.Credits != 3600 {
+		if len(v.Quests) != 1 || v.Quests[0].ID != "meridian_delivery" || v.Credits != 3600 {
 			t.Fatalf("campaign restore: %+v", v)
 		}
 		s.Evaluate(ctx, pid, station)
@@ -524,5 +522,171 @@ func TestEventReceiptRestartAndPendingCompletion(t *testing.T) {
 				t.Fatal("duplicate recovery reward", v)
 			}
 		})
+	}
+}
+
+func TestMeridianChapter(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc(NewMemStore())
+	if err := s.Join(ctx, "pilot"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.Pending("pilot", "deliver", "meridian"); ok {
+		t.Fatal("доставка не должна быть доступна до прыжка")
+	}
+	s.Evaluate(ctx, "pilot", station)
+	s.Event(ctx, "pilot", "kill", "", 1)
+	s.Event(ctx, "pilot", "mine", "iron_ore", 5)
+	s.Event(ctx, "pilot", "sell", "", 1)
+	if got := s.Event(ctx, "pilot", "jump", "redstorm", 1); len(got) != 0 {
+		t.Fatal("прыжок не в Меридиан закрыл главу", got)
+	}
+	got := s.Event(ctx, "pilot", "jump", "meridian", 1)
+	if len(got) != 1 || got[0].Next != "Груз для Меридиана" {
+		t.Fatalf("прыжок: %+v", got)
+	}
+	if got := s.EventAt(ctx, "pilot", "aurora", "deliver", "iron_ore", 5); len(got) != 0 {
+		t.Fatal("сдача в чужой системе", got)
+	}
+	d, ok := s.Pending("pilot", "deliver", "meridian")
+	if !ok || d.Target != "iron_ore" || d.Goal != 5 || d.Marker != "station" {
+		t.Fatalf("ожидалась доставка руды: %+v %v", d, ok)
+	}
+	got = s.EventAt(ctx, "pilot", "meridian", "deliver", "iron_ore", 5)
+	if len(got) != 1 || got[0].QuestID != "meridian_delivery" || got[0].Next != "След в пустоте" || got[0].Credits != 1200 {
+		t.Fatalf("доставка: %+v", got)
+	}
+	if _, ok := s.Pending("pilot", "visit", "aurora"); ok {
+		t.Fatal("аномалия Меридиана открылась в Авроре")
+	}
+	if got := s.EventAt(ctx, "pilot", "meridian", "visit", "station", 1); len(got) != 0 {
+		t.Fatal("станция закрыла ещё не открытый доклад", got)
+	}
+	got = s.EventAt(ctx, "pilot", "meridian", "visit", "anomaly", 1)
+	if len(got) != 1 || got[0].Next != "Доклад на станции" {
+		t.Fatalf("аномалия: %+v", got)
+	}
+	got = s.EventAt(ctx, "pilot", "meridian", "visit", "station", 1)
+	if len(got) != 1 || got[0].QuestID != "meridian_report" || got[0].Next != "Голос диспетчера" || got[0].Total != 6400 {
+		t.Fatalf("доклад: %+v", got)
+	}
+	if v, _ := s.View("pilot"); len(v.Quests) != 1 || v.Quests[0].ID != "meridian_voice" || v.Quests[0].Kind != "talk" || v.Credits != 6400 {
+		t.Fatalf("после доклада ждёт разговор: %+v", v)
+	}
+}
+
+func TestDispatcherThenRedStorm(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc(NewMemStore())
+	if err := s.Join(ctx, "pilot"); err != nil {
+		t.Fatal(err)
+	}
+	s.Evaluate(ctx, "pilot", station)
+	s.Event(ctx, "pilot", "kill", "", 1)
+	s.Event(ctx, "pilot", "mine", "iron_ore", 5)
+	s.Event(ctx, "pilot", "sell", "", 1)
+	s.Event(ctx, "pilot", "jump", "meridian", 1)
+	s.EventAt(ctx, "pilot", "meridian", "deliver", "iron_ore", 5)
+	s.EventAt(ctx, "pilot", "meridian", "visit", "anomaly", 1)
+	s.EventAt(ctx, "pilot", "meridian", "visit", "station", 1)
+	if _, _, err := s.Talk(ctx, "pilot", "aurora", ""); err != ErrNoDialogue {
+		t.Fatal("разговор Меридиана открылся в Авроре", err)
+	}
+	open, done, err := s.Talk(ctx, "pilot", "meridian", "")
+	if err != nil || open.Speaker != "Вора Кесс" || len(open.Choices) != 2 || len(done) != 0 || open.Done {
+		t.Fatalf("открытие: %+v %+v %v", open, done, err)
+	}
+	if _, _, err := s.Talk(ctx, "pilot", "meridian", "нет"); err != ErrBadChoice {
+		t.Fatal(err)
+	}
+	who, done, err := s.Talk(ctx, "pilot", "meridian", "ask")
+	if err != nil || len(who.Choices) != 1 || len(done) != 0 || who.Text == open.Text {
+		t.Fatalf("уточнение: %+v %v", who, err)
+	}
+	if _, ok := s.Pending("pilot", "talk", "meridian"); !ok {
+		t.Fatal("вопрос не должен закрывать задание")
+	}
+	end, done, err := s.Talk(ctx, "pilot", "meridian", "go")
+	if err != nil || !end.Done || len(done) != 1 || done[0].QuestID != "meridian_voice" || done[0].Next != "Ворота Шторма" || done[0].Credits != 400 {
+		t.Fatalf("согласие: %+v %+v %v", end, done, err)
+	}
+	if got := s.Event(ctx, "pilot", "jump", "aurora", 1); len(got) != 0 {
+		t.Fatal("обратный прыжок закрыл Шторм", got)
+	}
+	got := s.Event(ctx, "pilot", "jump", "redstorm", 1)
+	if len(got) != 1 || got[0].QuestID != "storm_jump" || got[0].Next != "Обломки у поля" {
+		t.Fatalf("прыжок: %+v", got)
+	}
+	if got := s.EventAt(ctx, "pilot", "meridian", "visit", "derelict", 1); len(got) != 0 {
+		t.Fatal("обломки Меридиана закрыли Шторм", got)
+	}
+	got = s.EventAt(ctx, "pilot", "redstorm", "visit", "derelict", 1)
+	if len(got) != 1 || got[0].QuestID != "storm_wreck" || got[0].Next != "Голос рубежа" || got[0].Credits != 1100 {
+		t.Fatalf("обломки: %+v", got)
+	}
+	if v, _ := s.View("pilot"); len(v.Quests) != 1 || v.Quests[0].ID != "storm_dispatch" {
+		t.Fatalf("после обломков ждёт диспетчера: %+v", v)
+	}
+}
+
+func TestRedStormReport(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc(NewMemStore())
+	if err := s.Join(ctx, "pilot"); err != nil {
+		t.Fatal(err)
+	}
+	s.Evaluate(ctx, "pilot", station)
+	s.Event(ctx, "pilot", "kill", "", 1)
+	s.Event(ctx, "pilot", "mine", "iron_ore", 5)
+	s.Event(ctx, "pilot", "sell", "", 1)
+	s.Event(ctx, "pilot", "jump", "meridian", 1)
+	s.EventAt(ctx, "pilot", "meridian", "deliver", "iron_ore", 5)
+	s.EventAt(ctx, "pilot", "meridian", "visit", "anomaly", 1)
+	s.EventAt(ctx, "pilot", "meridian", "visit", "station", 1)
+	if _, _, err := s.Talk(ctx, "pilot", "meridian", "go"); err != nil {
+		t.Fatal(err)
+	}
+	s.Event(ctx, "pilot", "jump", "redstorm", 1)
+	s.EventAt(ctx, "pilot", "redstorm", "visit", "derelict", 1)
+	if got := s.EventAt(ctx, "pilot", "redstorm", "visit", "anomaly", 1); len(got) != 0 {
+		t.Fatal("контур открылся до разговора с Кирой", got)
+	}
+	if _, _, err := s.Talk(ctx, "pilot", "meridian", ""); err != ErrNoDialogue {
+		t.Fatal("Кира отвечает из Меридиана", err)
+	}
+	open, done, err := s.Talk(ctx, "pilot", "redstorm", "")
+	if err != nil || open.Speaker != "Кира Роан" || len(done) != 0 || len(open.Choices) != 2 {
+		t.Fatalf("Кира: %+v %v", open, err)
+	}
+	if _, _, err := s.Talk(ctx, "pilot", "redstorm", "danger"); err != nil {
+		t.Fatal(err)
+	}
+	end, done, err := s.Talk(ctx, "pilot", "redstorm", "go")
+	if err != nil || !end.Done || len(done) != 1 || done[0].Next != "Старый контур" || done[0].Credits != 500 {
+		t.Fatalf("Кира закрыла не то: %+v %+v %v", end, done, err)
+	}
+	if got := s.EventAt(ctx, "pilot", "meridian", "visit", "anomaly", 1); len(got) != 0 {
+		t.Fatal("аномалия Меридиана закрыла контур Шторма", got)
+	}
+	got := s.EventAt(ctx, "pilot", "redstorm", "visit", "anomaly", 1)
+	if len(got) != 1 || got[0].QuestID != "storm_contour" || got[0].Next != "Граница известного" || got[0].Credits != 1000 {
+		t.Fatalf("контур: %+v", got)
+	}
+	open, done, err = s.Talk(ctx, "pilot", "redstorm", "")
+	if err != nil || open.Speaker != "Вера Элл" || len(done) != 0 {
+		t.Fatalf("Вера: %+v %v", open, err)
+	}
+	if _, _, err := s.Talk(ctx, "pilot", "redstorm", "ship"); err != nil {
+		t.Fatal(err)
+	}
+	end, done, err = s.Talk(ctx, "pilot", "redstorm", "close")
+	if err != nil || !end.Done || len(done) != 1 || done[0].QuestID != "storm_report" || done[0].Credits != 800 || done[0].Total != 11200 || done[0].Next != "" {
+		t.Fatalf("отчёт: %+v %+v %v", end, done, err)
+	}
+	if v, _ := s.View("pilot"); len(v.Quests) != 0 || v.Credits != 11200 {
+		t.Fatalf("глава не закрыта: %+v", v)
+	}
+	if _, _, err := s.Talk(ctx, "pilot", "redstorm", ""); err != ErrNoDialogue {
+		t.Fatal("после отчёта разговор ещё открыт", err)
 	}
 }

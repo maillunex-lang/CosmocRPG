@@ -27,6 +27,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/equipment"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/httpapi"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/location"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/media"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
@@ -244,11 +245,13 @@ func run() error {
 	playerStore := world.NewPGStore(pool)
 	var universe *world.Router
 	var quests *quest.Service
+	var visits location.Store
 	if cfg.FeatureQuests {
 		quests = quest.NewService(log, quest.NewPGStore(pool), gameWorld.ObjectPos)
 		if err := quests.Init(ctx); err != nil {
 			return err
 		}
+		visits = location.NewPGStore(pool)
 		log.Info("контракты включены (COSMOC_FEATURE_QUESTS)")
 	}
 	// конфигурация мира («живые локации»): версии в базе; активная применяется к миру на лету, если функция включена флагом
@@ -377,7 +380,7 @@ func run() error {
 	}
 	wsHandler := ws.NewHandler(log, ws.Options{
 		MaxMessage: cfg.WSMaxMessage, RatePerSec: cfg.WSRatePerSec, Version: version,
-		World: universe, Store: markedPlayers, AIActorGuard: aiGuard, Equipment: equipment.NewPGStore(pool), ShipPassports: &passports, Quests: quests, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
+		World: universe, Store: markedPlayers, AIActorGuard: aiGuard, Equipment: equipment.NewPGStore(pool), ShipPassports: &passports, Quests: quests, Locations: visits, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
 	if cfg.FeatureAI {

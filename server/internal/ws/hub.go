@@ -22,6 +22,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/equipment"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/location"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/rpg"
@@ -56,6 +57,7 @@ type Options struct {
 	Equipment     equipment.StarterStore       // persistent starter; nil preserves legacy fixed equipment
 	Store         world.Store                  // хранилище игроков; nil: позиции не сохраняются
 	Quests        *quest.Service               // контракты и награды; nil: функция выключена
+	Locations     location.Store               // журнал прибытий; nil: не пишется в базу
 	Accounts      *account.Service             // аккаунты (логин и пароль); nil: функция выключена
 	Shop          *shop.Service                // VIP и магазин косметики; nil: функция выключена
 	Chat          *chat.Service                // чат (общий и личные сообщения); nil: функция выключена
@@ -163,7 +165,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "equipment_set", "equipment_get":
+		case "join", "create_character", "move", "target", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "equipment_set", "equipment_get", "talk":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -325,6 +327,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.corpMsg(ctx, ss, m)
 	case "pilot", "pilot_spend":
 		h.pilotMsg(ctx, c, ss, m)
+	case "talk":
+		h.talkMsg(ctx, c, ss, m)
 	case "move":
 		var p struct{ X, Y float64 }
 		if err := json.Unmarshal(m.Payload, &p); err != nil || math.IsNaN(p.X+p.Y) || math.IsInf(p.X+p.Y, 0) {
@@ -769,6 +773,9 @@ func (h *Handler) Tick(n int, now time.Time) {
 	if len(evs) > 0 {
 		h.broadcastEvents(evs)
 	}
+	if arr := w.DrainArrivals(); len(arr) > 0 {
+		h.deliverArrivals(arr)
+	}
 	if rs := w.DrainRewards(); len(rs) > 0 && h.opts.Quests != nil {
 		go h.grantRewards(rs) // запись в базу не должна тормозить цикл симуляции
 	}
@@ -829,20 +836,93 @@ func (h *Handler) Run(ctx context.Context) {
 }
 
 // evaluateQuests проверяет контракты игрока и сообщает о выполненных. Награду выдаёт сервис (атомарно и однократно).
-func (h *Handler) evaluateQuests(ss *session, pid string, st world.State) {
+func (h *Handler) evaluateQuests(_ *session, pid string, st world.State) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	for _, c := range h.opts.Quests.Evaluate(ctx, pid, world.Vec{X: st.Ship.Pos[0], Y: st.Ship.Pos[1]}) {
-		m := Message{Type: "quest_completed", Payload: mustJSON(map[string]any{
-			"id": c.QuestID, "title": c.Title, "reward": map[string]int64{"credits": c.Credits}, "credits": c.Total,
-		})}
-		select {
-		case ss.events <- m:
-		default:
-			h.log.Warn("ws: очередь событий переполнена", "player", pid)
+	var pw *world.World
+	sys := ""
+	if h.opts.World != nil {
+		pw = h.opts.World.For(pid)
+		if pw != nil {
+			sys = pw.System().ID
 		}
-		h.grantXP(ctx, pid, "xp:quest:"+c.QuestID, "quest", pilot.XPFor("quest", c.Credits))
 	}
+	for _, c := range h.opts.Quests.Evaluate(ctx, pid, world.Vec{X: st.Ship.Pos[0], Y: st.Ship.Pos[1]}) {
+		h.finishQuest(pid, c)
+	}
+	if pw == nil {
+		return
+	}
+	if d, ok := h.opts.Quests.Pending(pid, "deliver", sys); ok && st.Ship.InSafe && d.Goal > 0 {
+		amt := float64(d.Goal)
+		if rec, taken := pw.TakeCargo(pid, d.Target, amt); taken {
+			done := h.opts.Quests.EventAt(ctx, pid, sys, "deliver", d.Target, d.Goal)
+			if len(done) == 0 {
+				if back, ok := pw.GiveCargo(pid, d.Target, amt); ok {
+					rec = back
+				} else {
+					h.log.Error("возврат груза задания не удался", "player", pid, "resource", d.Target)
+				}
+			}
+			h.save(rec)
+			for _, c := range done {
+				h.finishQuest(pid, c)
+			}
+		}
+	}
+	for i := 0; i < 4; i++ {
+		d, ok := h.opts.Quests.Pending(pid, "visit", sys)
+		if !ok || !pw.AtKind(pid, d.Target) {
+			return
+		}
+		done := h.opts.Quests.EventAt(ctx, pid, sys, "visit", d.Target, 1)
+		if len(done) == 0 {
+			return
+		}
+		for _, c := range done {
+			h.finishQuest(pid, c)
+		}
+	}
+}
+
+func (h *Handler) finishQuest(pid string, c quest.Completion) {
+	h.completeQuests(pid, []quest.Completion{c})
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	h.grantXP(ctx, pid, "xp:quest:"+c.QuestID, "quest", pilot.XPFor("quest", c.Credits))
+}
+
+// deliverArrivals сообщает игроку о первом прибытии и, если журнал включён, сохраняет его.
+func (h *Handler) deliverArrivals(arr []world.Arrival) {
+	for _, a := range arr {
+		h.mu.Lock()
+		ss := h.active[a.Player]
+		h.mu.Unlock()
+		if ss == nil {
+			continue
+		}
+		select {
+		case ss.events <- Message{Type: "location_arrived", Payload: mustJSON(map[string]any{
+			"id": a.ID, "name": a.Name, "kind": a.Kind, "system": a.System,
+		})}:
+		default:
+			h.log.Warn("ws: очередь прибытий переполнена", "player", a.Player)
+		}
+	}
+	if h.opts.Locations == nil {
+		return
+	}
+	cp := append([]world.Arrival(nil), arr...)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		for _, a := range cp {
+			err := h.opts.Locations.Record(ctx, location.Visit{Player: a.Player, System: a.System, ID: a.ID, Name: a.Name, Kind: a.Kind})
+			if err != nil {
+				h.log.Error("журнал локаций", "player", a.Player, "id", a.ID, "err", err)
+			}
+		}
+	}()
 }
 
 // applyShipLevel читает уровень корабля игрока из хранилища и применяет его в мире; возвращает прогресс (nil: функция выключена).
@@ -1185,11 +1265,32 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 	}
 	reply(Message{Type: "welcome", ID: m.ID, Payload: mustJSON(welcome)})
 	go h.pump(ctx, ss)
+	h.pushJournal(ctx, ss)
 	if st, ok := w.Snapshot(ss.pid); ok {
 		h.pushState(ss, st)
 	}
 	log.Info("ws: игрок вошёл", "player", rec.ID, "name", rec.Name)
 	return true
+}
+
+func (h *Handler) pushJournal(ctx context.Context, ss *session) {
+	if h.opts.Locations == nil || ss.pid == "" {
+		return
+	}
+	jctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	visits, err := h.opts.Locations.List(jctx, ss.pid)
+	if err != nil {
+		h.log.Error("журнал локаций", "player", ss.pid, "err", err)
+		return
+	}
+	if len(visits) == 0 {
+		return
+	}
+	select {
+	case ss.events <- Message{Type: "location_journal", Payload: mustJSON(map[string]any{"visits": visits})}:
+	default:
+	}
 }
 
 // pilotOptions описывает стартовые направления пилота и корабль каждого (для экрана создания персонажа).

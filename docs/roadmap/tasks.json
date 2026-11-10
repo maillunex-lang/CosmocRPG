@@ -322,9 +322,9 @@
    "title": "Квест тип deliver + продолжение цепочки",
    "module": "QUESTS",
    "priority": "P1",
-   "status": "TODO",
-   "description": "доставка ресурса в станцию другой системы; шаги 6–8 главы 1 в Меридиане",
-   "updated": "2026-11-09",
+   "status": "DONE",
+   "description": "Доставка 5 железной руды на станцию Меридиана, затем аномалия и доклад. Вертикальный срез главы 1 в ветке feature/game-sfx, в main не влит. Репутация, диалоги и боссы из FinalQuest не делались.",
+   "updated": "2026-11-10",
    "release": {
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
@@ -332,6 +332,10 @@
    "depends_on": [
     "PROTO-03",
     "K-1B"
+   ],
+   "tests": [
+    "go test ./internal/quest ./internal/world PASS без PostgreSQL",
+    "TestMeridianChapter, TestTakeCargoOnlyAtStation"
    ]
   },
   {
@@ -339,13 +343,19 @@
    "title": "Локации: журнал посещений и навигация",
    "module": "GALAXY",
    "priority": "P2",
-   "status": "TODO",
-   "description": "«прибыл в локацию», журнал, подсказки на карте",
-   "updated": "2026-11-09",
+   "status": "DONE",
+   "description": "Первое прибытие за сессию, тост, журнал location_visits и подсказка маркера на карте. Ветка feature/game-sfx, в main не влита. Скрытые сигналы без раскрытия не пишутся.",
+   "updated": "2026-11-10",
    "release": {
     "server": "NOT_RELEASED",
     "apk": "NOT_RELEASED"
-   }
+   },
+   "tests": [
+    "go test ./internal/world ./internal/location PASS",
+    "TestArrivalAndVisit",
+    "quest_hint_test 6/0",
+    "map_screen_test 23/0"
+   ]
   },
   {
    "id": "SR-100C",
@@ -571,7 +581,7 @@
    "module": "CLIENT",
    "priority": "P1",
    "status": "IN_PROGRESS",
-   "description": "М-1 в main: плеер, громкость, библиотека и /media/. М-2 (эфир, реклама, срочные новости) ещё нет. Production/APK не выпущены.",
+   "description": "М-1 в main: плеер, громкость, библиотека и /media/. М-3 (кнопки, двигатель, свой выстрел и попадание) написан в ветке feature/game-sfx и в main ещё не влит. М-2 (эфир, реклама, срочные новости) ещё нет. Production/APK не выпущены.",
    "updated": "2026-11-10",
    "release": {
     "server": "NOT_RELEASED",

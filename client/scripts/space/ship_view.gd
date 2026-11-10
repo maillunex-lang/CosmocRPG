@@ -34,6 +34,8 @@ var _label_base_y := 1.8    # исходная высота подписи на�
 var _label_lift := 0.0      # временное вертикальное смещение от стекинга (мир. ед.)
 var me := false
 var visual: Node3D        # визуальный адаптер корабля (ShipVisual); у станции нет
+var _model_evicted := false
+var hidden_since := 0
 var ship_type := ""
 var skin := ""
 var boosting := false
@@ -222,6 +224,12 @@ func set_ship(type_id: String, skin_id: String) -> void:
 		type_id = ShipDef.DEFAULT_ID
 	if skin_id == "":
 		skin_id = str(ShipDef.skin_ids(type_id)[0])
+	if not ShipDef.get_def(type_id).get("skins", {}).has(skin_id):
+		return
+	if _model_evicted:
+		ship_type = type_id
+		skin = skin_id
+		return
 	if visual != null and ship_type == type_id and skin == skin_id and is_instance_valid(visual._skin_root) and not visual._skin_root.is_queued_for_deletion():
 		return
 	if visual == null or ship_type != type_id:
@@ -239,6 +247,8 @@ func set_ship(type_id: String, skin_id: String) -> void:
 
 ## Событие сервера → эффект («Fire», «HitShield», «HitHull», «Death», «Boost», «Scan», «Respawn», «Dock»).
 func play(effect: String, arg: Variant = null) -> void:
+	if effect in ["Death", "Respawn"]:
+		set_meta("dead", effect == "Death")
 	if visual != null:
 		if visual.visible or effect in ["Death", "Respawn"]:
 			visual.play(effect, arg)
@@ -378,10 +388,28 @@ func _engine_sound(active: bool = true) -> void:
 
 ## Only presentation changes. Snapshot interpolation and target picking remain active.
 func set_full_visual(enabled: bool) -> void:
+	if enabled and _model_evicted:
+		_model_evicted = false
+		set_ship(ship_type, skin)
+		if visual != null:
+			visual.alive = not bool(get_meta("dead", false))
+			visual.bank.visible = visual.alive
 	if visual == null or visual.visible == enabled:
 		return
 	visual.visible = enabled
 	if not enabled:
+		hidden_since = Time.get_ticks_usec()
 		visual._reset_effects()
 	else:
 		visual.bank.visible = visual.alive
+
+
+## Release only the presentation; identity, buffers and authoritative state survive.
+func evict_hidden_model() -> void:
+	if me or is_selected() or visual == null or visual.visible:
+		return
+	visual._reset_effects()
+	remove_child(visual)
+	visual.queue_free()
+	visual = null
+	_model_evicted = true

@@ -54,6 +54,7 @@ var stats: CanvasLayer   # отладочная панель производи�
 
 var _graphics_elapsed := 0.0
 var _full_ship_limit := 20
+var _limit_hidden_model_cache := false
 var _applied_quality := ""
 var _priority_target := ""
 
@@ -431,14 +432,14 @@ func _sync_ship(id: String, kind: String, stance: String, display_name: String, 
 			var first := Vector3(pos.x, 0.0, pos.y)
 			_rig.snap_to(first)
 		new_snapshot = true
-	if v.visual != null:
+	if v.ship_type != "":
 		# облик и тип корабля приходят от сервера; характеристики у всех обликов одинаковые
 		if str(info.get("skin", "")) != "":
 			v.set_ship(str(info.get("ship", info.get("type", ""))), str(info["skin"]))
 		v.boosting = bool(info.get("boosting", false))
 		var dead := bool(info.get("dead", false))
 		v.set_meta("dead", dead)
-		if not dead and not v.visual.alive:
+		if v.visual != null and not dead and not v.visual.alive:
 			v.visual.respawn()
 	if new_snapshot:
 		v.push_snapshot(sim_t, now, pos, dir)
@@ -725,6 +726,8 @@ func open_settings() -> Control:
 	st.option_changed.connect(func(opt: String, v: bool) -> void:
 		if opt == "auto_retaliate":
 			gateway.set_option(opt, v)
+		elif opt == "limit_hidden_model_cache":
+			_apply_graphics()
 		elif opt == FrameStats.SETTING_KEY:
 			stats.set_shown(v))
 	st.closed.connect(func() -> void: layer.queue_free())
@@ -1174,6 +1177,7 @@ func _diagnostic_counts() -> Dictionary:
 
 func _apply_graphics() -> void:
 	_full_ship_limit = UiSettings.ship_limit()
+	_limit_hidden_model_cache = UiSettings.get_bool("limit_hidden_model_cache", false)
 	Engine.max_fps = UiSettings.fps_limit()
 	var viewport := _ships_root.get_viewport()
 	viewport.scaling_3d_scale = UiSettings.render_scale()
@@ -1195,12 +1199,12 @@ func _update_ship_budget() -> void:
 	var area := Rect2(Vector2.ZERO, _camera.get_viewport().get_visible_rect().size).grow(24)
 	for id in _ships:
 		var view = _ships[id]
-		if view.visual == null or id == ME:
+		if view.ship_type == "" or id == ME:
 			continue
 		var visible_on_screen: bool = not _camera.is_position_behind(view.global_position) and area.has_point(_camera.unproject_position(view.global_position))
 		var selected: bool = id == _priority_target
 		var score: float = view.world_pos.distance_squared_to(origin)
-		if view.visual.visible:
+		if view.visual != null and view.visual.visible:
 			score *= 0.8
 		candidates.append({"id": str(id), "score": score, "selected": selected, "onscreen": visible_on_screen})
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -1218,3 +1222,14 @@ func _update_ship_budget() -> void:
 			_ships[candidate.id].set_full_visual(false)
 	for id in allowed:
 		_ships[id].set_full_visual(true)
+
+	if _limit_hidden_model_cache:
+		var hidden: Array = []
+		for candidate in candidates:
+			var view = _ships[candidate.id]
+			if not allowed.has(candidate.id) and view.visual != null:
+				hidden.append(view)
+		hidden.sort_custom(func(a: Node3D, b: Node3D) -> bool:
+			return a.object_id < b.object_id if a.hidden_since == b.hidden_since else a.hidden_since > b.hidden_since)
+		for i in range(5, hidden.size()):
+			hidden[i].evict_hidden_model()

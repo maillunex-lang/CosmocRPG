@@ -27,3 +27,26 @@ ShipVisual still emits its documented dummy-renderer material error. Android GPU
 thermal, full online and real-rendered acceptance remain unmeasured/unavailable.
 Owner accepted prior phase acceptance without these checks. No FPS improvement
 is claimed. Server/protocol, map and HUD Layout Editor files are unchanged.
+
+## Optional hidden-model cache limit
+
+Settings → Graphics has `limit_hidden_model_cache` (default false), saved through
+the existing UiSettings boolean storage. Enabled: keep at most five recently hidden
+foreign ShipVisual instances, evict the rest. Own and currently displayed hulls are
+excluded. Disabled: stop evicting; previously evicted hulls restore on demand rather
+than loading all of them immediately.
+
+Eviction stops effects, detaches and queues only ShipVisual for deletion. ShipView,
+identity, snapshot buffer, selection and position remain. Hull/skin/dead/boost state
+continues updating without a model. Selecting or displaying an evicted ship rebuilds
+its current visual and restores alive/dead state. Shared GLB textures/meshes and
+material caches may remain referenced elsewhere; no byte-level RAM guarantee.
+The cap is a model-count bound, not an Android low-memory-pressure detector.
+Restoration may cause loading pauses. The toggle does not change the server.
+
+Godot 4.7.2 headless graphics_settings_test: 34 checks pass, including eviction cap,
+entity preservation, snapshots without reinstancing, current hull/skin restoration,
+death/respawn and UI toggle presence. HUD, navigation/map, hangar, settings and
+ShipVisual regressions pass their behavioral assertions. Existing dummy-renderer
+material warning remains in ShipVisual test. Android RAM/VRAM and restore frame-time
+measurements remain pending; no memory-saving percentage is claimed.

@@ -222,7 +222,7 @@ func set_ship(type_id: String, skin_id: String) -> void:
 		type_id = ShipDef.DEFAULT_ID
 	if skin_id == "":
 		skin_id = str(ShipDef.skin_ids(type_id)[0])
-	if visual != null and ship_type == type_id and skin == skin_id and is_instance_valid(visual._skin_root):
+	if visual != null and ship_type == type_id and skin == skin_id and is_instance_valid(visual._skin_root) and not visual._skin_root.is_queued_for_deletion():
 		return
 	if visual == null or ship_type != type_id:
 		if visual != null:

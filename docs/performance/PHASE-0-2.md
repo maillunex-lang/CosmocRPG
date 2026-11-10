@@ -65,3 +65,10 @@ pending for all phases, and phase 2 rendered deletion/reload validation is pendi
 No FPS improvement claimed. No server/protocol/HUD editor/release changes.
 Rollback: revert phase commits; added diagnostic export schema has no gameplay
 persistence. Keep corporation failures separate from this client rendering work.
+
+Follow-up: explicit hull rebuild now detaches old children immediately before
+queue_free, preventing a second hull from remaining in SceneTree until frame end.
+ShipView no longer treats a queued-for-deletion skin root as a valid unchanged
+visual. ShipVisual: 55 behavioral checks pass; Hangar: 46 pass on 4.7.2.
+The dummy material error remains reproducible in the deletion/reload test; this
+follow-up does not resolve or waive that outstanding rendered-validation issue.

@@ -149,6 +149,11 @@ func _run() -> void:
 	direct.set_ship("FTR-002", "b")
 	await process_frame
 	_c(direct.visual.ship_id == "FTR-002" and direct.visual._bolts.is_empty(), "смена корпуса сбрасывает прежние эффекты")
+	var rebuilding := ShipVisual.new()
+	root.add_child(rebuilding)
+	rebuilding.build("COR-001", "a")
+	_c(rebuilding.get_child_count() == 1, "перестройка сразу убирает прежний корпус из дерева")
+	rebuilding.queue_free()
 	var definition: Dictionary = ShipDef.get_def("FTR-002")
 	var original_path: String = definition.skins.b.glb
 	definition.skins.b.glb = "res://missing-test-model.glb"

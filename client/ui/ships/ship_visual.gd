@@ -56,6 +56,7 @@ func build(sid: String, skin: String = "") -> void:
 	_skin_root = null
 	_loaded_ship = ""
 	for c in get_children():
+		remove_child(c)
 		c.queue_free()
 	points.clear()
 	flames.clear()

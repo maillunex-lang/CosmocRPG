@@ -210,7 +210,7 @@ type Event struct {
 	Radius float64 `json:"radius,omitempty"`
 }
 
-// Training — неигровые объекты мира: учебные дроны (цели с запасом прочности) и скрытые сигналы (видны после сканирования).
+// npc — объект мира: враг, сигнал, станция или точка.
 type npc struct {
 	ID, Name, Kind, Stance string
 	Pos                    Vec
@@ -229,10 +229,9 @@ type npc struct {
 	Heading   Vec
 }
 
+// defaultNPCs — скрытые сигналы. Учебных дронов в мире нет.
 func defaultNPCs() []*npc {
 	return []*npc{
-		{ID: "dr1", Name: "Учебный дрон-1", Kind: "hostile", Stance: "hostile", Pos: Vec{40, -30}, Hull: 1500, HullMax: 1500, Shield: 300, ShieldMax: 300, respawn: 10},
-		{ID: "dr2", Name: "Учебный дрон-2", Kind: "hostile", Stance: "hostile", Pos: Vec{-45, -20}, Hull: 1500, HullMax: 1500, Shield: 300, ShieldMax: 300, respawn: 10},
 		{ID: "sig1", Name: "Слабый сигнал", Kind: "signal", Stance: "neutral", Pos: Vec{90, 60}, Hidden: true},
 		{ID: "sig2", Name: "Дрейфующий контейнер", Kind: "signal", Stance: "neutral", Pos: Vec{-70, 85}, Hidden: true},
 	}

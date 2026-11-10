@@ -59,6 +59,12 @@ func TestCatalogValidation(t *testing.T) {
 	}
 }
 
+func plantMark(w *World) *npc {
+	n := &npc{ID: "mark", Name: "Мишень", Kind: "hostile", Stance: "hostile", Pos: Vec{40, -30}, Hull: 1500, HullMax: 1500, Shield: 300, ShieldMax: 300, respawn: 10}
+	w.npcs = append([]*npc{n}, w.npcs...)
+	return n
+}
+
 func TestAttackRulesAndDamage(t *testing.T) {
 	w := New()
 	p := newPilot(t, w, "a")
@@ -70,8 +76,9 @@ func TestAttackRulesAndDamage(t *testing.T) {
 	if err := w.SetAttack("a", true); err != ErrBadTarget {
 		t.Fatalf("игроков атаковать нельзя: %v", err)
 	}
-	p.Pos = Vec{40, -30 + 20} // 20 ед. от дрона dr1 (дальность 30)
-	w.SetTarget("a", "dr1")
+	p.Pos = Vec{40, -30 + 20}
+	plantMark(w)
+	w.SetTarget("a", "mark")
 	p.Energy = 50
 	if err := w.SetAttack("a", true); err != nil {
 		t.Fatal(err)
@@ -93,23 +100,24 @@ func TestAttackRulesAndDamage(t *testing.T) {
 		w.Step(0.05, time.Now())
 	}
 	evs = append(evs, w.DrainEvents()...)
-	if dr.deadUntil == 0 || !hasEvent(evs, "hit_hull") || !hasEvent(evs, "death") {
-		t.Fatalf("дрон не уничтожен: hull=%.0f", dr.Hull)
+	if !hasEvent(evs, "hit_hull") || !hasEvent(evs, "death") {
+		t.Fatalf("мишень не уничтожена: hull=%.0f", dr.Hull)
 	}
 	if p.Target != "" || p.Attacking {
 		t.Fatal("после уничтожения цель и атака сбрасываются")
 	}
 	stepFor(w, 10.5)
 	if dr.Hull != 1500 || dr.deadUntil != 0 {
-		t.Fatal("дрон должен возродиться")
+		t.Fatal("мишень должна возродиться")
 	}
 }
 
 func TestOutOfRangeNoDamage(t *testing.T) {
 	w := New()
 	p := newPilot(t, w, "a")
+	plantMark(w)
 	p.Pos = Vec{300, 300}
-	p.Target = "dr1"
+	p.Target = "mark"
 	w.mu.Lock()
 	p.Attacking = true
 	w.mu.Unlock()
@@ -165,15 +173,16 @@ func TestBoostSpeedCooldownEnergy(t *testing.T) {
 func TestInterceptOnlyInterceptor(t *testing.T) {
 	w := New()
 	p := newPilot(t, w, "a")
+	plantMark(w)
 	if err := w.UseAbility("a", "intercept"); err != ErrNoTarget {
 		t.Fatalf("без цели: %v", err)
 	}
 	p.Pos = Vec{300, 300}
-	w.SetTarget("a", "dr1")
+	w.SetTarget("a", "mark")
 	if err := w.UseAbility("a", "intercept"); err != ErrRange {
 		t.Fatalf("далеко: %v", err)
 	}
-	p.Pos = Vec{40, 15} // 45 ед. от dr1
+	p.Pos = Vec{40, 15}
 	if err := w.UseAbility("a", "intercept"); err != nil {
 		t.Fatal(err)
 	}

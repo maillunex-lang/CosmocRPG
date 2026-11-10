@@ -34,11 +34,22 @@ func firstEnemy(w *World) *npc {
 	return nil
 }
 
-func TestLayoutKeepsTrainingObjects(t *testing.T) {
+func TestLayoutDropsTrainingDrones(t *testing.T) {
 	w, _ := livingWorld(t)
-	for _, id := range []string{"dr1", "dr2", "sig1", "sig2"} {
-		if w.npcByID(id, nil) == nil && id[0] == 'd' {
-			t.Fatalf("пропал учебный объект %s", id)
+	for _, id := range []string{"dr1", "dr2"} {
+		if w.npcByID(id, nil) != nil {
+			t.Fatalf("учебный дрон ещё в мире: %s", id)
+		}
+	}
+	for _, id := range []string{"sig1", "sig2"} {
+		found := false
+		for _, n := range w.npcs {
+			if n.ID == id {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("пропал сигнал %s", id)
 		}
 	}
 	if firstEnemy(w) == nil || len(w.deposits) == 0 {
@@ -318,12 +329,12 @@ func TestAutoRetaliateKeepsCurrentLiveTarget(t *testing.T) {
 	w, _ := livingWorld(t)
 	e := firstEnemy(w)
 	p := joinAt(w, "k", "FTR-001", Vec{e.Pos.X + 15, e.Pos.Y})
-	// игрок уже атакует учебного дрона: нападение врага не переключает цель
-	p.Target, p.Attacking = "dr1", true
+	w.npcs = append(w.npcs, &npc{ID: "mark", Name: "Мишень", Kind: "hostile", Stance: "hostile", Hull: 20, HullMax: 20, Pos: Vec{e.Pos.X, e.Pos.Y}})
+	p.Target, p.Attacking = "mark", true
 	w.mu.Lock()
 	w.retaliate(p, e.ID)
 	w.mu.Unlock()
-	if p.Target != "dr1" {
+	if p.Target != "mark" {
 		t.Fatalf("цель переключена с живой на нападающего: %q", p.Target)
 	}
 	// мёртвого нападающего не атакуют

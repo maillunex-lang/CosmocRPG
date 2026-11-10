@@ -110,7 +110,7 @@ func sanitizeHold(h map[string]float64, capacity float64) map[string]float64 {
 }
 
 // ApplyLayout добавляет в мир наполнение системы: врагов, месторождения, точки исследования, станции.
-// Учебные объекты (дроны, сигналы) и станция «Рубеж» сохраняются. Повторный вызов заменяет прежнее наполнение.
+// Скрытые сигналы сохраняются. Повторный вызов заменяет прежнее наполнение.
 func (w *World) ApplyLayout(l worldgen.Layout, cfg worldgen.Config) error {
 	if errs := l.Validate(); len(errs) > 0 {
 		return fmt.Errorf("раскладка некорректна: %v", errs)

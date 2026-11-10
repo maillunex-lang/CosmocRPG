@@ -460,7 +460,6 @@ func run() error {
 				Live:      live,
 				Res:       reservation,
 				Endpoint:  "ws://127.0.0.1:" + port + "/ws",
-				Fallback:  []string{"dr1", "dr2"},
 				Log:       log,
 			}
 			farmCtl = farm

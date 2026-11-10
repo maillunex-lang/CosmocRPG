@@ -141,7 +141,7 @@ func set_overlay(on: bool) -> void:
 
 func bind(gw: Node) -> void:
 	gateway = gw
-	enabled = not (gw.has_method("is_demo") and gw.is_demo())
+	enabled = gw.has_chat()
 	_edit.editable = enabled
 	_send.disabled = not enabled
 	_edit.placeholder_text = "Сообщение…" if enabled else "Чат только при игре на сервере"
@@ -179,6 +179,25 @@ func on_message(m: Dictionary) -> void:
 		unread_changed.emit(unread + dm_unread)
 	_redraw()
 	preview_changed.emit(preview_text())
+
+
+func preview_lines(n: int = 2) -> PackedStringArray:
+	var out := PackedStringArray()
+	if n <= 0 or _general.is_empty():
+		return out
+	var start := maxi(0, _general.size() - n)
+	for i in range(start, _general.size()):
+		var raw: Variant = _general[i]
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var m: Dictionary = raw
+		var who := str(m.get("from_name", "")).strip_edges()
+		var text := str(m.get("text", "")).strip_edges().replace("\n", " ")
+		var line := text if who == "" else "%s: %s" % [who, text]
+		if line.length() > 80:
+			line = line.substr(0, 79) + "…"
+		out.append(line)
+	return out
 
 
 func preview_text() -> String:

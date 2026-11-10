@@ -87,7 +87,7 @@ func _run() -> void:
 	_check(((_n(c, "%Credits") as HBoxContainer).get_child(1) as Label).text == "Кредиты  125 400", "кредиты с разделителями тысяч")
 	_check((_n(c, "%TargetName") as Label).text == "Цель не выбрана" and not (_n(c, "%TargetHull") as Control).visible, "цель не выбрана")
 	var attack := _n(c, "%AttackButton") as ActionButton
-	_check(attack.disabled and attack.text == "Атаковать", "атака без цели недоступна")
+	_check(attack.disabled and attack.tooltip_text == "Атаковать" and attack.custom_minimum_size.x == attack.custom_minimum_size.y, "атака без цели — круг и недоступна")
 	_check((_n(c, "%SpeedLabel") as Label).text.begins_with("0 м/с") and (_n(c, "%SpeedLabel") as Label).text.contains("Ручное"), "скорость: стоит на месте, ручное управление (%s)" % (_n(c, "%SpeedLabel") as Label).text)
 	_check(not (_n(c, "%HullBar") as ProgressBar).is_low() and (_n(c, "%HullBar") as ProgressBar).value > 250.0, "корпус в норме не предупреждает")
 	(_n(c, "%HullBar") as ProgressBar).set_values(200.0, 1000.0)
@@ -186,10 +186,10 @@ func _run() -> void:
 	hud._on_attack_pressed()  # повторное нажатие игнорируется
 	_check(gw.snapshot()["attacking"], "атака началась")
 	await _tick(c, 0.1)
-	_check(not attack.is_busy() and attack.text == "Прекратить атаку", "после подтверждения кнопка становится «Прекратить атаку»")
+	_check(not attack.is_busy() and attack.tooltip_text == "Прекратить атаку", "после подтверждения кнопка становится «Прекратить атаку»")
 	hud._on_attack_pressed()
 	await _tick(c, 0.1)
-	_check(not gw.snapshot()["attacking"] and attack.text == "Атаковать", "повторное нажатие прекращает атаку")
+	_check(not gw.snapshot()["attacking"] and attack.tooltip_text == "Атаковать", "повторное нажатие прекращает атаку")
 
 	# ============ атака нейтрального игрока и AI: требуется подтверждение ============
 	_free(c)
@@ -238,7 +238,7 @@ func _run() -> void:
 	skills = (_n(c, "%SkillsGrid") as Container).get_children().filter(func(ch): return ch.name != "AutoSkillsButton")
 	skills[1].pressed.emit()
 	await _tick(c, 0.1)
-	_check(skills[1].disabled and skills[1].text.contains("с"), "после применения «Щит» на перезарядке: %s" % skills[1].text)
+	_check(skills[1].disabled and skills[1].text.is_valid_int(), "после применения «Щит» на круге показаны секунды: %s" % skills[1].text)
 	_check((_n(c, "%EnergyBar") as ProgressBar).value < 90.0 or gw._ship["energy"] < 90.0, "энергия потрачена")
 	gw._ship["energy"] = 10.0
 	await _tick(c, 0.1)
@@ -269,12 +269,13 @@ func _run() -> void:
 	gw = c["gw"]
 	var quests := _n(c, "%QuestsCard")
 	var chat := _n(c, "%ChatCard")
-	_check(not quests.collapsed and chat.collapsed, "до боя: задания развёрнуты, чат свёрнут по умолчанию")
+	var peek := chat.find_child("ChatPeek", true, false)
+	_check(not quests.collapsed and peek != null and peek.visible and not (_n(c, "%ChatLines") as Control).visible, "до боя: задания развёрнуты, чат — короткая плашка")
 	await _select(c, "pi1")
 	gw._objects["pi1"]["pos"] = Vector2(20, 0)
 	gw.attack("pi1")
 	await _tick(c, 1.5)
-	_check(gw.in_combat() and quests.collapsed and chat.collapsed, "в бою задания и чат свёрнуты")
+	_check(gw.in_combat() and quests.collapsed and peek.visible, "в бою задания свёрнуты, плашка чата остаётся")
 	gw._ship["shield"] = 20.0
 	await _tick(c, 0.3)
 	var alert_bar := _n(c, "%AlertBar")
@@ -284,7 +285,7 @@ func _run() -> void:
 	gw._objects["pi1"]["pos"] = Vector2(200, 200)
 	gw._ship["shield"] = gw._ship["shield_max"]
 	await _tick(c, 8.0)
-	_check(not gw.in_combat() and not quests.collapsed and chat.collapsed, "после боя панели возвращаются к выбору игрока")
+	_check(not gw.in_combat() and not quests.collapsed and peek.visible, "после боя задания возвращаются, плашка чата на месте")
 	_check(not alert_bar.has_alert("shield_low"), "тревога снимается, когда причина исчезла")
 	quests.set_collapsed(true, false)
 	gw._last_combat = gw._t

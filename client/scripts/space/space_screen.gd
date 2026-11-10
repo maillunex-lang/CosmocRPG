@@ -131,7 +131,7 @@ func _ready() -> void:
 	_hud.corporation_requested.connect(open_corporation)
 	_hud.star_map_requested.connect(open_star_map)
 	_hud.station_requested.connect(open_station)
-	_hud.chat_requested.connect(func() -> void: open_chat())
+	_hud.chat_requested.connect(func() -> void: open_chat(ChatOverlay.Mode.FULL))
 	_hud.move_transform = screen_to_world_move
 	_rig.mode_changed.connect(func(_m: int) -> void: _hud.set_camera_mode_name(_rig.mode_name()))
 	_hud.set_camera_mode_name(_rig.mode_name())
@@ -568,8 +568,8 @@ func open_chat(m: int = ChatOverlay.Mode.HALF) -> Control:
 	var existing := get_node_or_null("ChatLayer/ChatOverlay")
 	if existing != null:
 		return existing
-	var demo := gateway != null and gateway.has_method("is_demo") and gateway.is_demo()
-	if _hud == null or _hud.chat_panel == null or demo:
+	var live := gateway != null and gateway.has_method("has_chat") and gateway.has_chat()
+	if _hud == null or _hud.chat_panel == null or not live:
 		if _hud != null:
 			_hud.show_toast("Чат доступен только при игре на сервере")
 		return null
@@ -583,7 +583,10 @@ func open_chat(m: int = ChatOverlay.Mode.HALF) -> Control:
 	layer.add_child(ov)
 	ov.theme = theme
 	ov.open(_hud.chat_panel, m)
-	ov.closed.connect(func() -> void: layer.queue_free())
+	ov.closed.connect(func() -> void:
+		if _hud != null and _hud.chat_panel != null:
+			_hud.chat_panel.visible = false
+		layer.queue_free())
 	return ov
 
 

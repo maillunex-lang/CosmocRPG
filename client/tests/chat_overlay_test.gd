@@ -139,7 +139,7 @@ func _run() -> void:
 	for i in 4:
 		await process_frame
 	var hud2: Control = screen2.get_node("%Hud")
-	_c(hud2.chat_panel != null and hud2.chat_panel.visible and hud2.chat_panel.enabled, "в игре с чатом панель чата создана и видна (раньше её не было вовсе)")
+	_c(hud2.chat_panel != null and hud2.chat_panel.enabled and not hud2.chat_panel.visible and hud2.find_child("ChatPeek", true, false) != null, "в игре чат — плашка, полное окно открывается отдельно")
 	_c(cg.history_requests >= 1, "история чата запрашивается для созданной панели")
 	var ov3 = screen2.open_chat()
 	for i in 3:

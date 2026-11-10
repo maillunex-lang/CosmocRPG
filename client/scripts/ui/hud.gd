@@ -57,6 +57,9 @@ var _sell_button: ActionButton
 var _cargo_row: HBoxContainer
 var _cargo_label: Label
 var _attack_expect: Variant = null  # ожидаемое значение attacking после нажатия (null: не ждём)
+var _peek_a: Label
+var _peek_b: Label
+var _chat_open: Button
 
 @onready var _joystick: Control = %Joystick
 @onready var _reset_button: ActionButton = %ResetButton
@@ -173,11 +176,7 @@ func _ready() -> void:
 	for bar in [%ShieldBar, %HullBar, %EnergyBar]:
 		bar.custom_minimum_size.y = 18.0
 	_skills_grid.add_theme_constant_override("separation", 10)
-	# чат — одна строка. «Открыть» поднимает окно, а не панель над джойстиком.
-	_chat_card.peek_only = true
-	_chat_card.peek_requested.connect(func() -> void: chat_requested.emit())
-	_pref_collapsed["chat"] = true
-	_chat_card.set_collapsed(true, false)
+	_build_chat_strip()
 	_target_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_target_info.max_lines_visible = 2
 	_target_info.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -201,7 +200,7 @@ func _ready() -> void:
 	_dock_skills()
 
 	# иконки боевого кластера и верхнего правого угла: интерфейс легче читается
-	Icons.apply(_attack, "zap", Tokens.DANGER, 22)
+	Icons.apply(_attack, "zap", Color.WHITE, 28)
 	Icons.apply(_autopilot, "rocket", Tokens.ACCENT, 22)
 	Icons.apply(_exit_button, "x", Tokens.TEXT, 18)
 	_exit_button.add_theme_font_size_override("font_size", Tokens.FONT_BODY - 4)
@@ -282,26 +281,120 @@ func _ready() -> void:
 			title_label.gui_input.connect(func(ev: InputEvent) -> void:
 				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 					quest_log_requested.emit())
-	_chat_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("chat", c))
+	_chat_card.toggled.connect(func(c: bool) -> void:
+		_on_card_toggled("chat", c)
+		_keep_chat_strip())
 	_set_target_empty()
 
 
-## Окно чата внутри карточки «Чат» (на сервере); в демо остаются демонстрационные строки.
+## Короткая плашка: два последних сообщения на прозрачном фоне и круглая иконка чата сбоку.
+func _build_chat_strip() -> void:
+	var header := _chat_card.find_child("CardHeader", true, false)
+	if header != null:
+		header.visible = false
+	_chat_lines.visible = false
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Tokens.BG, 0.22)
+	sb.set_corner_radius_all(14)
+	sb.set_content_margin_all(8)
+	sb.border_color = Color(Tokens.TEXT, 0.10)
+	sb.set_border_width_all(1)
+	sb.anti_aliasing = true
+	_chat_card.add_theme_stylebox_override("panel", sb)
+	var row := HBoxContainer.new()
+	row.name = "ChatPeek"
+	row.add_theme_constant_override("separation", 8)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lines.add_theme_constant_override("separation", 2)
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_peek_a = _peek_label()
+	_peek_b = _peek_label()
+	lines.add_child(_peek_a)
+	lines.add_child(_peek_b)
+	row.add_child(lines)
+	var icon := ActionButton.new()
+	icon.name = "ChatOpenButton"
+	icon.text = ""
+	icon.tooltip_text = "Открыть чат"
+	icon.focus_mode = Control.FOCUS_ALL
+	_round_button(icon, 56, Color(Tokens.SURFACE, 0.35), Color(Tokens.ACCENT, 0.55))
+	Icons.apply(icon, "mail", Tokens.ACCENT, 22)
+	icon.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon.pressed.connect(func() -> void: chat_requested.emit())
+	row.add_child(icon)
+	_chat_open = icon
+	_chat_lines.get_parent().add_child(row)
+	_show_chat_lines(PackedStringArray())
+
+
+func _peek_label() -> Label:
+	var l := Label.new()
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.clip_text = true
+	l.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
+	l.add_theme_color_override("font_color", Color(Tokens.TEXT, 0.94))
+	l.custom_minimum_size = Vector2(160, 22)
+	return l
+
+
+func _show_chat_lines(lines: PackedStringArray) -> void:
+	if _peek_a == null or _peek_b == null:
+		return
+	if lines.is_empty():
+		_peek_a.text = "Чат"
+		_peek_a.add_theme_color_override("font_color", Tokens.TEXT_MUTED)
+		_peek_b.text = ""
+		_peek_b.visible = false
+		return
+	_peek_a.add_theme_color_override("font_color", Color(Tokens.TEXT, 0.94))
+	var older := lines[0] if lines.size() == 1 else lines[lines.size() - 2]
+	var newer := "" if lines.size() == 1 else lines[lines.size() - 1]
+	_peek_a.text = older
+	_peek_b.text = newer
+	_peek_b.visible = newer != ""
+
+
+func _keep_chat_strip() -> void:
+	var header := _chat_card.find_child("CardHeader", true, false)
+	if header != null:
+		header.visible = false
+	_chat_lines.visible = false
+	var peek := _chat_card.find_child("ChatPeek", true, false)
+	if peek != null:
+		peek.visible = true
+	if chat_panel != null and chat_panel.get_parent() == self:
+		chat_panel.visible = false
+
+
+## Окно чата живёт отдельно и открывается иконкой. В карточке остаются только две строки.
+func _has_live_chat(gw: Node) -> bool:
+	return gw != null and gw.has_method("has_chat") and gw.has_chat()
+
+
 func _setup_chat(gw: UiGateway) -> void:
 	if chat_panel != null:
 		return
 	chat_panel = ChatPanel.new()
 	chat_panel.name = "ChatPanel"
-	_chat_lines.get_parent().add_child(chat_panel)
+	chat_panel.visible = false
+	add_child(chat_panel)
 	chat_panel.bind(gw)
-	var online := not (gw.has_method("is_demo") and gw.is_demo())
-	_chat_lines.visible = not online
-	chat_panel.visible = online
+	_keep_chat_strip()
+	if not _has_live_chat(gw):
+		return
 	chat_panel.unread_changed.connect(func(n: int) -> void:
-		_chat_card.title = "Чат" if n <= 0 else "Чат · %d" % n)
+		if _chat_open != null:
+			_chat_open.tooltip_text = "Открыть чат" if n <= 0 else "Открыть чат · %d" % n)
 	chat_panel.expand_requested.connect(func() -> void: chat_requested.emit())
-	chat_panel.preview_changed.connect(_set_chat_preview)
-	_set_chat_preview(chat_panel.preview_text())
+	chat_panel.preview_changed.connect(func(_t: String) -> void:
+		_show_chat_lines(chat_panel.preview_lines(2)))
+	_show_chat_lines(chat_panel.preview_lines(2))
 
 
 ## Короткое сообщение игроку (всплывающая плашка).
@@ -388,7 +481,7 @@ func bind(gw: UiGateway) -> void:
 	%DemoLabel.visible = gw.is_demo()
 	_system_button.visible = gw.is_demo()
 	_setup_chat(gw)   # панель чата создаётся при привязке к шлюзу (с 0.3.2 вызов был забыт: в игре оставалась демо-заглушка)
-	if not (gw.has_method("is_demo") and gw.is_demo()):
+	if _has_live_chat(gw):
 		gw.request_chat_history()   # история запрашивается при входе, до появления панели: запрашиваем ещё раз уже для неё
 	apply_state(gw.snapshot())
 	if gw.has_signal("server_updated"):
@@ -407,7 +500,7 @@ func _build_cargo_ui() -> void:
 	var sp := _speed_label.get_parent()
 	sp.add_child(_cargo_row)
 	sp.move_child(_cargo_row, _speed_label.get_index() + 1)
-	var stack := _attack.get_parent()
+	var stack := _autopilot.get_parent()
 	_mine_button = ActionButton.new()
 	_mine_button.name = "MineButton"
 	_mine_button.text = "Добыть"
@@ -422,8 +515,9 @@ func _build_cargo_ui() -> void:
 	_sell_button.pressed.connect(func() -> void: if gateway != null: gateway.sell())
 	stack.add_child(_mine_button)
 	stack.add_child(_sell_button)
-	stack.move_child(_mine_button, _attack.get_index() + 1)
-	stack.move_child(_sell_button, _attack.get_index() + 2)
+	var at := _autopilot.get_index()
+	stack.move_child(_mine_button, at)
+	stack.move_child(_sell_button, at + 1)
 
 
 func _on_mine_pressed() -> void:
@@ -460,15 +554,30 @@ func _apply_cargo(state: Dictionary, target: Dictionary, ship: Dictionary) -> vo
 
 func _dock_skills() -> void:
 	var right := _attack.get_parent()
-	_skills_grid.reparent(right, false)
-	right.move_child(_skills_grid, _attack.get_index())
+	var cluster := VBoxContainer.new()
+	cluster.name = "SkillCluster"
+	cluster.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cluster.size_flags_horizontal = Control.SIZE_SHRINK_END
+	cluster.add_theme_constant_override("separation", 8)
+	right.add_child(cluster)
+	right.move_child(cluster, _attack.get_index())
+	_skills_grid.reparent(cluster, false)
 	_skills_grid.size_flags_horizontal = Control.SIZE_SHRINK_END
 	if _skills_grid is GridContainer:
 		(_skills_grid as GridContainer).columns = 2
-	_auto_skills.reparent(right, false)
-	right.move_child(_auto_skills, _attack.get_index())
-	_auto_skills.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_auto_skills.custom_minimum_size = Vector2(52, 52)
+	var bottom := HBoxContainer.new()
+	bottom.name = "AttackRow"
+	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom.add_theme_constant_override("separation", 10)
+	cluster.add_child(bottom)
+	_attack.reparent(bottom, false)
+	_attack.text = ""
+	_attack.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_attack.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	_style_attack(false)
+	_auto_skills.reparent(bottom, false)
+	_auto_skills.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_auto_skills.text = "Авто"
 	_round_button(_auto_skills, 52)
 	for b in _skill_buttons:
@@ -476,32 +585,48 @@ func _dock_skills() -> void:
 	_paint_auto()
 
 
-func _round_button(b: Button, side: float) -> void:
+func _round_button(b: Button, side: float, fill: Variant = null, edge: Variant = null) -> void:
 	b.custom_minimum_size = Vector2(side, side)
 	b.clip_text = true
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.add_theme_font_size_override("font_size", 13 if side < 60 else 15)
+	var bg := Color(Tokens.SURFACE, 0.78)
+	var border := Color(Tokens.ACCENT, 0.55)
+	if fill is Color:
+		bg = fill
+	if edge is Color:
+		border = edge
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(Tokens.SURFACE, 0.78)
-	sb.border_color = Color(Tokens.ACCENT, 0.55)
+	sb.bg_color = bg
+	sb.border_color = border
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(int(side * 0.5))
-	sb.content_margin_left = 6
-	sb.content_margin_right = 6
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
 	var hover := sb.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(Tokens.ACCENT, 0.28)
+	hover.bg_color = bg.lightened(0.12)
 	var pressed := sb.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(Tokens.ACCENT, 0.45)
+	pressed.bg_color = bg.lightened(0.2)
 	var disabled := sb.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(Tokens.BG, 0.55)
+	disabled.bg_color = Color(Tokens.BG, 0.45)
 	disabled.border_color = Color(Tokens.TEXT_MUTED, 0.25)
 	b.add_theme_stylebox_override("normal", sb)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_stylebox_override("disabled", disabled)
 	b.add_theme_stylebox_override("focus", sb)
+
+
+func _style_attack(attacking: bool) -> void:
+	var fill := Color(Tokens.DANGER, 0.95) if attacking else Color(Tokens.DANGER, 0.72)
+	var edge := Color(1, 1, 1, 0.9) if attacking else Color(Tokens.DANGER.lightened(0.2), 0.85)
+	_round_button(_attack, 84, fill, edge)
+	Icons.apply(_attack, "zap", Color.WHITE, 28)
+	_attack.text = ""
+	_attack.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_attack.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 
 
 func _paint_auto() -> void:
@@ -716,9 +841,10 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 		_attack_expect = null
 	var combat_ok: bool = state.get("combat_available", true)
 	if not _attack.is_busy():
-		_attack.text = ("Прекратить атаку" if attacking else "Атаковать") if combat_ok else "Бой · скоро"
-		_attack.variant = ActionButton.Variant.SECONDARY if attacking else ActionButton.Variant.DANGER
+		var phrase := ("Прекратить атаку" if attacking else "Атаковать") if combat_ok else "Бой скоро"
+		_attack.tooltip_text = phrase
 		_attack.disabled = not combat_ok or (not attacking and (not has_target or friendly))
+		_style_attack(attacking and combat_ok)
 
 	for i in _skill_buttons.size():
 		var b: ActionButton = _skill_buttons[i]
@@ -770,10 +896,9 @@ func _apply_combat_layout(in_combat: bool) -> void:
 	_auto_collapsing = true
 	if in_combat:
 		_quests_card.set_collapsed(true, false)
-		_chat_card.set_collapsed(true, false)
 	else:
 		_quests_card.set_collapsed(_pref_collapsed["quests"], true)
-		_chat_card.set_collapsed(_pref_collapsed["chat"], true)
+	_keep_chat_strip()
 	_auto_collapsing = false
 
 
@@ -806,27 +931,18 @@ func _apply_lists(state: Dictionary) -> void:
 	var csig := JSON.stringify(chat)
 	if csig != _chat_sig:
 		_chat_sig = csig
-		for c in _chat_lines.get_children():
-			c.queue_free()
-		if chat.is_empty():
-			_add_muted(_chat_lines, "Сообщений нет")
-			if gateway == null or not gateway.has_chat():
-				_set_chat_preview("")
-		var last := ""
-		for m in chat.slice(maxi(0, chat.size() - 3)):
-			var who: String = ("%s: " % m["author"]) if str(m["author"]) != "" else ""
-			var line := "[%s] %s%s" % [m["channel"], who, m["text"]]
-			_add_muted(_chat_lines, line)
-			last = ("%s: %s" % [m["author"], m["text"]]).strip_edges()
-		if gateway == null or not gateway.has_chat():
-			_set_chat_preview(last)
-
-
-func _set_chat_preview(text: String) -> void:
-	var line := text.strip_edges().replace("\n", " ")
-	if line.length() > 28:
-		line = line.substr(0, 27) + "…"
-	_chat_card.title = "Чат" if line == "" else line
+		var live := _has_live_chat(gateway)
+		if not live:
+			var lines := PackedStringArray()
+			for m in chat.slice(maxi(0, chat.size() - 2)):
+				var who := str(m.get("author", "")).strip_edges()
+				var text := str(m.get("text", "")).strip_edges().replace("\n", " ")
+				var line := text if who == "" else "%s: %s" % [who, text]
+				if line.length() > 80:
+					line = line.substr(0, 79) + "…"
+				lines.append(line)
+			_show_chat_lines(lines)
+		_keep_chat_strip()
 
 
 func _add_muted(parent: Control, text: String) -> void:
@@ -865,8 +981,8 @@ func _on_attack_pressed() -> void:
 	gateway.attack(str(target["id"]))
 
 
-func _begin_attack_busy(text: String, expect: bool) -> void:
-	_attack.begin_busy(text)
+func _begin_attack_busy(_text: String, expect: bool) -> void:
+	_attack.begin_busy("")
 	_attack_expect = expect
 	get_tree().create_timer(BUSY_TIMEOUT).timeout.connect(func() -> void:
 		if _attack.is_busy():

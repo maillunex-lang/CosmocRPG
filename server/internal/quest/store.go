@@ -22,7 +22,7 @@ func NewPGStore(pool *pgxpool.Pool) *PGStore { return &PGStore{pool: pool} }
 func (s *PGStore) Sync(ctx context.Context, defs []Def) error {
 	for _, d := range defs {
 		body, _ := json.Marshal(map[string]any{
-			"text": d.Text, "kind": d.Kind, "target": d.Target, "radius": d.Radius, "goal": d.Goal,
+			"text": d.Text, "kind": d.Kind, "target": d.Target, "system": d.System, "marker": d.Marker, "radius": d.Radius, "goal": d.Goal,
 			"reward": map[string]any{"credits": d.Reward.Credits},
 		})
 		// версия неизменяема: повторная запись той же версии ничего не меняет

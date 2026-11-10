@@ -282,19 +282,17 @@ func TestEventKindsAndChain(t *testing.T) {
 	if got := s.Event(ctx, "p2", "sell", "", 1); len(got) != 1 || got[0].Next != "За границей" {
 		t.Fatalf("sell: %+v", got)
 	}
-	if got := s.Event(ctx, "p2", "jump", "meridian", 1); len(got) != 1 || got[0].Next != "" {
+	if got := s.Event(ctx, "p2", "jump", "meridian", 1); len(got) != 1 || got[0].Next != "Груз для Меридиана" {
 		t.Fatalf("jump: %+v", got)
 	}
-	// View показывает активные: после финального прыжка активных нет — цепочка пройдена целиком
-	if v, _ := s.View("p2"); len(v.Quests) != 0 {
-		t.Fatalf("активные после финала: %+v", v.Quests)
+	if v, _ := s.View("p2"); len(v.Quests) != 1 || v.Quests[0].ID != "meridian_delivery" {
+		t.Fatalf("после прыжка открыта доставка: %+v", v.Quests)
 	}
-	// перезаход: заново не выдаётся, все пять в журнале завершённых
 	s.Leave("p2")
 	if err := s.Join(ctx, "p2"); err != nil {
 		t.Fatal(err)
 	}
-	if v, _ := s.View("p2"); len(v.Quests) != 0 || v.Credits != 3600 {
+	if v, _ := s.View("p2"); len(v.Quests) != 1 || v.Quests[0].ID != "meridian_delivery" || v.Credits != 3600 {
 		t.Fatalf("после перезахода: %+v", v)
 	}
 }
@@ -411,7 +409,7 @@ func TestTwoPilotCampaignRestart(t *testing.T) {
 			t.Fatal(err)
 		}
 		v, _ := s.View(pid)
-		if len(v.Quests) != 0 || v.Credits != 3600 {
+		if len(v.Quests) != 1 || v.Quests[0].ID != "meridian_delivery" || v.Credits != 3600 {
 			t.Fatalf("campaign restore: %+v", v)
 		}
 		s.Evaluate(ctx, pid, station)
@@ -524,5 +522,55 @@ func TestEventReceiptRestartAndPendingCompletion(t *testing.T) {
 				t.Fatal("duplicate recovery reward", v)
 			}
 		})
+	}
+}
+
+func TestMeridianChapter(t *testing.T) {
+	ctx := context.Background()
+	s := newSvc(NewMemStore())
+	if err := s.Join(ctx, "pilot"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.Pending("pilot", "deliver", "meridian"); ok {
+		t.Fatal("доставка не должна быть доступна до прыжка")
+	}
+	s.Evaluate(ctx, "pilot", station)
+	s.Event(ctx, "pilot", "kill", "", 1)
+	s.Event(ctx, "pilot", "mine", "iron_ore", 5)
+	s.Event(ctx, "pilot", "sell", "", 1)
+	if got := s.Event(ctx, "pilot", "jump", "redstorm", 1); len(got) != 0 {
+		t.Fatal("прыжок не в Меридиан закрыл главу", got)
+	}
+	got := s.Event(ctx, "pilot", "jump", "meridian", 1)
+	if len(got) != 1 || got[0].Next != "Груз для Меридиана" {
+		t.Fatalf("прыжок: %+v", got)
+	}
+	if got := s.EventAt(ctx, "pilot", "aurora", "deliver", "iron_ore", 5); len(got) != 0 {
+		t.Fatal("сдача в чужой системе", got)
+	}
+	d, ok := s.Pending("pilot", "deliver", "meridian")
+	if !ok || d.Target != "iron_ore" || d.Goal != 5 || d.Marker != "station" {
+		t.Fatalf("ожидалась доставка руды: %+v %v", d, ok)
+	}
+	got = s.EventAt(ctx, "pilot", "meridian", "deliver", "iron_ore", 5)
+	if len(got) != 1 || got[0].QuestID != "meridian_delivery" || got[0].Next != "След в пустоте" || got[0].Credits != 1200 {
+		t.Fatalf("доставка: %+v", got)
+	}
+	if _, ok := s.Pending("pilot", "visit", "aurora"); ok {
+		t.Fatal("аномалия Меридиана открылась в Авроре")
+	}
+	if got := s.EventAt(ctx, "pilot", "meridian", "visit", "station", 1); len(got) != 0 {
+		t.Fatal("станция закрыла ещё не открытый доклад", got)
+	}
+	got = s.EventAt(ctx, "pilot", "meridian", "visit", "anomaly", 1)
+	if len(got) != 1 || got[0].Next != "Доклад на станции" {
+		t.Fatalf("аномалия: %+v", got)
+	}
+	got = s.EventAt(ctx, "pilot", "meridian", "visit", "station", 1)
+	if len(got) != 1 || got[0].QuestID != "meridian_report" || got[0].Next != "" || got[0].Total != 6400 {
+		t.Fatalf("доклад: %+v", got)
+	}
+	if v, _ := s.View("pilot"); len(v.Quests) != 0 || v.Credits != 6400 {
+		t.Fatalf("глава закрыта: %+v", v)
 	}
 }

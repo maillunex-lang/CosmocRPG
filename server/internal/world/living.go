@@ -136,9 +136,13 @@ func (w *World) ApplyLayout(l worldgen.Layout, cfg worldgen.Config) error {
 	}
 	for _, st := range l.Stations {
 		w.safe = append(w.safe, safeZone{Vec{st.Pos[0], st.Pos[1]}, st.SafeRadius})
-		if st.ID != StationID {
-			w.npcs = append(w.npcs, &npc{ID: st.ID, Name: st.Name, Kind: "station", Stance: "friendly", Pos: Vec{st.Pos[0], st.Pos[1]}})
+		if st.ID == StationID || st.Hub {
+			w.station.ID = st.ID
+			w.station.Name = st.Name
+			w.station.Pos = st.Pos
+			continue
 		}
+		w.npcs = append(w.npcs, &npc{ID: st.ID, Name: st.Name, Kind: "station", Stance: "friendly", Pos: Vec{st.Pos[0], st.Pos[1]}})
 	}
 	for _, sp := range l.Spawns {
 		ec, ok := cfg.Enemies[sp.Tier]
@@ -235,6 +239,7 @@ func (w *World) stepLiving(dt float64) {
 		}
 		w.stepMining(p)
 		w.stepDiscovery(p)
+		w.stepStations(p)
 	}
 }
 
@@ -398,6 +403,7 @@ func (w *World) stepDiscovery(p *Player) {
 			continue
 		}
 		p.discovered[n.ID] = true
+		w.arrived = append(w.arrived, Arrival{Player: p.ID, System: w.system.ID, ID: n.ID, Name: n.Name, Kind: n.Kind, Pos: n.Pos})
 		w.emit(Event{Type: "discover", From: p.ID, To: n.ID, Amount: n.pt.reward})
 		if n.pt.reward > 0 {
 			w.rewards = append(w.rewards, Reward{Player: p.ID, Key: "discover:" + n.ID, Kind: "discover", Ref: n.ID, Credits: int64(n.pt.reward)})
@@ -405,7 +411,105 @@ func (w *World) stepDiscovery(p *Player) {
 	}
 }
 
-// SellCargo продаёт весь груз на станции (в зоне станции). Цены задаёт конфигурация ресурсов.
+func (w *World) stepStations(p *Player) {
+	seen := map[string]bool{}
+	try := func(id, name string, pos Vec) {
+		if id == "" || seen[id] || p.discovered["station:"+id] {
+			return
+		}
+		if dist(p.Pos, pos) > 40 {
+			return
+		}
+		seen[id] = true
+		p.discovered["station:"+id] = true
+		w.arrived = append(w.arrived, Arrival{Player: p.ID, System: w.system.ID, ID: id, Name: name, Kind: "station", Pos: pos})
+	}
+	try(w.station.ID, w.station.Name, Vec{w.station.Pos[0], w.station.Pos[1]})
+	for _, n := range w.npcs {
+		if n.Kind == "station" {
+			try(n.ID, n.Name, n.Pos)
+		}
+	}
+}
+
+// DrainArrivals забирает новые прибытия и очищает очередь.
+func (w *World) DrainArrivals() []Arrival {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	out := w.arrived
+	w.arrived = nil
+	return out
+}
+
+// AtKind сообщает, стоит ли живой игрок у объекта этого вида (аномалия, обломок, сигнал, станция).
+func (w *World) AtKind(id, kind string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok || p.deadUntil > w.t {
+		return false
+	}
+	if kind == "station" && dist(p.Pos, Vec{w.station.Pos[0], w.station.Pos[1]}) <= 40 {
+		return true
+	}
+	for _, n := range w.npcs {
+		if n.Kind != kind || n.deadUntil > w.t {
+			continue
+		}
+		if n.Hidden && p.revealed[n.ID] <= w.t {
+			continue
+		}
+		reach := 40.0
+		if n.pt != nil && n.pt.radius > 0 {
+			reach = n.pt.radius
+		}
+		if dist(p.Pos, n.Pos) <= reach {
+			return true
+		}
+	}
+	return false
+}
+
+// TakeCargo списывает ресурс у станции. false — не списано, груз не изменён.
+func (w *World) TakeCargo(id, resource string, amount float64) (Record, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok || amount <= 0 || math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return Record{}, false
+	}
+	if p.actionBusy() || p.cargoRevision == math.MaxInt64 || p.deadUntil > w.t || !w.inSafe(p.Pos) {
+		return Record{}, false
+	}
+	if p.hold[resource]+1e-6 < amount {
+		return Record{}, false
+	}
+	p.hold[resource] -= amount
+	if p.hold[resource] < 1e-6 {
+		delete(p.hold, resource)
+	}
+	p.cargoRevision++
+	return p.record(), true
+}
+
+// GiveCargo возвращает ресурс, если списание задания не удалось сохранить. false — груз не изменён.
+func (w *World) GiveCargo(id, resource string, amount float64) (Record, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok || amount <= 0 || p.actionBusy() || p.cargoRevision == math.MaxInt64 {
+		return Record{}, false
+	}
+	if holdUsed(p.hold)+amount > p.spec.Cargo+1e-6 {
+		return Record{}, false
+	}
+	if p.hold == nil {
+		p.hold = map[string]float64{}
+	}
+	p.hold[resource] += amount
+	p.cargoRevision++
+	return p.record(), true
+}
 func (w *World) SellCargo(id string) (int64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()

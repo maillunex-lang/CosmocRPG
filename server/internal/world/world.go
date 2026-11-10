@@ -226,6 +226,7 @@ type World struct {
 	catalog Catalog
 	npcs    []*npc
 	events  []Event
+	arrived []Arrival
 
 	// живые локации
 	deposits []*deposit

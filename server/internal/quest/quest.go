@@ -21,8 +21,10 @@ type Def struct {
 	Version int
 	Title   string
 	Text    string
-	Kind    string  // reach | kill | mine | sell | jump
-	Target  string  // идентификатор объекта/ресурса/системы
+	Kind    string  // reach | kill | mine | sell | jump | deliver | visit
+	Target  string  // идентификатор объекта/ресурса/вида точки
+	System  string  // система, если задание привязано к ней; пусто — любая
+	Marker  string  // подсказка карты: station | anomaly | derelict | signal
 	Radius  float64 // дистанция выполнения, ед. (reach)
 	Goal    int
 	Reward  Reward
@@ -55,6 +57,18 @@ func Catalog() []Def {
 			Text: "Совершите гиперпереход из Авроры в Меридиан.",
 			Kind: "jump", Target: "meridian", Goal: 1, After: "first_deal",
 			Reward: Reward{Credits: 1000}},
+		{ID: "meridian_delivery", Version: 1, Title: "Груз для Меридиана",
+			Text: "Привезите 5 единиц железной руды на станцию Меридиана.",
+			Kind: "deliver", Target: "iron_ore", System: "meridian", Marker: "station", Goal: 5, After: "first_jump",
+			Reward: Reward{Credits: 1200}},
+		{ID: "meridian_trace", Version: 1, Title: "След в пустоте",
+			Text: "Найдите гравитационную аномалию в Меридиане.",
+			Kind: "visit", Target: "anomaly", System: "meridian", Marker: "anomaly", Goal: 1, After: "meridian_delivery",
+			Reward: Reward{Credits: 900}},
+		{ID: "meridian_report", Version: 1, Title: "Доклад на станции",
+			Text: "Вернитесь на станцию Меридиана и сдайте доклад.",
+			Kind: "visit", Target: "station", System: "meridian", Marker: "station", Goal: 1, After: "meridian_trace",
+			Reward: Reward{Credits: 700}},
 	}
 }
 
@@ -108,6 +122,8 @@ type QuestView struct {
 	Text     string `json:"text"`
 	Progress int    `json:"progress"`
 	Goal     int    `json:"goal"`
+	System   string `json:"system,omitempty"`
+	Marker   string `json:"marker,omitempty"`
 }
 
 // Completion — событие выполнения контракта.
@@ -229,7 +245,7 @@ func (s *Service) View(pid string) (View, bool) {
 		if !ok {
 			continue
 		}
-		v.Quests = append(v.Quests, QuestView{ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal})
+		v.Quests = append(v.Quests, QuestView{ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal, System: d.System, Marker: d.Marker})
 	}
 	return v, true
 }
@@ -291,7 +307,13 @@ func (s *Service) activateFollowers(ctx context.Context, pid, doneID string) str
 // Event учитывает серверное событие (kill/mine/sell/jump) в активных контрактах игрока.
 // Возвращает завершённые контракты (с Next — названием следующего).
 func (s *Service) Event(ctx context.Context, pid, kind, ref string, n int) []Completion {
-	return s.event(ctx, pid, "", kind, ref, n)
+	return s.event(ctx, pid, "", "", kind, ref, n)
+}
+
+// EventAt — то же событие, но только для заданий указанной системы.
+// Доставка и посещение не засчитываются без системы: иначе груз можно было бы сдать не там.
+func (s *Service) EventAt(ctx context.Context, pid, system, kind, ref string, n int) []Completion {
+	return s.event(ctx, pid, "", system, kind, ref, n)
 }
 
 // EventOnce — только для подтверждённых событий сервера с постоянным ключом.
@@ -300,9 +322,34 @@ func (s *Service) EventOnce(ctx context.Context, pid, key, kind, ref string, n i
 	if key == "" || len(key) > 128 {
 		return nil
 	}
-	return s.event(ctx, pid, key, kind, ref, n)
+	return s.event(ctx, pid, key, "", kind, ref, n)
 }
-func (s *Service) event(ctx context.Context, pid, key, kind, ref string, n int) []Completion {
+
+// Pending возвращает активное задание этого вида в системе, если прогресс ещё не добран.
+func (s *Service) Pending(pid, kind, system string) (Def, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ps := s.players[pid]
+	if ps == nil {
+		return Def{}, false
+	}
+	for _, q := range ps.data.Quests {
+		if q.State != "active" || (q.Goal > 0 && q.Progress >= q.Goal) {
+			continue
+		}
+		d, ok := s.def(q.QuestID, q.Version)
+		if !ok || d.Kind != kind {
+			continue
+		}
+		if d.System != "" && d.System != system {
+			continue
+		}
+		return d, true
+	}
+	return Def{}, false
+}
+
+func (s *Service) event(ctx context.Context, pid, key, system, kind, ref string, n int) []Completion {
 	if n <= 0 {
 		return nil
 	}
@@ -318,7 +365,7 @@ func (s *Service) event(ctx context.Context, pid, key, kind, ref string, n int) 
 			continue
 		}
 		d, ok := s.def(q.QuestID, q.Version)
-		if ok && d.Kind == kind && (d.Target == "" || d.Target == ref) {
+		if ok && d.Kind == kind && (d.System == "" || d.System == system) && (d.Target == "" || d.Target == ref) {
 			matching = append(matching, d)
 		}
 	}

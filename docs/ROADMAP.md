@@ -17,7 +17,7 @@
 ## Сводка прогресса
 
 <!--GEN:SUMMARY-->
-Всего задач в реестре: **64** · DONE **23** · IN_PROGRESS **5** · BLOCKED **3** · TODO **32** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
+Всего задач в реестре: **64** · DONE **25** · IN_PROGRESS **5** · BLOCKED **3** · TODO **30** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
 <!--/GEN-->
 
 Правило подсчёта: прогресс = доля DONE-задач в `tasks.json`. Это **не** готовность игры — см. `roadmap/STATUS.md`.
@@ -29,7 +29,7 @@
 | PROTO-12 | P1 | Двухклиентская приёмка прототипа | владелец | IN_PROGRESS | `tasks.json`, Э-5 |
 | PROTO-05B | P1 | Сквозная приёмка + контрольная точка | Kimi | TODO | после PROTO-12 |
 | K-1B | P1 | Корпорации: клиент | свободен | TODO | `modules/CORPORATIONS.md` |
-| K-2 | P1 | Квест deliver + глава 1 в Меридиане | свободен | TODO | `modules/QUESTS.md` |
+| K-2 | P1 | Квест deliver + глава 1 в Меридиане | ветка feature/game-sfx | DONE локально, не в main | `modules/QUESTS.md` |
 | SR-100C | P0 | Оснащение: сохранение и смена в доке | Codex | IN_PROGRESS | `docs/ships-rpg/ROADMAP.md` |
 | SR-100D | P0 | Приёмка оснащения + release | Codex | TODO | после SR-100C |
 | E-4 | P2 | Серверные препятствия (минимум NAV-01) | свободен | TODO | `modules/GALAXY.md` |
@@ -44,7 +44,7 @@
 | Галактика (системы, локации) | 3/4 | активно | `modules/GALAXY.md` |
 | Корабли и оснащение | 1/10 | активно (Codex) | `modules/SHIPS.md` → `docs/ships-rpg/` |
 | Бой | 1/1 | в основном готово | `modules/COMBAT.md` |
-| Квесты и сюжет | 1/3 | активно | `modules/QUESTS.md` |
+| Квесты и сюжет | 3/4 | глава 1 Меридиана в ветке, не в main | `modules/QUESTS.md` |
 | ИИ-игроки | 1/1 | готово (мониторинг) | `modules/AI_PLAYERS.md` |
 | Экономика | 2/2 | готово (расширение в бэклоге) | `modules/ECONOMY.md` |
 | Корпорации | 1/2 | активно | `modules/CORPORATIONS.md` |

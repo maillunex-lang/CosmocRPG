@@ -15,17 +15,20 @@ type WorldView interface {
 }
 
 // FarmController joins one reserved captain as a real player and attacks the nearest hostile from the world snapshot.
+// It also monitors hull and retreats when health is low.
 type FarmController struct {
 	Bootstrap *Bootstrapper
 	Store     *Store
 	World     WorldView
 	Endpoint  string // loopback WS, e.g. "ws://127.0.0.1:8080/ws"
 	Fallback  []string // used only if snapshot has no hostiles
+	LowHull   float64  // fraction (0-1) below which the agent retreats; default 0.3
 	Log       *slog.Logger
 }
 
-func nearestHostile(st world.State, me [2]float64) string {
+func nearestHostile(st world.State, me [2]float64) (id string, pos [2]float64) {
 	best, bd := "", math.MaxFloat64
+	var bp [2]float64
 	for _, o := range st.Objects {
 		if o.Kind != "hostile" || o.Dead || o.ID == "" {
 			continue
@@ -33,10 +36,10 @@ func nearestHostile(st world.State, me [2]float64) string {
 		dx, dy := o.Pos[0]-me[0], o.Pos[1]-me[1]
 		d := math.Hypot(dx, dy)
 		if d < bd {
-			best, bd = o.ID, d
+			best, bd, bp = o.ID, d, o.Pos
 		}
 	}
-	return best
+	return best, bp
 }
 
 // JoinAndFarm ensures the captain has a player, opens a Gateway, reads the snapshot and attacks the nearest hostile.
@@ -57,13 +60,12 @@ func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Ga
 	if err != nil {
 		return nil, err
 	}
-	// Give the world a moment to register the joined player.
 	time.Sleep(300 * time.Millisecond)
 
 	target := ""
 	if f.World != nil {
 		if st, ok := f.World.Snapshot(rec.ID); ok {
-			target = nearestHostile(st, st.Ship.Pos)
+			target, _ = nearestHostile(st, st.Ship.Pos)
 		}
 	}
 	if target == "" {
@@ -90,7 +92,57 @@ func (f *FarmController) JoinAndFarm(ctx context.Context, captainID string) (*Ga
 	if f.Log != nil {
 		f.Log.Info("AI civilization: farming started", "captain", captainID, "target", target)
 	}
+	// Start health monitor in background.
+	go f.monitorHealth(ctx, g, captainID, rec.ID)
 	return g, nil
+}
+
+// monitorHealth periodically checks hull and retreats when below LowHull.
+func (f *FarmController) monitorHealth(ctx context.Context, g *Gateway, captainID, playerID string) {
+	threshold := f.LowHull
+	if threshold <= 0 || threshold >= 1 {
+		threshold = 0.3
+	}
+	t := time.NewTicker(2 * time.Second)
+	defer t.Stop()
+	retreating := false
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if f.World == nil {
+				continue
+			}
+			st, ok := f.World.Snapshot(playerID)
+			if !ok || st.Ship.HullMax <= 0 {
+				continue
+			}
+			frac := st.Ship.Hull / st.Ship.HullMax
+			if frac < threshold && !retreating {
+				_, threatPos := nearestHostile(st, st.Ship.Pos)
+				if err := RetreatAway(ctx, g, "retreat-1", st.Ship.Pos, threatPos); err != nil {
+					if f.Log != nil {
+						f.Log.Error("AI retreat failed", "captain", captainID, "err", err)
+					}
+					continue
+				}
+				retreating = true
+				_ = RecordFailure(ctx, f.Store, captainID, "low-hull", time.Now())
+				if f.Log != nil {
+					f.Log.Info("AI civilization: retreating (low hull)", "captain", captainID, "hull_frac", frac)
+				}
+			}
+			if frac > threshold+0.15 && retreating {
+				// recovered enough; stop forced move so the agent can re-engage later
+				_ = IssueMove(ctx, g, "resume-1", 0, 0)
+				retreating = false
+				if f.Log != nil {
+					f.Log.Info("AI civilization: recovered, can re-engage", "captain", captainID, "hull_frac", frac)
+				}
+			}
+		}
+	}
 }
 
 // Hold keeps the gateway open until the context is cancelled, then closes it.

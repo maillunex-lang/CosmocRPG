@@ -47,6 +47,7 @@ func (h *Handler) aiPlayersSettingsPut(w http.ResponseWriter, r *http.Request, u
 		h.opts.Civ.Set(aiciv.Knobs{Enabled: s.CivEnabled, Cast: s.CivCast, Chat: s.CivChat, TalkMin: s.CivTalkMin, TalkMax: s.CivTalkMax, IntervalSec: s.CivIntervalSec, RetreatPct: s.CivRetreatPct, Help: s.CivHelp})
 	}
 	h.audit_(r.Context(), 0, u.Username, "ai_players_settings", h.clientIP(r), map[string]any{"enabled": s.Enabled, "min": s.MinOnline, "max": s.MaxOnline, "civ": s.CivEnabled, "cast": s.CivCast})
+	h.changed("ИИ-игроки")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "settings": s})
 }
 

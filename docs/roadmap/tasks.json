@@ -4,7 +4,7 @@
  "branch": "main",
  "generated_by": "docs/roadmap-refactor-v2.0 (Kimi Code)",
  "updated": "2026-11-10",
- "last_verified_sha": "0a14c14",
+ "last_verified_sha": "200c1b8",
  "modules": [
   "GALAXY",
   "SHIPS",
@@ -1419,6 +1419,162 @@
     "apk": "NOT_RELEASED"
    },
    "acceptance": "Есть согласованный список рецептов, сервер списывает материалы и выдаёт результат один раз, клиент показывает верстак."
+  },
+  {
+   "id": "CLASS-000",
+   "title": "Аудит боевых профессий кораблей",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "CLASS-RPG-001: аудит main 200c1b8 и гибрид корпус→роль→специализация→таланты→модули→билд. Игровой код не менялся.",
+   "updated": "2026-11-10",
+   "release": {
+    "server": "IN_MAIN",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Аудит и этапы CLASS-010…080 записаны. Код боя не менялся.",
+   "tests": [
+    "Сверка с server/internal/world/combat.go и ships.json на SHA 200c1b8"
+   ]
+  },
+  {
+   "id": "CLASS-010",
+   "title": "Общий профиль боя без новых ролей",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Один CombatProfile поверх текущего урона. Характеристики пилота — маленький множитель. Старые сейвы и Стриж не ломаются.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-000"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Стриж и коридор как раньше; старый сейв заходит."
+  },
+  {
+   "id": "CLASS-020",
+   "title": "Четыре боевые роли первой поставки",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "BLOCKED",
+   "description": "Штурмовик, бастион, инженер, снайпер. По одной ветке, 6 узлов, ульта. Только корпуса из ships.json. Ждёт Q-CLASS.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-010"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Коридор соло и пати; лечение убывает со стаками."
+  },
+  {
+   "id": "CLASS-030",
+   "title": "Ангар ролей, дерева и четырёх слотов",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Выбор роли, дерево, 4 слота. Превью статов считает сервер. Старый клиент остаётся на pulse/boost/intercept/scan.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-020"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-040",
+   "title": "Контролёр и разведчик",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Метка, тишина, маскировка. Повторный контроль не держит вечно.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-030"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-050",
+   "title": "Дрон как сущность, затем дроновод и псионик",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Сначала отдельный дрон с корпусом, потом роль дроновода. Псионик после живых зон.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-040"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-060",
+   "title": "Босс хранителя награды",
+   "module": "COMBAT",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Три фазы, уязвимые подсистемы и телеграф в текущем коридоре. Без ролей тоже убиваем.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-020"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-070",
+   "title": "Gear Score как число подбора",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Показатель мощности, не множитель урона.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-010"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-080",
+   "title": "PvP-множители выключены флагом",
+   "module": "COMBAT",
+   "priority": "P3",
+   "status": "DEFERRED",
+   "description": "Коэффициенты PvP подготовлены и не применяются. Корпоративные войны отдельно. Флаг по умолчанию выключен.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-070"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
   }
  ]
 }

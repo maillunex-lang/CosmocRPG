@@ -17,7 +17,7 @@
 ## Сводка прогресса
 
 <!--GEN:SUMMARY-->
-Всего задач в реестре: **65** · DONE **25** · IN_PROGRESS **5** · BLOCKED **3** · TODO **31** · DEFERRED **1** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
+Всего задач в реестре: **74** · DONE **26** · IN_PROGRESS **5** · BLOCKED **4** · TODO **37** · DEFERRED **2** · FAILED **0** · ожидают решения владельца: **6** (см. `roadmap/BLOCKERS.md`)
 <!--/GEN-->
 
 Правило подсчёта: прогресс = доля DONE-задач в `tasks.json`. Это **не** готовность игры — см. `roadmap/STATUS.md`.
@@ -33,6 +33,8 @@
 | SR-100C | P0 | Оснащение: сохранение и смена в доке | Codex | IN_PROGRESS | `docs/ships-rpg/ROADMAP.md` |
 | SR-100D | P0 | Приёмка оснащения + release | Codex | TODO | после SR-100C |
 | E-4 | P2 | Серверные препятствия (минимум NAV-01) | свободен | TODO | `modules/GALAXY.md` |
+| CLASS-000 | P1 | Аудит боевых профессий записан, код не начат | — | DONE | `docs/ships-rpg/ROADMAP.md` |
+| CLASS-010 | P1 | Общий профиль боя без новых ролей | — | TODO | после подтверждения владельца, CLASS-020 |
 | RADIO | P1 | Радио: М-1 в main, М-3 в отдельной ветке, М-2 ещё нет | свободен | IN_PROGRESS | `modules/CLIENT.md` |
 
 Полная очередь: `roadmap/NOW.md`. Свободные задачи: `roadmap/AGENT_TASKS.md`.

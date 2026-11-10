@@ -460,26 +460,15 @@ func run() error {
 			})
 			log.Info("AI civilization follows admin settings")
 		}
-		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
-		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
-		dlg.Push = wsHandler.PushChat // реплики ИИ должны доходить до живых клиентов, а не только попадать в историю
-		wsHandler.SetOnChat(func(m chat.Message) { dlg.Handle(context.Background(), m) })
-		go dlg.RunAmbient(ctx) // ИИ пишут в общий чат сами, пока в мире есть живые игроки
-		// личные сообщения ИИ-капитанам по имени из мира
-		chatSvc.Directory = func(ctx context.Context, q string) (chat.Person, bool) {
-			c, ok := agent.Lookup(q)
-			if !ok {
-				return chat.Person{}, false
-			}
-			return chat.Person{ID: c.ID, Name: c.Name, AI: true}, true
-		}
-		go agent.Run(ctx, 2*time.Second)
+		// Старый агент (простые корабли и шаблонные реплики) не запускается:
+		// он дублировал капитанов и перебивал чат цивилизации.
+		go agent.KeepSettings(ctx, 2*time.Second)
 		if cfg.FeatureAICivilizationShadow {
 			shadow := &aiciv.Shadow{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiciv.NewStore(pool), Log: log}
 			go shadow.Run(ctx)
 			log.Info("AI civilization shadow: без действий, имущества и нового spawn")
 		}
-		log.Info("ИИ-игроки включены (COSMOC_FEATURE_AI), реплики в чате (ИИ-2)")
+		log.Info("ИИ-цивилизация включена, старый агент кораблей не запущен")
 	}
 	worldDone := make(chan struct{})
 	go func() {

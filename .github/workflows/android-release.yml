@@ -18,7 +18,7 @@ jobs:
     name: Подписанный APK
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       GODOT_VERSION: 4.7.2-stable
     steps:
@@ -34,33 +34,36 @@ jobs:
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          keystore="${RUNNER_TEMP}/release.keystore"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=${keystore}" >> "$GITHUB_ENV"
+          umask 077
+          KEYSTORE_PATH="$keystore" python3 - <<'PY'
+          import base64, os, pathlib
           from pathlib import Path
+
           preset = Path("client/export_presets.cfg").read_text()
           project = Path("client/project.godot").read_text()
           assert 'name="Android"' in preset
           assert 'platform="Android"' in preset
           assert "gradle_build/use_gradle_build=true" in preset
           assert 'package/unique_name="ru.cosmocrpg.game"' in preset
-          assert 'package/signed=true' in preset
+          assert "package/signed=true" in preset
           assert 'config/version="' in project
-          PY
-          test -n "$KEYSTORE_B64"
-          test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_USER"
-          test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD"
-          # RUNNER_TEMP вне репозитория и вне каталога артефакта.
-          keystore="${RUNNER_TEMP}/release.keystore"
-          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=${keystore}" >> "$GITHUB_ENV"
-          umask 077
-          install -m 600 /dev/null "$keystore"
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$keystore"
-          chmod 600 "$keystore"
-          python3 - "$keystore" <<'PY'
-          import pathlib, sys
-          raw = pathlib.Path(sys.argv[1]).read_bytes()
+          for name in (
+              "KEYSTORE_B64",
+              "GODOT_ANDROID_KEYSTORE_RELEASE_USER",
+              "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD",
+          ):
+              if not os.environ.get(name):
+                  raise SystemExit("не задан секрет " + name)
+          raw = base64.b64decode(os.environ["KEYSTORE_B64"], validate=False)
+          path = pathlib.Path(os.environ["KEYSTORE_PATH"])
+          path.write_bytes(raw)
+          path.chmod(0o600)
           # JKS начинается с FEEDFEED, PKCS12 — с ASN.1 SEQUENCE (0x30). Содержимое не печатаем.
           if len(raw) < 16 or not (raw[:4] == b"\xfe\xed\xfe\xed" or raw[:1] == b"\x30"):
-              sys.exit("расшифрованный файл не похож на Java keystore")
+              path.unlink(missing_ok=True)
+              raise SystemExit("расшифрованный файл не похож на Java keystore")
           PY
 
       - uses: actions/setup-java@v4
@@ -68,20 +71,75 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Установить Android SDK из шаблона Godot
+      - name: Установить Android SDK по шаблону проекта
         run: |
           set -euo pipefail
-          # client/android/build/config.gradle: compileSdk 36, buildTools 36.1.0, ndk 29.0.14206865, Java 17.
-          timeout 120 bash -c 'yes | sdkmanager --licenses >/dev/null' || true
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.1.0" "ndk;29.0.14206865"
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path("client/android/build/config.gradle").read_text()
+          wrapper = pathlib.Path("client/android/build/gradle/wrapper/gradle-wrapper.properties").read_text()
+          build = pathlib.Path("client/android/.build_version").read_text().strip()
+
+          def grab(key):
+              match = re.search(rf"^\s*{key}\s*:\s*(?:'([^']+)'|(\d+))\s*,", text, re.M)
+              if not match:
+                  raise SystemExit(f"в config.gradle нет {key}")
+              return match.group(1) or match.group(2)
+
+          versions = {
+              "compileSdk": grab("compileSdk"),
+              "buildTools": grab("buildTools"),
+              "ndkVersion": grab("ndkVersion"),
+              "agp": grab("androidGradlePlugin"),
+          }
+          if "JavaVersion.VERSION_17" not in text:
+              raise SystemExit("шаблон Android ожидает не Java 17")
+          if "gradle-8.11.1-" not in wrapper:
+              raise SystemExit("gradle wrapper отличается от 8.11.1")
+          if build != "4.7.2.stable":
+              raise SystemExit(f"android/.build_version={build}, ожидается 4.7.2.stable")
+          pathlib.Path("android-versions.env").write_text(
+              "ANDROID_COMPILE_SDK={compileSdk}\nANDROID_BUILD_TOOLS={buildTools}\nANDROID_NDK_VERSION={ndkVersion}\n".format(**versions)
+          )
+          print(
+              "Из client/android/build: compileSdk {compileSdk}, build-tools {buildTools}, "
+              "ndk {ndkVersion}, AGP {agp}, Java 17, Gradle 8.11.1, шаблоны Godot 4.7.2-stable".format(**versions)
+          )
+          PY
+          # shellcheck disable=SC1091
+          source ./android-versions.env
+          cat android-versions.env >> "$GITHUB_ENV"
+          rm -f android-versions.env
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          sm="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$sm" ]; then
+            sm="$(find "$sdk_root/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort | tail -1)"
+          fi
+          test -n "$sm" && test -x "$sm"
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "$sdk_root/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
+          echo "$sdk_root/build-tools/${ANDROID_BUILD_TOOLS}" >> "$GITHUB_PATH"
+          set +o pipefail
+          yes | "$sm" --sdk_root="$sdk_root" --licenses >/dev/null || true
+          set -o pipefail
+          "$sm" --sdk_root="$sdk_root" --install \
+            "platform-tools" \
+            "platforms;android-${ANDROID_COMPILE_SDK}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          test -d "$sdk_root/platforms/android-${ANDROID_COMPILE_SDK}"
+          test -x "$sdk_root/platform-tools/adb"
+          test -x "$sdk_root/build-tools/${ANDROID_BUILD_TOOLS}/apksigner"
+          test -x "$sdk_root/build-tools/${ANDROID_BUILD_TOOLS}/aapt"
+          test -f "$sdk_root/ndk/${ANDROID_NDK_VERSION}/source.properties"
 
       - name: Установить Godot 4.7.2 и экспортные шаблоны
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libgl1 libglx-mesa0 libgl1-mesa-dri libxcursor1 libxinerama1 libxi6 libxrandr2 libfontconfig1 mesa-vulkan-drivers libvulkan1
+          sudo apt-get install -y -qq xvfb libgl1 libglx-mesa0 libgl1-mesa-dri libxcursor1 libxinerama1 libxi6 libxrandr2 libfontconfig1 mesa-vulkan-drivers libvulkan1 vulkan-tools
           base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
           curl -fsSL --retry 6 --retry-all-errors --retry-delay 10 "$base/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
@@ -95,6 +153,7 @@ jobs:
           test -f "$template_dir/android_source.zip"
           # Только библиотеки движка. Собственный Gradle-шаблон client/android/build не заменяется.
           unzip -qo "$template_dir/android_source.zip" "libs/*" -d client/android/build
+          find client/android/build/libs/release -type f -name '*.aar' | grep -q .
           chmod 0755 client/android/build/gradlew
           mkdir -p "${HOME}/.config/godot"
           python3 - <<'PY'
@@ -115,6 +174,8 @@ jobs:
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
+          # Alias и пароль заданы окружением шага (secrets) и не попадают в аргументы команды.
+          # Godot читает GODOT_ANDROID_KEYSTORE_RELEASE_PATH/USER/PASSWORD.
           mkdir -p dist
           godot --headless --path client --import
           godot --headless --path client --export-release "Android" "$GITHUB_WORKSPACE/dist/zvezdnye-rubezhi-release.apk"
@@ -125,28 +186,43 @@ jobs:
           EXPECTED_CERT: ${{ vars.ANDROID_CERT_SHA256 }}
         run: |
           set -euo pipefail
-          sdk="${ANDROID_HOME}/build-tools/36.1.0"
-          "$sdk/apksigner" verify --print-certs dist/zvezdnye-rubezhi-release.apk | tee dist/signature.txt
-          "$sdk/apksigner" verify --verbose dist/zvezdnye-rubezhi-release.apk
+          tools="${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}"
+          "$tools/apksigner" verify --print-certs dist/zvezdnye-rubezhi-release.apk | tee dist/signature.txt
+          "$tools/apksigner" verify --verbose dist/zvezdnye-rubezhi-release.apk | tee dist/apksigner-verbose.txt
+          grep -E 'Verified using v[23] scheme \(APK Signature Scheme v[23]\): true' dist/apksigner-verbose.txt
           actual=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' dist/signature.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')
           test -n "$actual"
           printf '%s\n' "$actual" > dist/cert-sha256.txt
-          if [ -n "${EXPECTED_CERT:-}" ]; then
-            expected=$(printf '%s' "$EXPECTED_CERT" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
-            test "$actual" = "$expected"
-          fi
-          "$sdk/aapt" dump badging dist/zvezdnye-rubezhi-release.apk > dist/badging.txt
-          python3 - <<'PY'
-          import pathlib, re
+          "$tools/aapt" dump badging dist/zvezdnye-rubezhi-release.apk > dist/badging.txt
+          ACTUAL_CERT="$actual" python3 - <<'PY'
+          import os, pathlib, re
           project = pathlib.Path("client/project.godot").read_text()
+          preset = pathlib.Path("client/export_presets.cfg").read_text()
           version = re.search(r'^config/version="(.*?)"', project, re.M).group(1)
           code = re.search(r'^version_code=(\d+)', project, re.M).group(1)
+          preset_version = re.search(r'^version/name="(.*?)"', preset, re.M).group(1)
+          preset_code = re.search(r'^version/code=(\d+)', preset, re.M).group(1)
+          if version != preset_version or code != preset_code:
+              raise SystemExit(f"версия проекта {version}/{code} не совпадает с preset {preset_version}/{preset_code}")
           badge = pathlib.Path("dist/badging.txt").read_text().splitlines()[0]
           assert "name='ru.cosmocrpg.game'" in badge, badge
           assert f"versionCode='{code}'" in badge, badge
           assert f"versionName='{version}'" in badge, badge
           size = pathlib.Path("dist/zvezdnye-rubezhi-release.apk").stat().st_size
           assert size <= 95 * 1024 * 1024, size
+          actual = os.environ["ACTUAL_CERT"]
+          security = pathlib.Path("docs/SECURITY.md").read_text()
+          published = re.search(r"Отпечаток сертификата SHA-256[^`]*`([0-9A-Fa-f:]+)`", security)
+          if not published:
+              raise SystemExit("в docs/SECURITY.md нет отпечатка SHA-256")
+          expected = re.sub(r"[^0-9A-F]", "", published.group(1).upper())
+          if actual != expected:
+              raise SystemExit("отпечаток APK не совпадает с release-ключом из docs/SECURITY.md")
+          extra = os.environ.get("EXPECTED_CERT", "").strip()
+          if extra:
+              extra = re.sub(r"[^0-9A-F]", "", extra.upper())
+              if actual != extra:
+                  raise SystemExit("отпечаток APK не совпадает с переменной ANDROID_CERT_SHA256")
           PY
           sha256sum dist/zvezdnye-rubezhi-release.apk > dist/SHA256SUMS
           {
@@ -157,12 +233,13 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: android-release-apk
+          name: zvezdnye-rubezhi-release-apk
           path: |
             dist/zvezdnye-rubezhi-release.apk
             dist/cert-sha256.txt
             dist/SHA256SUMS
             dist/signature.txt
+            dist/apksigner-verbose.txt
             dist/badging.txt
           retention-days: 14
           if-no-files-found: error
@@ -176,3 +253,4 @@ jobs:
           fi
           rm -f "${RUNNER_TEMP}/release.keystore"
           find client -type f -name '*.keystore' -delete
+          rm -rf "${HOME}/.gradle/daemon" client/android/build/.gradle

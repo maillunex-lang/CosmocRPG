@@ -495,12 +495,18 @@ func run() error {
 	// Админ-API на отдельном адресе: наружу не публикуется, доступен через Caddy с HTTPS.
 	if cfg.AdminAddr != "" {
 		store := admin.NewStore(pool)
+		studio := aistudio.NewService(aistudio.NewPGStore(pool))
+		if added, ver, err := studio.Generate(ctx, "system", 20261108, 500); err != nil {
+			log.Error("реестр капитанов", "err", err)
+		} else if len(added.Added) > 0 || added.Enriched > 0 {
+			log.Info("реестр капитанов", "добавлено", len(added.Added), "уточнено", added.Enriched, "версия", ver)
+		}
 		adminSrv := &http.Server{
 			Addr: cfg.AdminAddr,
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Civ: live, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
+				AI: studio, Agent: agent, Civ: live, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
 				OnChanged: func(reason string) {
 					log.Info("настройки применены", "what", reason)
 					wsHandler.PushServerUpdated(reason)

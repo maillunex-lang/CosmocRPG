@@ -27,3 +27,41 @@ p95/p99 with Perfetto FrameTimeline, GPU capture and Android PSS. Measure diagno
 overhead with overlay hidden/shown and timing off/on. Never use headless FPS as
 Android performance evidence. Stock baseline needs the test-only replay copied
 into an isolated checkout; production scripts must stay at the baseline SHA.
+
+## Implementation / validation record
+
+Phase 0: existing FrameStats extended; 52 checks pass, including 120 FPS window,
+mean units and metadata rejection. 14 replays completed a 12-frame headless smoke
+run each; all JSON exports returned OK. These are startup/behavior checks, not
+GPU benchmarks. Diagnostic overhead and full-length Android runs remain NOT RUN.
+
+Phase 1: initialization uses server hull/skin before ready; fallback ready remains.
+Valid unchanged skin retains instance identity; failed loading can retry. Hangar
+100-update identity test passes. Fleet initialization test passes.
+
+Phase 2: local reset stops and detaches owned effects before removing references.
+Weapon flashes/bolts reset together. Independent Tween channels replace prior
+animation of the same properties. Death/respawn cancel old callbacks. No global
+pool, resource caching or phases 3–8 introduced.
+
+Validation with Godot 4.7.2.stable.official.ed1daf0bf:
+- ship_visual_test: 54 checks pass, including 100 skin changes, 100 same-skin
+  updates, 100 shots, overlapping hits, death/early respawn and resource cycles.
+- hangar_test: 46 checks pass; fleet_shop_test: 54 checks pass.
+- Existing offline test list from tools/test_client.sh: all exit 0 except
+  corporation_test (3 failures). Identical failures reproduced on untouched
+  e6e50c5: nil text assignment, member roles and scrolling tests.
+- Expanded ship test emits one dummy-renderer `Parameter material is null` error
+  while testing deletion/reload; no GDScript error. Rendered validation is required
+  before accepting phase 2. Resource count stabilized within the tested bound;
+  this is not proof of absence of every leak.
+- Renderer tests NOT RUN: no DISPLAY/Xvfb and sudo unavailable.
+- WebSocket/Go tests blocked: installed `go` reports `Go: Unknown option: test`.
+- Android, GPU timing validity, diagnostic overhead, long thermal/memory tests,
+  production server hidden-NPC regression: NOT RUN.
+
+Readiness: implementation is reviewable; Android performance acceptance remains
+pending for all phases, and phase 2 rendered deletion/reload validation is pending.
+No FPS improvement claimed. No server/protocol/HUD editor/release changes.
+Rollback: revert phase commits; added diagnostic export schema has no gameplay
+persistence. Keep corporation failures separate from this client rendering work.

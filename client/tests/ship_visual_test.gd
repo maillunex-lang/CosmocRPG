@@ -104,6 +104,27 @@ func _run() -> void:
 	v.play("Неизвестное")
 	_c(true, "неизвестное событие игнорируется")
 
+	# Overlapping events and skin changes must retain bounded ownership.
+	v.respawn()
+	for i in 100:
+		v.update_motion(0.016, 1.0, 0.0, true)
+		v.play_fire(Vector3(10, 0, 0))
+		v.play_hit_hull()
+		v.play_hit_shield()
+		v.set_skin("a" if i % 2 == 0 else "b")
+		await process_frame
+	_c(v._flash.is_empty() and v._bolts.is_empty(), "100 смен скина очищают оружие согласованно")
+	_c(v._boost_trail == null and v.active_tween_count() == 0, "нет потерянных следов и Tween")
+	var stable_nodes: int = v.get_child_count()
+	for i in 100:
+		v.play_fire(Vector3(10, 0, 0))
+		v.play_hit_shield()
+	_c(v._bolts.size() == 2 and v.active_tween_count() <= 5, "частые события имеют ограниченные каналы")
+	v.play_death()
+	v.respawn()
+	await create_timer(0.5).timeout
+	_c(v.bank.visible and v.bank.scale == Vector3.ONE, "старый death callback не скрывает respawn")
+	_c(v.get_child_count() == stable_nodes, "respawn убирает заряды top_level")
 	# ShipView: облик по данным сервера
 	var sv: Node3D = ShipView.new()
 	root.add_child(sv)
@@ -120,6 +141,39 @@ func _run() -> void:
 	root.add_child(st)
 	st.setup("st1", "station", "friendly", "Станция", false)
 	_c(st.visual == null, "у станции нет визуала корабля")
+	var direct: Node3D = ShipView.new()
+	root.add_child(direct)
+	direct.setup("server-hull", "player", "neutral", "Fixture", false, {"ship": "COR-001", "skin": "a"})
+	_c(direct.ship_type == "COR-001" and direct.visual.build_count == 1 and direct.visual.skin_instance_count == 1, "правильный серверный корпус без промежуточного Стрижа")
+	direct.play("Fire", Vector3.ONE)
+	direct.set_ship("FTR-002", "b")
+	await process_frame
+	_c(direct.visual.ship_id == "FTR-002" and direct.visual._bolts.is_empty(), "смена корпуса сбрасывает прежние эффекты")
+	var definition: Dictionary = ShipDef.get_def("FTR-002")
+	var original_path: String = definition.skins.b.glb
+	definition.skins.b.glb = "res://missing-test-model.glb"
+	direct.visual._skin_root.queue_free()
+	await process_frame
+	direct.visual.set_skin("b")
+	_c(not is_instance_valid(direct.visual._skin_root), "неудачная загрузка не объявлена успешной")
+	definition.skins.b.glb = original_path
+	direct.visual.set_skin("b")
+	_c(is_instance_valid(direct.visual._skin_root), "загрузка повторяется после ошибки")
+	direct.queue_free()
+	await process_frame
+	# Repeated create/free cycles after warming resource caches.
+	var resources: Array = []
+	for batch in 3:
+		for cycle in 20:
+			var temporary := ShipVisual.new()
+			root.add_child(temporary)
+			temporary.play_fire(Vector3.ONE)
+			temporary.play_hit_hull()
+			await process_frame
+			temporary.queue_free()
+			await process_frame
+		resources.append(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT))
+	_c(resources[2] <= resources[1] + 2, "ресурсы стабилизируются в повторных create/free циклах")
 	print("Итого: проверок %d, провалов %d" % [_n, _f])
 	quit(1 if _f > 0 else 0)
 

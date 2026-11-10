@@ -236,7 +236,7 @@ func stats() -> Dictionary:
 func text() -> String:
 	var s := stats()
 	var lines: Array[String] = []
-	lines.append("FPS %.1f · кадр p50 %.1f / p95 %.1f / p99 %.1f / макс %.1f мс" % [s["fps"], s["p50"], s["p95"], s["p99"], s["max"]])
+	lines.append("FPS %.1f · ср %.1f мс · кадр p50 %.1f / p95 %.1f / p99 %.1f / макс %.1f мс" % [s["fps"], s["mean_ms"], s["p50"], s["p95"], s["p99"], s["max"]])
 	lines.append("За 10 с: кадров >25 мс — %d, >50 мс — %d" % [s["hitches25"], s["hitches50"]])
 	lines.append("Старт (%d с): >25 мс — %d, макс %.0f мс" % [int(STARTUP_SEC), startup_hitches, startup_max_ms])
 	if not startup_list.is_empty():

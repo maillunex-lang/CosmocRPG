@@ -60,11 +60,13 @@ func _run() -> void:
 	_c(temp_count == 11 and not ShipDef.is_temporary("FTR-001"), "временными помечены все, кроме «Стрижа»")
 	# окраска заглушек не портит оригинальный GLB
 	var a := ShipVisual.new()
+	a.ship_id = "FTR-001"
+	a.skin_id = "a"
 	root.add_child(a)
-	a.build("FTR-001", "a")
 	var b := ShipVisual.new()
+	b.ship_id = "FTR-002"
+	b.skin_id = "a"
 	root.add_child(b)
-	b.build("FTR-002", "a")
 	await process_frame
 	var ma: Array = []
 	var mb: Array = []
@@ -75,6 +77,7 @@ func _run() -> void:
 	var cb := ((mb[0] as MeshInstance3D).get_active_material(0) as BaseMaterial3D).albedo_color
 	_c(not ca.is_equal_approx(cb), "заглушка окрашена иначе, чем «Стриж»")
 	_c(((ma[0] as MeshInstance3D).get_surface_override_material(0)) == null, "у «Стрижа» окраска не применяется")
+	_c(a.build_count == 1 and b.build_count == 1, "каталог сразу создаёт правильные корпуса один раз")
 	# --- магазин ---
 	var catalog := {"free": true, "currency": "кристаллов", "items": [
 		{"id": "vip_1", "kind": "vip", "name": "VIP I", "desc": "d", "price": 299, "icon": "vip"},

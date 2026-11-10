@@ -245,6 +245,8 @@ func _ready() -> void:
 	Icons.apply(%MailMenuButton, "mail", Tokens.ACCENT, 22)
 	%StorageMenuButton.visible = false
 	%MailMenuButton.visible = false
+	%StationMenuButton.visible = false
+	%HangarMenuButton.visible = false
 	_order_menu()
 	%SettingsMenuButton.pressed.connect(func() -> void: _set_menu_open(false); settings_requested.emit())
 	Icons.apply(%SettingsMenuButton, "settings", Tokens.ACCENT, 22)
@@ -489,6 +491,9 @@ func apply_state(state: Dictionary) -> void:
 	_player_level.text = "Ур. %d" % int(player.get("level", 1)) + ((" · +%d" % int(player["attr_free"])) if int(player.get("attr_free", 0)) > 0 else "")
 	_apply_xp(player)
 	var ship: Dictionary = state.get("ship", {})
+	var at_station := bool(ship.get("in_safe", false))
+	%StationMenuButton.visible = at_station
+	%HangarMenuButton.visible = at_station
 	_ship_name.text = str(ship.get("name", "")) + ((" · ур. %d" % int(ship["level"])) if ship.has("level") else "")
 	# косметика профиля (R-34): аватарка, рамка, титул — прислал сервер
 	var cos: Dictionary = ship.get("cosmetics", {})

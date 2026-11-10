@@ -392,13 +392,21 @@ func run() error {
 		log.Info("AI civilization reservation attached to old Manager")
 		if cfg.FeatureAICivilizationGateway {
 			dir := aiciv.NewDirector(reservation, 8, log)
-			// candidatesFn: studio captain IDs; Director reserves them so old Manager skips them.
-			// Actual Gateway open + combat is a later step.
+			// candidatesFn: real captain IDs from active AI Studio version.
+			// Director reserves them so old Manager does not spawn them as FSM.
 			go dir.Run(ctx, 15*time.Second, func() []string {
-				// placeholder: empty until we wire studio list; Director is safe with empty.
-				return nil
+				profiles, err := aiagent.StudioSource{Svc: studioSvc}.Profiles(ctx)
+				if err != nil {
+					log.Error("director: studio profiles", "err", err)
+					return nil
+				}
+				ids := make([]string, 0, len(profiles))
+				for _, p := range profiles {
+					ids = append(ids, p.ID)
+				}
+				return ids
 			})
-			log.Info("AI civilization Director started (gateway flag)")
+			log.Info("AI civilization Director started (gateway flag, studio candidates)")
 		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)

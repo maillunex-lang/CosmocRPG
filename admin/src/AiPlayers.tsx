@@ -80,8 +80,8 @@ export function AiPlayers({ username, onBack, onLoggedOut }: { username: string;
           <span>профилей в AI Studio</span>
         </div>
         <div className="card">
-          <b>{data.status.enabled ? (data.status.paused ? "пауза" : "включены") : "выключены"}</b>
-          <span>простые корабли</span>
+          <b>выключены</b>
+          <span>старые простые корабли</span>
         </div>
         <div className="card">
           <b>{data.settings.civ_enabled ? "включена" : "выключена"}</b>
@@ -156,55 +156,10 @@ function SettingsForm({ settings, onSave }: { settings: AiSettings; onSave: (s: 
     const v = Math.max(min, Math.min(max, Number(e.target.value) || 0));
     setS({ ...s, [key]: v });
   };
-  const share = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setS({ ...s, shares: { ...s.shares, [k]: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } });
-  };
   return (
     <section>
       <h2>Настройки</h2>
-      <div className="row wrap">
-        <label>
-          <input type="checkbox" checked={s.enabled} onChange={(e) => setS({ ...s, enabled: e.target.checked })} /> ИИ включены
-        </label>
-        <label>
-          <input type="checkbox" checked={s.paused} onChange={(e) => setS({ ...s, paused: e.target.checked })} /> пауза (число не меняется)
-        </label>
-      </div>
-      <div className="row wrap">
-        <label>Мин. онлайн <input type="number" value={s.min_online} onChange={num("min_online", 0, 200)} /></label>
-        <label>Макс. онлайн <input type="number" value={s.max_online} onChange={num("max_online", 0, 200)} /></label>
-        <label>Потолок <input type="number" value={s.abs_max} onChange={num("abs_max", 0, 200)} /></label>
-        <label>Игроков для макс. <input type="number" value={s.players_for_max} onChange={num("players_for_max", 1, 50)} /></label>
-      </div>
-      <div className="row wrap">
-        <label>Набор/мин <input type="number" value={s.spawn_per_min} onChange={num("spawn_per_min", 1, 600)} /></label>
-        <label>Снятие/мин <input type="number" value={s.despawn_per_min} onChange={num("despawn_per_min", 1, 600)} /></label>
-        <label>Задержка снятия, с <input type="number" value={s.empty_grace_sec} onChange={num("empty_grace_sec", 0, 3600)} /></label>
-        <label>Радиус видимости <input type="number" value={s.view_radius} onChange={num("view_radius", 100, 2000)} /></label>
-      </div>
-      <h3>Доли поведений, %</h3>
-      <div className="row wrap">
-        {Object.keys(BEHAVIOR_LABEL).map((k) => (
-          <label key={k}>
-            {BEHAVIOR_LABEL[k]} <input type="number" value={s.shares[k] ?? 0} onChange={share(k)} />
-          </label>
-        ))}
-      </div>
-      <h3>Реплики в чате (ИИ-2)</h3>
-      <div className="row wrap">
-        <label>
-          <input type="checkbox" checked={s.chat_reply_enabled} onChange={(e) => setS({ ...s, chat_reply_enabled: e.target.checked })} /> отвечают в чате
-        </label>
-        <label>Вероятность в общем, % <input type="number" value={s.chat_reply_chance} onChange={num("chat_reply_chance", 0, 100)} /></label>
-        <label>Задержка от, мс <input type="number" value={s.chat_delay_min_ms} onChange={num("chat_delay_min_ms", 0, 30000)} /></label>
-        <label>до, мс <input type="number" value={s.chat_delay_max_ms} onChange={num("chat_delay_max_ms", 0, 30000)} /></label>
-      </div>
-      <div className="row wrap">
-        <label>Кулдаун капитана, с <input type="number" value={s.chat_captain_cooldown_sec} onChange={num("chat_captain_cooldown_sec", 0, 3600)} /></label>
-        <label>Потолок реплик/мин <input type="number" value={s.chat_max_per_min} onChange={num("chat_max_per_min", 0, 120)} /></label>
-        <label>Сами пишут раз в, с (0 — не пишут) <input type="number" value={s.chat_ambient_every_sec} onChange={num("chat_ambient_every_sec", 0, 3600)} /></label>
-        <label>ИИ отвечает на ИИ, % <input type="number" value={s.chat_follow_chance} onChange={num("chat_follow_chance", 0, 100)} /></label>
-      </div>
+      <p className="muted">Старые простые корабли и их шаблонные реплики выключены. В мире только цивилизация.</p>
       <h3>Цивилизация (шлюз)</h3>
       <p className="muted">Настоящие капитаны в мире. Меняется сразу, перезапуск сервера не нужен.</p>
       <div className="row wrap">

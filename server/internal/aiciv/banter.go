@@ -1,8 +1,8 @@
 package aiciv
 
-// Threads are original lines. The shape comes from real MMO local and offtop:
-// food, shift work, sleep, music, pets, weather at home, mild smack, "brb the stove".
-// Nothing here is a copied forum post. No runtime LLM.
+// Threads are original lines. The shape comes from MMO local and offtop
+// (intel, ore prices, good fight, gate queue, corp dues, haul risk, food, shift, pets).
+// Wording is written for this game. Nothing here is a copied forum post. No runtime LLM.
 
 var topicIDs = []string{"food", "sleep", "music", "home", "pet", "movie", "shift", "tea", "quiet", "rain", "brb", "smack"}
 

@@ -4,7 +4,7 @@
  "branch": "main",
  "generated_by": "docs/roadmap-refactor-v2.0 (Kimi Code)",
  "updated": "2026-11-10",
- "last_verified_sha": "200c1b8",
+ "last_verified_sha": "f87f78b",
  "modules": [
   "GALAXY",
   "SHIPS",
@@ -1569,6 +1569,114 @@
    "updated": "2026-11-10",
    "depends_on": [
     "CLASS-070"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-100",
+   "title": "Аудит профессий и трёх слоёв талантов",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "DONE",
+   "description": "CLASS-RPG-002/003 записаны. Профессии по ship_id, не по семье. Три слоя — метки одного дерева на 150 узлов и бюджета 70 очков. Код не менялся.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-000"
+   ],
+   "release": {
+    "server": "IN_MAIN",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md",
+   "acceptance": "Паспорта 12 живых корпусов и конфликты с семейной матрицей записаны. Второе дерево не вводится.",
+   "tests": [
+    "Сверка ships.json и rpg.TalentPoints на HEAD f87f78b, код боя 200c1b8"
+   ]
+  },
+  {
+   "id": "CLASS-110",
+   "title": "Каталог профессий по ship_id",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "BLOCKED",
+   "description": "Версионированная совместимость и серверная проверка. Бонус основной профессии 3–5% выключен, пока это гипотеза. TMP без боевой профессии. Ждёт Q-CLASS2.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-100"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-120",
+   "title": "Три слоя внутри дерева пилота",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Узлы одного дерева помечены слоем: класс, специализация, универсальный. Бюджет остаётся 70. Отдельного дерева и отдельного бюджета нет.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-110",
+    "PP-04"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-130",
+   "title": "Три слота билдов и смена в безопасной зоне",
+   "module": "RPG",
+   "priority": "P1",
+   "status": "TODO",
+   "description": "Каждый слот заново тратит один бюджет. Смена атомарна, только на станции или в безопасной зоне, без лечения и сброса кулдаунов. Смена модулей в бою сюда не переносится.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-120"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "QUESTJOB/PilotProgression.md"
+  },
+  {
+   "id": "CLASS-140",
+   "title": "Дроновод как альтернатива после сущности дрона",
+   "module": "RPG",
+   "priority": "P2",
+   "status": "TODO",
+   "description": "Альтернатива дроновода в каталоге не включается, пока нет отдельной сущности дрона.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-050",
+    "CLASS-110"
+   ],
+   "release": {
+    "server": "NOT_RELEASED",
+    "apk": "NOT_RELEASED"
+   },
+   "spec": "docs/ships-rpg/ROADMAP.md"
+  },
+  {
+   "id": "CLASS-150",
+   "title": "Псионик отдельным допуском",
+   "module": "RPG",
+   "priority": "P3",
+   "status": "DEFERRED",
+   "description": "Псионик не профессия корпуса и не выдаётся по матрице. Включение только отдельным разрешением.",
+   "updated": "2026-11-10",
+   "depends_on": [
+    "CLASS-110"
    ],
    "release": {
     "server": "NOT_RELEASED",

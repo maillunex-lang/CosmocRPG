@@ -142,5 +142,5 @@ jobs:
         run: |
           docker compose config -q
           docker compose build
-  # Сборка APK в CI (Android SDK, release-подпись через GitHub Secrets) добавляется на этапе UI-12.
+  # Подписанный APK собирается отдельно: .github/workflows/android-release.yml, только workflow_dispatch с main.
   # Автодеплой в production не включён: только по согласованию с владельцем.

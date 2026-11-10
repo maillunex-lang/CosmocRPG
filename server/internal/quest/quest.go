@@ -21,7 +21,7 @@ type Def struct {
 	Version int
 	Title   string
 	Text    string
-	Kind    string  // reach | kill | mine | sell | jump | deliver | visit
+	Kind    string  // reach | kill | mine | sell | jump | deliver | visit | talk
 	Target  string  // идентификатор объекта/ресурса/вида точки
 	System  string  // система, если задание привязано к ней; пусто — любая
 	Marker  string  // подсказка карты: station | anomaly | derelict | signal
@@ -34,7 +34,8 @@ type Def struct {
 // Reward — награда (пока только кредиты; остальные виды добавятся расширением).
 type Reward struct{ Credits int64 }
 
-// Catalog — цепочка начала кампании (Акт I, глава 1 «Сигнал из пустоты» — вертикальный срез, Э-3).
+// Catalog — играбельный срез акта I: Аврора, Меридиан и закрытие главы «Красный Шторм».
+// Это не все 82 задания FinalQuest и не открытие главы 4.
 func Catalog() []Def {
 	return []Def{
 		{ID: "first_flight", Version: 1, Title: "Первый полёт",
@@ -69,6 +70,30 @@ func Catalog() []Def {
 			Text: "Вернитесь на станцию Меридиана и сдайте доклад.",
 			Kind: "visit", Target: "station", System: "meridian", Marker: "station", Goal: 1, After: "meridian_trace",
 			Reward: Reward{Credits: 700}},
+		{ID: "meridian_voice", Version: 1, Title: "Голос диспетчера",
+			Text: "На станции Меридиана поговорите с диспетчером Ворой Кесс.",
+			Kind: "talk", Target: "vora", System: "meridian", Marker: "station", Goal: 1, After: "meridian_report",
+			Reward: Reward{Credits: 400}},
+		{ID: "storm_jump", Version: 1, Title: "Ворота Шторма",
+			Text: "Совершите гиперпереход из Меридиана в Красный Шторм.",
+			Kind: "jump", Target: "redstorm", Goal: 1, After: "meridian_voice",
+			Reward: Reward{Credits: 1000}},
+		{ID: "storm_wreck", Version: 1, Title: "Обломки у поля",
+			Text: "Осмотрите обломки в Красном Шторме. Вора Кесс просила не верить пометке «мусор».",
+			Kind: "visit", Target: "derelict", System: "redstorm", Marker: "derelict", Goal: 1, After: "storm_jump",
+			Reward: Reward{Credits: 1100}},
+		{ID: "storm_dispatch", Version: 1, Title: "Голос рубежа",
+			Text: "Вернитесь на форпост Красного Шторма и поговорите с диспетчером Кирой Роан.",
+			Kind: "talk", Target: "kira", System: "redstorm", Marker: "station", Goal: 1, After: "storm_wreck",
+			Reward: Reward{Credits: 500}},
+		{ID: "storm_contour", Version: 1, Title: "Старый контур",
+			Text: "Осмотрите старый ретрансляционный контур в Красном Шторме. На карте он отмечен как аномалия. Это след данных, не корабль «Арго».",
+			Kind: "visit", Target: "anomaly", System: "redstorm", Marker: "anomaly", Goal: 1, After: "storm_dispatch",
+			Reward: Reward{Credits: 1000}},
+		{ID: "storm_report", Version: 1, Title: "Граница известного",
+			Text: "Вернитесь на форпост и сдайте отчёт Вере Элл. Подтвердите транзит метаданных и не сходящийся импульс. Местонахождение «Арго» не утверждайте.",
+			Kind: "talk", Target: "vera", System: "redstorm", Marker: "station", Goal: 1, After: "storm_contour",
+			Reward: Reward{Credits: 800}},
 	}
 }
 
@@ -109,6 +134,12 @@ type Store interface {
 // ErrNotEnough — недостаточно кредитов (ремонт, покупка; Э-2).
 var ErrNotEnough = errors.New("no_credits")
 
+// ErrNoDialogue — сейчас не с кем говорить или разговор не в этой системе.
+var ErrNoDialogue = errors.New("no_dialogue")
+
+// ErrBadChoice — такого ответа в текущей реплике нет.
+var ErrBadChoice = errors.New("bad_choice")
+
 // View — то, что видит клиент.
 type View struct {
 	Credits int64       `json:"credits"`
@@ -124,6 +155,7 @@ type QuestView struct {
 	Goal     int    `json:"goal"`
 	System   string `json:"system,omitempty"`
 	Marker   string `json:"marker,omitempty"`
+	Kind     string `json:"kind,omitempty"`
 }
 
 // Completion — событие выполнения контракта.
@@ -149,6 +181,7 @@ type Service struct {
 
 type playerState struct {
 	data PlayerData
+	line string // текущая реплика разговора; пусто — начало сцены
 }
 
 // NewService создаёт сервис. pos возвращает положение объекта мира (станции).
@@ -245,7 +278,10 @@ func (s *Service) View(pid string) (View, bool) {
 		if !ok {
 			continue
 		}
-		v.Quests = append(v.Quests, QuestView{ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal, System: d.System, Marker: d.Marker})
+		v.Quests = append(v.Quests, QuestView{
+			ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal,
+			System: d.System, Marker: d.Marker, Kind: d.Kind,
+		})
 	}
 	return v, true
 }

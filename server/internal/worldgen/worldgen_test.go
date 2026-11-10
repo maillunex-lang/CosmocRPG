@@ -155,3 +155,48 @@ func TestBigMapRulesManySeeds(t *testing.T) {
 		t.Fatalf("станции размещаются не всегда: полных раскладок %d из 200 (без станций %d)", full, missing)
 	}
 }
+
+func TestRedStormNamesStayOnExistingObjects(t *testing.T) {
+	cfg := DefaultConfig()
+	var storm, aurora SystemParams
+	for _, p := range cfg.Systems {
+		switch p.ID {
+		case "redstorm":
+			storm = p
+		case "aurora":
+			aurora = p
+		}
+	}
+	if storm.ID == "" || aurora.ID == "" {
+		t.Fatal("нет Авроры или Красного Шторма")
+	}
+	l := Generate(storm, cfg)
+	if errs := l.Validate(); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if l.Stations[0].Name != "Форпост «Тихая пристань»" || l.Stations[0].ID != "st1" {
+		t.Fatalf("хаб Шторма: %+v", l.Stations[0])
+	}
+	var derelict, contour int
+	for _, p := range l.Points {
+		switch p.Name {
+		case "Контейнер чужого рейса":
+			if p.Kind != "derelict" || p.ID != "dr-1" {
+				t.Fatalf("контейнер: %+v", p)
+			}
+			derelict++
+		case "Старый ретрансляционный контур":
+			if p.Kind != "anomaly" || p.ID != "an-1" {
+				t.Fatalf("контур: %+v", p)
+			}
+			contour++
+		}
+	}
+	if derelict != 1 || contour != 1 {
+		t.Fatalf("точки главы: контейнер %d, контур %d", derelict, contour)
+	}
+	home := Generate(aurora, cfg)
+	if home.Stations[0].Name != "Станция «Рубеж»" {
+		t.Fatalf("Аврора потеряла свою станцию: %s", home.Stations[0].Name)
+	}
+}

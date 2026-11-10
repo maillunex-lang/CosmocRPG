@@ -226,6 +226,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			for item in payload.get("visits", []):
 				if item is Dictionary:
 					_remember_location(item, false)
+		"dialogue":
+			dialogue_opened.emit(payload)
 		"reward":
 			var credits := int(payload.get("credits", 0))
 			var what: String = {"kill": "Награда за победу", "discover": "Открытие", "sell": "Груз продан"}.get(str(payload.get("kind", "")), "Награда")
@@ -429,7 +431,7 @@ func _apply_state(p: Dictionary) -> void:
 	var quests: Array = []
 	for q in p.get("quests", []):
 		quests.append({"id": str(q.get("id", "")), "title": str(q.get("title", "")), "text": str(q.get("text", "")),
-			"marker": str(q.get("marker", "")), "system": str(q.get("system", "")),
+			"marker": str(q.get("marker", "")), "system": str(q.get("system", "")), "kind": str(q.get("kind", "")),
 			"progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
 	_state["quests"] = quests
 	_state["locations"] = _locations.duplicate(true)
@@ -522,6 +524,9 @@ func jump_gates() -> Array:
 
 func jump(to: String) -> void:
 	_client.send_message("jump", {"to": to})
+
+func talk(choice: String) -> void:
+	_client.send_message("talk", {"choice": choice})
 
 func request_market() -> void:
 	_client.send_message("market", {})

@@ -243,8 +243,12 @@ func Generate(p SystemParams, cfg Config) Layout {
 	g.hub = circle{p.Hub[0], p.Hub[1], 12}
 	l := Layout{System: p.ID, Name: p.Name, Seed: p.Seed, Radius: p.Radius, Hub: p.Hub,
 		Bodies: []Body{}, Stations: []Station{}, Zones: []Zone{}, Deposits: []Deposit{}, Spawns: []Spawn{}, Points: []Point{}, Lanes: []Lane{}}
-	l.Stations = append(l.Stations, Station{ID: "st1", Name: "Станция «Рубеж»", Pos: p.Hub, SafeRadius: 40, Hub: true})
-	l.Zones = append(l.Zones, Zone{ID: "z-trade-1", Type: "trade", Name: "Торговый узел «Рубеж»", Pos: p.Hub, Radius: 55, Danger: 0})
+	hubName, hubZone := "Станция «Рубеж»", "Торговый узел «Рубеж»"
+	if p.ID == "redstorm" {
+		hubName, hubZone = "Форпост «Тихая пристань»", "Торговый узел «Тихая пристань»"
+	}
+	l.Stations = append(l.Stations, Station{ID: "st1", Name: hubName, Pos: p.Hub, SafeRadius: 40, Hub: true})
+	l.Zones = append(l.Zones, Zone{ID: "z-trade-1", Type: "trade", Name: hubZone, Pos: p.Hub, Radius: 55, Danger: 0})
 	dens := map[string]float64{"mining": 1.3, "pirate": 1.0, "trade": 0.8, "explore": 1.1, "mixed": 1.0}[p.Specialization]
 	trade := has(p.Features, "busy_lanes") || p.Specialization == "trade"
 	l.Decor = DecorParams{Seed: p.Seed*31 + 7, Density: dens, Busy: trade}
@@ -428,8 +432,12 @@ func Generate(p SystemParams, cfg Config) Layout {
 	for i := 0; i < count(p.Derelicts, has(p.Features, "derelict")); i++ {
 		if dc, ok := g.placeAbs(26, g.bandFor(i+1, false), ZoneGap); ok {
 			n := i + 1
-			l.Zones = append(l.Zones, Zone{ID: fmt.Sprintf("z-explore-derelict-%d", n), Type: "explore", Name: "Заброшенная станция", Pos: pos(dc), Radius: round1(dc.r), Danger: 1})
-			l.Points = append(l.Points, Point{ID: fmt.Sprintf("dr-%d", n), Kind: "derelict", Name: "Заброшенная станция", Pos: pos(circle{dc.x, dc.y, 0}), Radius: 16, Reward: 220 + 80*float64(i)})
+			dname := "Заброшенная станция"
+			if p.ID == "redstorm" && n == 1 {
+				dname = "Контейнер чужого рейса"
+			}
+			l.Zones = append(l.Zones, Zone{ID: fmt.Sprintf("z-explore-derelict-%d", n), Type: "explore", Name: dname, Pos: pos(dc), Radius: round1(dc.r), Danger: 1})
+			l.Points = append(l.Points, Point{ID: fmt.Sprintf("dr-%d", n), Kind: "derelict", Name: dname, Pos: pos(circle{dc.x, dc.y, 0}), Radius: 16, Reward: 220 + 80*float64(i)})
 			g.blockers = append(g.blockers, circle{dc.x, dc.y, dc.r})
 		}
 	}
@@ -469,8 +477,14 @@ func Generate(p SystemParams, cfg Config) Layout {
 	for i := 0; i < nAn; i++ {
 		if ac, ok := g.placeAbs(30, g.bandFor(i+1, false), ZoneGap); ok {
 			id := fmt.Sprintf("an-%d", i+1)
-			l.Zones = append(l.Zones, Zone{ID: "z-explore-" + id, Type: "explore", Name: g.pick(anomalyNames), Pos: pos(ac), Radius: round1(ac.r), Danger: 1})
-			l.Points = append(l.Points, Point{ID: id, Kind: "anomaly", Name: "Гравитационная аномалия", Pos: pos(circle{ac.x, ac.y, 0}), Radius: 18, Reward: 150 + 40*float64(i)})
+			anName := "Гравитационная аномалия"
+			zoneName := g.pick(anomalyNames)
+			if p.ID == "redstorm" && i == 0 {
+				anName = "Старый ретрансляционный контур"
+				zoneName = anName
+			}
+			l.Zones = append(l.Zones, Zone{ID: "z-explore-" + id, Type: "explore", Name: zoneName, Pos: pos(ac), Radius: round1(ac.r), Danger: 1})
+			l.Points = append(l.Points, Point{ID: id, Kind: "anomaly", Name: anName, Pos: pos(circle{ac.x, ac.y, 0}), Radius: 18, Reward: 150 + 40*float64(i)})
 			g.blockers = append(g.blockers, circle{ac.x, ac.y, ac.r})
 		}
 	}

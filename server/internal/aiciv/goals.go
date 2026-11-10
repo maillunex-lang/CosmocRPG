@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/world"
 )
 
@@ -44,6 +45,7 @@ type GoalRunner struct {
 	Log     *slog.Logger
 	LowHull float64
 	Name    string
+	Clans   *corp.Service
 }
 
 func (r *GoalRunner) hullLimit() float64 {
@@ -72,6 +74,7 @@ type agentState struct {
 	target    string
 	targetPos [2]float64
 	playerID  string
+	clanAt    time.Time
 }
 
 // RunGoal drives one agent for the lifetime of ctx according to the given goal.
@@ -90,6 +93,10 @@ func (r *GoalRunner) RunGoal(ctx context.Context, g *Gateway, captainID, playerI
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			if r.Clans != nil && time.Since(st.clanAt) >= 45*time.Second {
+				st.clanAt = time.Now()
+				r.Clans.SettleAI(ctx, playerID, r.Name)
+			}
 			if r.World == nil {
 				continue
 			}

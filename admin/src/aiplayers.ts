@@ -52,6 +52,7 @@ export interface AiCaptain {
 }
 
 export interface AiPlayersData {
+  civ_error?: string;
   status: AiStatus;
   settings: AiSettings;
   captains: AiCaptain[];

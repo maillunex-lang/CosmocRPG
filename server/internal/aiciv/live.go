@@ -47,8 +47,8 @@ func (l *Live) Set(k Knobs) {
 	if k.Cast < 1 {
 		k.Cast = 1
 	}
-	if k.Cast > 8 {
-		k.Cast = 8
+	if k.Cast > 500 {
+		k.Cast = 500
 	}
 	if k.TalkMin < 1 {
 		k.TalkMin = 1

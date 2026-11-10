@@ -45,6 +45,7 @@ type Options struct {
 	Design        *design.Service      // библиотека дизайна: каталог элементов, замены, публикация (nil: раздел выключен)
 	Media         *media.Service       // библиотека музыки и радио (nil: раздел выключен)
 	LivingEnabled bool                 // включены ли живые локации на сервере (флаг COSMOC_FEATURE_LIVING)
+	OnChanged     func(reason string)  // настройки сохранены: сказать игрокам, что сервер обновился
 }
 
 // Handler — HTTP-обработчик админ-API (/api/...).
@@ -69,6 +70,13 @@ func NewHandler(store *Store, log *slog.Logger, opts Options) *Handler {
 		store: store, log: log, opts: opts, now: time.Now,
 		byIP:  newThrottle(maxLoginFails*2, failWindow),
 		byUsr: newThrottle(maxLoginFails, failWindow),
+	}
+}
+
+// changed сообщает живым игрокам, что настройки уже применены и игру стоит перезапустить.
+func (h *Handler) changed(reason string) {
+	if h.opts.OnChanged != nil && reason != "" {
+		h.opts.OnChanged(reason)
 	}
 }
 

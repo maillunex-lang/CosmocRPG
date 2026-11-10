@@ -65,6 +65,7 @@ func (h *Handler) worldPublish(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "world_publish", h.clientIP(r), map[string]any{"version": ver, "base": req.Base})
+	h.changed("мир")
 	writeJSON(w, http.StatusOK, map[string]any{"version": ver, "living_enabled": h.opts.LivingEnabled})
 }
 
@@ -80,5 +81,6 @@ func (h *Handler) worldRollback(w http.ResponseWriter, r *http.Request, u User) 
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "world_rollback", h.clientIP(r), map[string]any{"to": id, "version": ver})
+	h.changed("мир")
 	writeJSON(w, http.StatusOK, map[string]any{"version": ver})
 }

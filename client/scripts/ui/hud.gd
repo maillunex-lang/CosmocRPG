@@ -27,6 +27,7 @@ signal station_requested    # Э-2: экран станции (ремонт, п�
 signal corporation_requested
 signal settings_requested   # пункт меню «Настройки»
 signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
+signal quest_log_requested   # карточка «Задания»: описание и маршрут
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -245,6 +246,17 @@ func _ready() -> void:
 	_autopilot.toggled.connect(func(on: bool) -> void: if gateway != null: gateway.set_autopilot(on))
 	_auto_skills.toggled.connect(func(on: bool) -> void: if gateway != null: gateway.set_auto_skills(on))
 	_quests_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("quests", c))
+	_quests_card.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			quest_log_requested.emit())
+	var quest_title := _quests_card.find_child("CardHeader", true, false)
+	if quest_title != null and quest_title.get_child_count() > 0:
+		var title_label := quest_title.get_child(0) as Control
+		if title_label != null:
+			title_label.mouse_filter = Control.MOUSE_FILTER_STOP
+			title_label.gui_input.connect(func(ev: InputEvent) -> void:
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+					quest_log_requested.emit())
 	_chat_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("chat", c))
 	_set_target_empty()
 
@@ -613,15 +625,16 @@ func _apply_lists(state: Dictionary) -> void:
 		if quests.is_empty():
 			_add_muted(_quests_list, "Нет активных заданий")
 		for q in quests:
-			var l := Label.new()
-			l.text = "%s (%d/%d)" % [q["title"], int(q["progress"]), int(q["goal"])]
-			l.theme_type_variation = &"MutedLabel"
-			l.add_theme_color_override("font_color", Tokens.TEXT)
-			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			l.custom_minimum_size.x = 220
+			var b := Button.new()
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.theme_type_variation = &"FlatButton"
+			b.text = "%s (%d/%d)" % [q["title"], int(q["progress"]), int(q["goal"])]
+			b.clip_text = true
+			b.custom_minimum_size = Vector2(0, 48)
 			var tip := str(q.get("text", ""))
-			l.tooltip_text = tip if tip != "" else l.text
-			_quests_list.add_child(l)
+			b.tooltip_text = tip if tip != "" else b.text
+			b.pressed.connect(func() -> void: quest_log_requested.emit())
+			_quests_list.add_child(b)
 	var chat: Array = state.get("chat", [])
 	var csig := JSON.stringify(chat)
 	if csig != _chat_sig:

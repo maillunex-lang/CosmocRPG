@@ -49,8 +49,14 @@ func _run() -> void:
 	_c(m.pick_at(m.to_screen(Vector2(500, 100)) + Vector2(5, 3)) == "st2" and got == ["st2"], "нажатие на станцию выбирает её")
 	_c(m.pick_at(m.to_screen(Vector2(-30, -190))) == "dep-1", "нажатие на месторождение выбирает его")
 	_c(m.pick_at(m.to_screen(Vector2(620, -380))) == "en-sp-1", "нажатие на врага выбирает его")
-	_c(m.pick_at(m.to_screen(Vector2(0, 600))) == "", "убитый враг не выбирается")
-	_c(m.pick_at(m.to_screen(Vector2(-900, 900))) == "" , "нажатие в пустоту ничего не выбирает")
+	_c(m.pick_at(m.to_screen(Vector2(0, 600))) == "@point", "убитый враг не выбирается, на его месте ставится точка маршрута")
+	var empty: Vector2 = m.to_screen(Vector2(-900, 900))
+	_c(m.pick_at(empty) == "@point" and not m._auto.disabled, "нажатие в пустую точку системы ставит маршрут")
+	var wps: Array = []
+	m.waypoint_requested.connect(func(pos: Vector2) -> void: wps.append(pos))
+	m._auto.pressed.emit()
+	_c(wps.size() == 1 and (wps[0] as Vector2).distance_to(Vector2(-900, 900)) < 1.0, "кнопка автопилота отправляет точку маршрута")
+	_c(m.pick_at(m.to_screen(Vector2(2200, 0))) == "", "нажатие за границей системы ничего не выбирает")
 	m.select("st2")
 	_c(not m._auto.disabled and m._info.text.contains("Порт"), "для выбранной цели доступен автопилот, подпись показана")
 	var auto: Array = []
@@ -63,9 +69,8 @@ func _run() -> void:
 	# Скрытая цель не остаётся доступной автопилоту и не выбирается.
 	m.select("dep-1")
 	m.set_filter("deposit", false)
-	await process_frame
-	await process_frame
-	_c(m.pick_at(m.to_screen(Vector2(-30, -190))) == "" and m._auto.disabled, "фильтр скрывает добычу и блокирует автопилот к скрытой цели")
+	_c(m._auto.disabled, "фильтр скрывает добычу и блокирует автопилот к скрытой цели")
+	_c(m.pick_at(m.to_screen(Vector2(-30, -190))) != "dep-1", "фильтр не выбирает скрытую добычу как объект")
 	m.set_filter("deposit", true)
 	await process_frame
 	await process_frame

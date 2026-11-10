@@ -52,6 +52,11 @@ func set_autopilot(_on: bool) -> void:
 	_unsupported("space.autopilot")
 
 
+## Автопилот в произвольную точку текущей системы.
+func set_waypoint(_p: Vector2) -> void:
+	_unsupported("space.waypoint")
+
+
 ## Ручное управление: вектор 0..1 (джойстик, клавиатура). Нулевой вектор останавливает.
 func move_input(_v: Vector2) -> void:
 	_unsupported("space.move")

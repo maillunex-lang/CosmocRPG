@@ -28,6 +28,16 @@ func _run() -> void:
 	_c(Hints.prefix(state) == Hints.text(state), "без журнала подсказка — это текст задания")
 	state["locations"] = [{"id": "st1", "name": "Станция «Рубеж»", "kind": "station", "system": "meridian"}]
 	_c(Hints.prefix(state).contains("Журнал локаций: 1"), "журнал добавляется к подсказке")
+	var aurora := {"system": {"id": "aurora"}, "quests": [{"kind": "kill", "system": "aurora"}]}
+	_c(Hints.marked(aurora, "en-1", "hostile") and not Hints.marked(aurora, "st1", "station"), "убийство отмечает врагов, не станцию")
+	var reach := {"system": {"id": "aurora"}, "quests": [{"kind": "reach", "target": "st1"}]}
+	_c(Hints.marked(reach, "st1", "station") and not Hints.marked(reach, "st2", "station"), "долет отмечает только нужную станцию")
+	var ore := {"quests": [{"kind": "mine", "target": "iron_ore"}]}
+	_c(Hints.marked(ore, "d1", "deposit", "iron_ore") and not Hints.marked(ore, "d2", "deposit", "crystals"), "добыча отмечает нужный ресурс")
+	var jump := {"quests": [{"kind": "jump", "target": "meridian"}]}
+	_c(Hints.marked(jump, "", "gate", "meridian") and not Hints.marked(jump, "", "gate", "redstorm"), "прыжок отмечает нужные ворота")
+	var other := {"system": {"id": "aurora"}, "quests": [{"kind": "visit", "target": "anomaly", "marker": "anomaly", "system": "meridian"}]}
+	_c(not Hints.marked(other, "an-1", "anomaly"), "задание другой системы не отмечается")
 	var holder := SubViewport.new()
 	holder.size = Vector2i(1280, 720)
 	root.add_child(holder)

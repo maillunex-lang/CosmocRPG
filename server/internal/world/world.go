@@ -50,14 +50,16 @@ func (v Vec) limit(max float64) Vec {
 
 // Player — корабль игрока.
 type Player struct {
-	ID        string // публичный идентификатор (из хеша токена)
-	Name      string
-	Pos       Vec
-	Dir       Vec
-	Speed     float64 // текущая скорость, ед/с
-	Move      Vec     // желаемое направление, длина 0..1
-	Target    string
-	Autopilot bool
+	ID          string // публичный идентификатор (из хеша токена)
+	Name        string
+	Pos         Vec
+	Dir         Vec
+	Speed       float64 // текущая скорость, ед/с
+	Move        Vec
+	Target      string
+	Autopilot   bool
+	Waypoint    Vec
+	HasWaypoint bool
 
 	// корабль и бой (Этап «Стриж»): все значения принадлежат серверу
 	ShipType            string
@@ -411,6 +413,7 @@ func (w *World) SetMove(id string, v Vec) bool {
 	p.Move = v.limit(1)
 	if p.Move.length() > 0.05 {
 		p.Autopilot = false
+		p.HasWaypoint = false
 	}
 	return true
 }
@@ -426,6 +429,7 @@ func (w *World) SetTarget(id, target string) bool {
 	if target == "" {
 		p.Target = ""
 		p.Autopilot = false
+		p.HasWaypoint = false
 		return true
 	}
 	if target == id {
@@ -435,6 +439,29 @@ func (w *World) SetTarget(id, target string) bool {
 		return false
 	}
 	p.Target = target
+	p.HasWaypoint = false
+	return true
+}
+
+// SetWaypoint ведёт автопилот в произвольную точку системы, а не к объекту.
+func (w *World) SetWaypoint(id string, pos Vec) bool {
+	if !pos.finite() {
+		return false
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p, ok := w.players[id]
+	if !ok || p.actionBusy() || p.deadUntil > w.t {
+		return false
+	}
+	if l := pos.length(); w.radius > 0 && l > w.radius {
+		pos = pos.normalized().mul(w.radius * 0.98)
+	}
+	p.Waypoint = pos
+	p.HasWaypoint = true
+	p.Target = ""
+	p.Move = Vec{}
+	p.Autopilot = true
 	return true
 }
 
@@ -450,13 +477,27 @@ func (w *World) SetAutopilot(id string, on bool) bool {
 		return false
 	}
 	if on {
-		if p.Target == "" {
+		if p.Target == "" && !p.HasWaypoint {
 			return false
 		}
 		p.Move = Vec{}
+	} else {
+		p.HasWaypoint = false
 	}
 	p.Autopilot = on
 	return true
+}
+
+// autopilotDest — точка маршрута: произвольная метка или выбранный объект. Вызывать под блокировкой.
+func (w *World) autopilotDest(p *Player) (Vec, bool) {
+	if p.HasWaypoint {
+		return p.Waypoint, true
+	}
+	if p.Target == "" {
+		return Vec{}, false
+	}
+	pos, _, ok := w.objectPos(p.Target)
+	return pos, ok
 }
 
 // objectPos ищет объект мира по идентификатору (вызывать под блокировкой).
@@ -507,25 +548,29 @@ func (w *World) Step(dt float64, now time.Time) []Record {
 		}
 		move := p.Move
 		if p.Autopilot {
-			tp, _, ok := w.objectPos(p.Target)
+			dest, ok := w.autopilotDest(p)
 			if !ok {
 				p.Autopilot = false
 				p.Target = ""
+				p.HasWaypoint = false
 			} else {
-				d := tp.sub(p.Pos)
+				d := dest.sub(p.Pos)
 				if d.length() > AutopilotStop {
 					move = d.normalized()
 				} else {
 					move = Vec{}
+					if p.HasWaypoint {
+						p.HasWaypoint = false
+						p.Autopilot = false
+					}
 				}
 			}
 		}
 		vel := move.limit(1).mul(p.spec.Speed * w.speedFor(p))
 		step := vel.mul(dt)
 		if p.Autopilot && move != (Vec{}) {
-			// не перелетать точку остановки
-			if tp, _, ok := w.objectPos(p.Target); ok {
-				if rem := tp.sub(p.Pos).length() - AutopilotStop; rem < step.length() && rem > 0 {
+			if dest, ok := w.autopilotDest(p); ok {
+				if rem := dest.sub(p.Pos).length() - AutopilotStop; rem < step.length() && rem > 0 {
 					step = step.normalized().mul(rem)
 				}
 			}

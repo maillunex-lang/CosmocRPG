@@ -81,6 +81,35 @@ func TestAutopilotStopsAtDistance(t *testing.T) {
 	}
 }
 
+func TestWaypointAutopilotStops(t *testing.T) {
+	w := New()
+	p := join(t, w, "a")
+	if w.SetWaypoint("a", Vec{math.NaN(), 0}) {
+		t.Fatal("NaN не должен приниматься")
+	}
+	p.Pos = Vec{40, 0}
+	if !w.SetWaypoint("a", Vec{120, 0}) {
+		t.Fatal("точка маршрута не принята")
+	}
+	if !p.Autopilot || !p.HasWaypoint || p.Target != "" {
+		t.Fatalf("автопилот к точке: %q", p.Target)
+	}
+	w.SetMove("a", Vec{0, 1})
+	if p.Autopilot || p.HasWaypoint {
+		t.Fatal("ручное управление должно снимать точку маршрута")
+	}
+	if !w.SetWaypoint("a", Vec{120, 0}) {
+		t.Fatal("повторная точка маршрута не принята")
+	}
+	for i := 0; i < 20*40; i++ {
+		w.Step(0.05, time.Now())
+	}
+	d := p.Pos.sub(Vec{120, 0}).length()
+	if math.Abs(d-AutopilotStop) > 0.3 || p.Autopilot || p.HasWaypoint {
+		t.Fatalf("не остановился у точки: dist %.2f autopilot %v", d, p.Autopilot)
+	}
+}
+
 func TestManualInputCancelsAutopilot(t *testing.T) {
 	w := New()
 	p := join(t, w, "a")

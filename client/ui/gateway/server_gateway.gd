@@ -435,6 +435,7 @@ func _apply_state(p: Dictionary) -> void:
 	for q in p.get("quests", []):
 		quests.append({"id": str(q.get("id", "")), "title": str(q.get("title", "")), "text": str(q.get("text", "")),
 			"marker": str(q.get("marker", "")), "system": str(q.get("system", "")), "kind": str(q.get("kind", "")),
+			"target": str(q.get("target", "")),
 			"progress": int(q.get("progress", 0)), "goal": int(q.get("goal", 1))})
 	_state["quests"] = quests
 	_state["locations"] = _locations.duplicate(true)
@@ -468,6 +469,11 @@ func set_target(id: String) -> void:
 func set_autopilot(on: bool) -> void:
 	if _joined:
 		_client.send_message("autopilot", {"on": on})
+
+
+func set_waypoint(p: Vector2) -> void:
+	if _joined:
+		_client.send_message("waypoint", {"x": p.x, "y": p.y})
 
 
 func move_input(v: Vector2) -> void:

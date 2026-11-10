@@ -95,6 +95,7 @@ type QuestView struct {
 	System   string `json:"system,omitempty"`
 	Marker   string `json:"marker,omitempty"`
 	Kind     string `json:"kind,omitempty"`
+	Target   string `json:"target,omitempty"`
 }
 
 // Completion — событие выполнения контракта.
@@ -219,7 +220,7 @@ func (s *Service) View(pid string) (View, bool) {
 		}
 		v.Quests = append(v.Quests, QuestView{
 			ID: d.ID, Title: d.Title, Text: d.Text, Progress: q.Progress, Goal: q.Goal,
-			System: d.System, Marker: d.Marker, Kind: d.Kind,
+			System: d.System, Marker: d.Marker, Kind: d.Kind, Target: d.Target,
 		})
 	}
 	return v, true

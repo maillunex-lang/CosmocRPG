@@ -12,6 +12,7 @@ const QuestHints := preload("res://ui/quest_hints.gd")
 
 signal target_selected(id: String)
 signal autopilot_requested(id: String)
+signal waypoint_requested(pos: Vector2)
 signal closed
 
 const ZONE_COLORS := {"pve": Color("#F16C79"), "mining": Color("#F3C46B"), "explore": Color("#9575E8"), "trade": Color("#42C6E5")}
@@ -41,7 +42,11 @@ var _pan := Vector2.ZERO   # смещение центра карты в мир�
 var _info: Label
 var _coords: Label
 var _auto: ActionButton
+var _side: ScrollContainer
+var _filters_box: GridContainer
 var _pickables: Array = []   # [{id, pos(мир), name}]
+var _waypoint := Vector2.ZERO
+var _has_waypoint := false
 var _touches := {}           # index -> позиция (щипок и перетаскивание)
 var _pinch_dist := 0.0
 var _pinch_zoom := 1.0
@@ -55,18 +60,24 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var scroll := ScrollContainer.new()
+	scroll.name = "MapSide"
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
-	scroll.offset_left = -300
-	scroll.offset_right = -16
-	scroll.offset_top = 16
-	scroll.offset_bottom = -16
+	scroll.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	scroll.clip_contents = true
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
+	_side = scroll
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_left", 10)
+	pad.add_theme_constant_override("margin_right", 10)
+	pad.add_theme_constant_override("margin_top", 8)
+	pad.add_theme_constant_override("margin_bottom", 8)
+	scroll.add_child(pad)
 	var side := VBoxContainer.new()
-	side.custom_minimum_size.x = 264
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side.add_theme_constant_override("separation", 8)
-	scroll.add_child(side)
+	pad.add_child(side)
 	var title := Label.new()
 	title.text = "Карта системы"
 	title.theme_type_variation = &"TitleLabel"
@@ -85,7 +96,11 @@ func _ready() -> void:
 	_auto.text = "Автопилот к цели"
 	_auto.variant = ActionButton.Variant.PRIMARY
 	Icons.apply(_auto, "rocket", Tokens.BG, 22)
-	_auto.pressed.connect(func() -> void: if selected != "": autopilot_requested.emit(selected))
+	_auto.pressed.connect(func() -> void:
+		if _has_waypoint and selected == "@point":
+			waypoint_requested.emit(_waypoint)
+		elif selected != "":
+			autopilot_requested.emit(selected))
 	side.add_child(_auto)
 	_favorite = ActionButton.new()
 	_favorite.pressed.connect(_toggle_favorite)
@@ -94,12 +109,18 @@ func _ready() -> void:
 	_favorites.item_selected.connect(_choose_favorite)
 	side.add_child(_favorites)
 	var filters := GridContainer.new()
-	filters.columns = 2
+	filters.columns = 1
+	filters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_filters_box = filters
 	side.add_child(filters)
 	for key in FILTERS:
 		var check := CheckBox.new()
 		check.text = FILTERS[key]
 		check.button_pressed = Settings.get_bool("map_filter_" + key, true)
+		check.clip_text = true
+		check.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		check.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
 		_filters[key] = check.button_pressed
 		check.toggled.connect(func(on: bool) -> void: set_filter(key, on))
 		filters.add_child(check)
@@ -133,7 +154,9 @@ func _ready() -> void:
 	Icons.apply(close, "x", Color.WHITE, 22)
 	close.pressed.connect(func() -> void: closed.emit())
 	side.add_child(close)
+	_fit_panel()
 	_refresh_info()
+	resized.connect(_fit_panel)
 
 
 func _legend() -> Control:
@@ -150,6 +173,8 @@ func _legend() -> Control:
 		row.add_child(sw)
 		var l := Label.new()
 		l.text = it[0]
+		l.clip_text = true
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.add_theme_font_size_override("font_size", Tokens.FONT_SMALL)
 		row.add_child(l)
 		box.add_child(row)
@@ -204,10 +229,29 @@ func _process(_delta: float) -> void:
 	queue_redraw()   # пульс метки игрока
 
 
+func _panel_width() -> float:
+	return clampf(size.x * 0.34, 220.0, 300.0)
+
+
+func _fit_panel() -> void:
+	if _side == null:
+		return
+	var w := _panel_width()
+	_side.offset_left = -w - 8.0
+	_side.offset_right = -8.0
+	_side.offset_top = 8.0
+	_side.offset_bottom = -8.0
+	if _filters_box != null:
+		_filters_box.columns = 1 if w < 280.0 else 2
+	_compute_rect()
+	queue_redraw()
+
+
 func _compute_rect() -> void:
-	var avail := Vector2(size.x - 320.0, size.y) - Vector2(32, 32)
-	var side := maxf(minf(avail.x, avail.y), 100.0)
-	_map_rect = Rect2(Vector2(16 + (avail.x - side) * 0.5, 16 + (avail.y - side) * 0.5), Vector2(side, side))
+	var reserved := _panel_width() + 28.0
+	var avail := Vector2(maxf(size.x - reserved, 80.0), size.y) - Vector2(24, 24)
+	var side := maxf(minf(avail.x, avail.y), 80.0)
+	_map_rect = Rect2(Vector2(12 + (avail.x - side) * 0.5, 12 + (avail.y - side) * 0.5), Vector2(side, side))
 	_center = _map_rect.get_center()
 	_scale = side / (2.0 * radius() * 1.04) * _zoom
 
@@ -220,7 +264,7 @@ func _pos(d: Dictionary) -> Vector2:
 func _draw() -> void:
 	_compute_rect()
 	_pickables.clear()
-	draw_rect(Rect2(Vector2.ZERO, size), Color(Tokens.BG, 0.96))
+	draw_rect(Rect2(Vector2.ZERO, size), Tokens.BG)
 	var grid_step := _nice_step(70.0 / _scale)
 	if grid_step > 0.0:
 		var col := Color(Tokens.ACCENT, 0.07)
@@ -252,7 +296,9 @@ func _draw() -> void:
 		draw_rect(Rect2(sp - Vector2(5, 5), Vector2(10, 10)), Tokens.TEXT)
 		draw_string(font, sp + Vector2(8, 4), str(s.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Tokens.TEXT)
 		_pickables.append({"id": str(s.get("id", "")), "pos": _pos(s), "name": str(s.get("name", ""))})
-		if QuestHints.marker(state) == "station":
+		if QuestHints.marked(state, str(s.get("id", "")), "station"):
+			_draw_bang(sp)
+		elif QuestHints.marker(state) == "station":
 			draw_arc(sp, 16, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
 	# серверные объекты из состояния: месторождения, точки, враги, игроки
 	for o in state.get("objects", []):
@@ -284,11 +330,27 @@ func _draw() -> void:
 		if QuestHints.marker(state) == kind:
 			draw_arc(sc, 14, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
 		if kind in ["anomaly", "derelict", "signal"] or str(o.get("id", "")) == selected:
-			draw_string(font, sc + Vector2(8, -8), str(o.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, 180, 12, Tokens.TEXT)
-	_refresh_info()
+			_draw_name(font, sc + Vector2(8, -8), str(o.get("name", "")))
+		if QuestHints.marked(state, str(o.get("id", "")), kind, str(o.get("resource", ""))):
+			_draw_bang(sc)
+	for g in state.get("gates", []):
+		if typeof(g) != TYPE_DICTIONARY:
+			continue
+		var gp: Array = (g as Dictionary).get("pos", [0, 0])
+		var gpos := Vector2(float(gp[0]), float(gp[1]))
+		var gs := to_screen(gpos)
+		draw_colored_polygon(PackedVector2Array([gs + Vector2(0, -7), gs + Vector2(7, 0), gs + Vector2(0, 7), gs + Vector2(-7, 0)]), Tokens.ACCENT)
+		_pickables.append({"id": "gate:" + str((g as Dictionary).get("to", "")), "pos": gpos, "name": "Ворота в " + str((g as Dictionary).get("to", ""))})
+		if QuestHints.marked(state, "", "gate", str((g as Dictionary).get("to", ""))):
+			_draw_bang(gs)
 	var me: Dictionary = state.get("ship", {})
 	# курс к цели: пунктир от корабля до выбранного объекта + дистанция посередине
-	if selected != "" and not me.is_empty():
+	if selected == "@point" and _has_waypoint and not me.is_empty():
+		var a3: Vector2 = to_screen(me["pos"])
+		var b3: Vector2 = to_screen(_waypoint)
+		draw_dashed_line(a3, b3, Color(Tokens.RARE, 0.8), 2.0, 6.0, true)
+		draw_circle(b3, 5.0, Tokens.RARE)
+	if selected != "" and selected != "@point" and not me.is_empty():
 		for pk in _pickables:
 			if pk["id"] == selected:
 				var a2: Vector2 = to_screen(me["pos"])
@@ -317,6 +379,32 @@ func _draw() -> void:
 			if pk["id"] == selected:
 				var sp2 := to_screen(pk["pos"])
 				draw_arc(sp2, 10, 0, TAU, 24, Tokens.RARE, 2.0, true)
+	_draw_panel_bg()
+	_refresh_info()
+
+
+func _draw_panel_bg() -> void:
+	if _side == null:
+		return
+	var r := _side.get_rect()
+	if r.size.x < 8.0 or r.size.y < 8.0:
+		return
+	draw_rect(r, Tokens.SURFACE)
+	draw_rect(r, Color(Tokens.ACCENT, 0.35), false, 1.0)
+
+
+func _draw_name(font: Font, at: Vector2, text: String) -> void:
+	if text == "":
+		return
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, 160, 12, Tokens.TEXT)
+
+
+func _draw_bang(at: Vector2) -> void:
+	var p := at + Vector2(0, -16)
+	draw_circle(p, 9.0, Color("#F3C46B"))
+	draw_circle(p, 9.0, Color("#081421"), false, 1.5)
+	var font := ThemeDB.fallback_font
+	draw_string(font, p + Vector2(-3, 5), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#081421"))
 
 
 ## Шаг сетки координат в мирах: ближайший «красивый» шаг, чтобы сетка была не чаще ~70 px.
@@ -405,11 +493,23 @@ func pick_at(screen_pos: Vector2) -> String:
 			best_d = d
 			best = str(pk["id"])
 	if best != "":
+		_has_waypoint = false
 		select(best)
-	return best
+		return best
+	var world := to_world(screen_pos)
+	if world.length() <= radius() and _map_rect.has_point(screen_pos):
+		_waypoint = world
+		_has_waypoint = true
+		selected = "@point"
+		_refresh_info()
+		queue_redraw()
+		return "@point"
+	return ""
 
 
 func select(id: String) -> void:
+	if id != "@point":
+		_has_waypoint = false
 	selected = id
 	_refresh_info()
 	queue_redraw()
@@ -433,11 +533,15 @@ func _refresh_info() -> void:
 			name_ = str(pk["name"])
 			if not me.is_empty():
 				dist_km = (me["pos"] as Vector2).distance_to(pk["pos"]) / 10.0
-	_favorite.disabled = name_ == ""
+	if selected == "@point" and _has_waypoint:
+		name_ = "Точка маршрута"
+		if not me.is_empty():
+			dist_km = (me["pos"] as Vector2).distance_to(_waypoint) / 10.0
+	_favorite.disabled = name_ == "" or selected == "@point"
 	_favorite.text = "★ Убрать точку" if _is_favorite(selected) else "☆ В избранные точки"
 	_refresh_favorites()
 	if selected == "" or name_ == "":
-		_info.text = "Нажмите на станцию, месторождение, точку исследования или врага. При увеличении карту можно перетаскивать."
+		_info.text = "Нажмите на объект или пустое место карты, чтобы построить маршрут."
 		var hint := QuestHints.prefix(state)
 		if hint != "":
 			_info.text = hint + "\n" + _info.text

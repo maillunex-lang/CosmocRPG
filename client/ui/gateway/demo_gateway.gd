@@ -26,6 +26,8 @@ var _target_id := ""
 var _attacking := false
 var _auto_skills := false
 var _autopilot := false
+var _waypoint := Vector2.ZERO
+var _has_waypoint := false
 var _move := Vector2.ZERO
 var _boost_left := 0.0
 var _attack_timer := 0.0
@@ -66,8 +68,8 @@ func _init() -> void:
 		{"slot": 3, "name": "Рывок", "energy_cost": 15.0, "cooldown": 10.0, "cooldown_left": 0.0, "needs_target": false},
 	]
 	_quests = [
-		{"title": "Добыть руду в поясе Кси", "progress": 3, "goal": 10},
-		{"title": "Доставить груз на станцию", "progress": 0, "goal": 1},
+		{"id": "demo_ore", "title": "Добыть руду в поясе Кси", "text": "Добудьте железную руду из астероидов.", "kind": "mine", "target": "iron_ore", "progress": 3, "goal": 10},
+		{"id": "demo_station", "title": "Доставить груз на станцию", "text": "Долетите до станции «Рубеж».", "kind": "reach", "target": "st1", "progress": 0, "goal": 1},
 	]
 	_chat = [
 		{"channel": "Общий", "author": "Орион-7", "text": "Кто идёт в пояс?"},
@@ -147,6 +149,7 @@ func set_target(id: String) -> void:
 	if id == _target_id:
 		return
 	_target_id = id
+	_has_waypoint = false
 	if _attacking:
 		_attacking = false  # смена цели прекращает атаку прежней
 	if _autopilot and id == "":
@@ -183,17 +186,29 @@ func set_auto_skills(on: bool) -> void:
 
 
 func set_autopilot(on: bool) -> void:
-	if on and not _objects.has(_target_id):
+	if on and not _has_waypoint and not _objects.has(_target_id):
 		command_failed.emit("space.autopilot", "Выберите цель для автопилота")
 		return
+	if not on:
+		_has_waypoint = false
 	_autopilot = on
+	_publish()
+
+
+func set_waypoint(p: Vector2) -> void:
+	_waypoint = p
+	_has_waypoint = true
+	_target_id = ""
+	_move = Vector2.ZERO
+	_autopilot = true
 	_publish()
 
 
 func move_input(v: Vector2) -> void:
 	_move = v.limit_length(1.0)
 	if _move.length() > 0.05:
-		_autopilot = false  # ручное управление отключает автопилот
+		_autopilot = false
+		_has_waypoint = false
 
 
 ## Демо: перейти в следующую систему (другой профиль фона). На сервере переход между системами — отдельная команда.
@@ -239,6 +254,16 @@ func _move_ship(dt: float) -> void:
 	if _move.length() > 0.05:
 		pos += _move * speed * dt
 		_ship["dir"] = _move.normalized()
+	elif _autopilot and _has_waypoint:
+		var to_wp: Vector2 = _waypoint - pos
+		if to_wp.length() > AUTOPILOT_STOP:
+			var d2 := to_wp.normalized()
+			pos += d2 * minf(speed * dt, to_wp.length() - AUTOPILOT_STOP)
+			_ship["dir"] = d2
+		else:
+			_autopilot = false
+			_has_waypoint = false
+			notification.emit("Автопилот: прибыли к точке")
 	elif _autopilot and _objects.has(_target_id):
 		var to: Vector2 = (_objects[_target_id]["pos"] as Vector2) - pos
 		if to.length() > AUTOPILOT_STOP:

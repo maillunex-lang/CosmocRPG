@@ -17,6 +17,7 @@ jobs:
   android-apk:
     name: Подписанный APK
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'maillunex-lang/CosmocRPG'
+    environment: android-signing   # секреты подписи живут только здесь: подтверждение владельцем + только ветка main
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:

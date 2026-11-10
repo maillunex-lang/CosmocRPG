@@ -165,7 +165,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "equipment_set", "equipment_get", "talk":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "talk":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -323,7 +323,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.shopMsg(ctx, c, ss, m)
 	case "chat_send", "chat_history":
 		h.chatMsg(ctx, c, ss, m)
-	case "corp_create", "corp_join", "corp_leave", "corp_info":
+	case "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote":
 		h.corpMsg(ctx, ss, m)
 	case "pilot", "pilot_spend":
 		h.pilotMsg(ctx, c, ss, m)
@@ -1501,7 +1501,59 @@ func (h *Handler) corpMsg(ctx context.Context, ss *session, m Message) {
 			reply(errMsg(m.ID, corpCode(err), corpText(err)))
 			return
 		}
-		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "members": mem})})
+		body := map[string]any{"corp": c, "members": mem}
+		if task, ok, al, seats, hasAl, snapErr := h.opts.Corp.Snapshot(cctx, c.ID); snapErr == nil {
+			if ok {
+				body["task"] = task
+			}
+			if hasAl {
+				body["alliance"] = al
+				body["alliance_clans"] = seats
+			}
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(body)})
+	case "alliance_found":
+		var p struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Name == "" {
+			reply(errMsg(m.ID, "bad_message", "некорректное имя союза"))
+			return
+		}
+		al, err := h.opts.Corp.FoundAlliance(cctx, ss.pid, p.Name)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"alliance": al})})
+	case "alliance_join":
+		var p struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Name == "" {
+			reply(errMsg(m.ID, "bad_message", "некорректное имя союза"))
+			return
+		}
+		al, err := h.opts.Corp.JoinAlliance(cctx, ss.pid, p.Name)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"alliance": al})})
+	case "alliance_vote":
+		var p struct {
+			Governor string `json:"governor"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil || p.Governor == "" {
+			reply(errMsg(m.ID, "bad_message", "не выбран управляющий"))
+			return
+		}
+		al, err := h.opts.Corp.Vote(cctx, ss.pid, p.Governor)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"alliance": al})})
 	}
 }
 
@@ -1517,6 +1569,16 @@ func corpCode(err error) string {
 		return "already_in_corp"
 	case corp.ErrNoCorp, corp.ErrNotMember:
 		return "no_corp"
+	case corp.ErrNotOwner:
+		return "not_owner"
+	case corp.ErrAllianceFull:
+		return "alliance_full"
+	case corp.ErrHasAlliance:
+		return "has_alliance"
+	case corp.ErrNoAlliance:
+		return "no_alliance"
+	case corp.ErrBadVote:
+		return "bad_vote"
 	default:
 		if errors.Is(err, quest.ErrNotEnough) {
 			return "no_credits"
@@ -1537,6 +1599,16 @@ func corpText(err error) string {
 		return "вы уже в корпорации: сначала выйдите"
 	case corp.ErrNoCorp, corp.ErrNotMember:
 		return "вы не состоите в корпорации"
+	case corp.ErrNotOwner:
+		return "это может сделать только основатель клана"
+	case corp.ErrAllianceFull:
+		return "в союзе уже три клана"
+	case corp.ErrHasAlliance:
+		return "клан уже в союзе"
+	case corp.ErrNoAlliance:
+		return "союз не найден"
+	case corp.ErrBadVote:
+		return "управляющим можно выбрать только основателя клана из союза"
 	default:
 		if errors.Is(err, quest.ErrNotEnough) {
 			return "взнос 10 000 кр.: не хватает кредитов"

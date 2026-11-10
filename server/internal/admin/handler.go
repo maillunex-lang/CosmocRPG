@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aiagent"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/aiciv"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/aistudio"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/chat"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/design"
@@ -37,6 +38,7 @@ type Options struct {
 	WSSessions    func() int64         // число активных игровых сессий
 	AI            *aistudio.Service    // AI Civilization Training Studio (nil: раздел выключен)
 	Agent         *aiagent.Manager     // ИИ-игроки в мире: статус, настройки, капитаны (nil: раздел выключен)
+	Civ           *aiciv.Live          // живые настройки цивилизации (nil: шлюз не запущен)
 	Ships         *shipcatalog.Service // каталог кораблей: параметры и ZIP-патчи (nil: раздел выключен)
 	World         *worldcfg.Service    // конфигурация мира: локации, враги, ресурсы, графика (nil: раздел выключен)
 	Chat          *chat.Service        // чат: журнал, мьюты, настройки (nil: раздел выключен)

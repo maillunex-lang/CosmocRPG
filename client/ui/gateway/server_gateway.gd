@@ -25,6 +25,7 @@ signal character_failed(reason: String)
 signal join_failed(reason: String)
 ## Сервер применил настройки или сменил версию. reason — коротко, что изменилось.
 signal server_updated(reason: String)
+signal fitting_updated(data: Dictionary)
 
 var url := ""
 var player_name := ""
@@ -280,6 +281,8 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			ships_updated.emit(fleet)
 		"shop":
 			shop_updated.emit(payload)
+		"fitting":
+			fitting_updated.emit(payload)
 		"error":
 			_on_error(payload)
 
@@ -312,7 +315,7 @@ func _on_error(payload: Dictionary) -> void:
 			else:
 				join_failed.emit(text)
 		"bad_target", "no_target", "cooldown", "no_energy", "out_of_range", "wrong_spec", "dead", "unknown_ability", "bad_skin", "bad_spec", \
-				"equipment_unavailable", "equipment_revision_conflict", "equipment_busy", "equipment_in_combat", "equipment_unsupported_ship", "module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big":
+				"equipment_unavailable", "equipment_revision_conflict", "equipment_busy", "equipment_in_combat", "equipment_unsupported_ship", "module_unavailable", "ability_not_learned", "no_module", "hold_full", "deposit_empty", "no_deposit", "not_at_station", "nothing_to_sell", "no_ship", "hold_too_big", "engine_slot_locked", "fitting_unavailable", "unknown_slot", "module_category", "module_size", "module_class", "not_owned":
 			command_failed.emit("space", text)
 		_:
 			command_failed.emit("server", text)
@@ -337,6 +340,8 @@ func _ship_dict(ship: Dictionary) -> Dictionary:
 		d["equipment"] = ship["equipment"]
 	if ship.get("modules") is Array:
 		d["modules"] = ship["modules"]
+	if ship.get("bays") is Array:
+		d["bays"] = ship["bays"]
 	d["cosmetics"] = ship.get("cosmetics", {}) if ship.get("cosmetics") is Dictionary else {}
 	return d
 
@@ -687,6 +692,16 @@ func set_starter_engine(equipped: bool, revision: int) -> void:
 func refresh_equipment() -> void:
 	if _joined and _client != null:
 		_client.send_message("equipment_get", {})
+
+
+func request_fitting() -> void:
+	if _joined and _client != null:
+		_client.send_message("fitting_get", {})
+
+
+func set_module(op: String, slot_id: String, item_id: String, revision: int, pilot_revision: int) -> void:
+	if _joined and _client != null:
+		_client.send_message("fitting_set", {"op": op, "slot": slot_id, "item": item_id, "revision": revision, "pilot_revision": pilot_revision})
 
 
 func has_corporations() -> bool:

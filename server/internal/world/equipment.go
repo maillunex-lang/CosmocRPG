@@ -49,6 +49,32 @@ func (w *World) equipmentCheck(p *Player) error {
 	return nil
 }
 
+// CanRefit — смена модулей у станции, на любом корпусе. Штатный двигатель Стрижа сюда не входит.
+func (w *World) CanRefit(id string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	p := w.players[id]
+	if p == nil {
+		return ErrNoPlayer
+	}
+	if p.actionBusy() {
+		return ErrEquipmentBusy
+	}
+	if p.deadUntil > w.t {
+		return ErrDead
+	}
+	if p.Attacking || p.combatUntil > w.t {
+		return ErrEquipmentCombat
+	}
+	if dist(p.Pos, Vec{w.station.Pos[0], w.station.Pos[1]}) > EquipmentDockRadius {
+		return ErrNoStable
+	}
+	if p.Move.length() > 0.05 || p.Speed > 0.1 || p.Autopilot || p.mining != "" || p.boostUntil > w.t {
+		return ErrEquipmentBusy
+	}
+	return nil
+}
+
 func (w *World) equipmentStatus(p *Player) *EquipmentStatus {
 	if !p.persistentEquipment {
 		return nil

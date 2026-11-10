@@ -797,7 +797,22 @@ func open_hangar() -> Control:
 			gateway.set_starter_engine(equipped, revision))
 	h.equipment_refresh_requested.connect(func() -> void:
 		if gateway.has_method("refresh_equipment"):
-			gateway.refresh_equipment())
+			gateway.refresh_equipment()
+		if gateway.has_method("request_fitting"):
+			gateway.request_fitting())
+	h.module_action.connect(func(op: String, slot_id: String, item_id: String, revision: int, pilot_revision: int) -> void:
+		if gateway.has_method("set_module"):
+			gateway.set_module(op, slot_id, item_id, revision, pilot_revision))
+	if gateway.has_signal("fitting_updated"):
+		var on_fitting := func(data: Dictionary) -> void:
+			if is_instance_valid(h):
+				h.set_fitting(data)
+		gateway.fitting_updated.connect(on_fitting)
+		h.tree_exiting.connect(func() -> void:
+			if gateway.fitting_updated.is_connected(on_fitting):
+				gateway.fitting_updated.disconnect(on_fitting))
+	if gateway.has_method("request_fitting"):
+		gateway.request_fitting()
 	h.ship_selected.connect(func(id: String) -> void:
 		_hangar_wait_ship = id
 		gateway.set_ship(id))

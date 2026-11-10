@@ -137,3 +137,15 @@ func TestEquipmentDoesNotRewriteLearnedRankOrCombatResources(t *testing.T) {
 		}
 	}
 }
+
+func TestCanRefitAllowsOtherHullsOnlyAtStation(t *testing.T) {
+	w, p := dockedEngine(t)
+	w.initShip(p, "TMP-MINE", "", "")
+	if err := w.CanRefit(p.ID); err != nil {
+		t.Fatalf("у станции модули можно менять и не на Стриже: %v", err)
+	}
+	p.Pos.X += EquipmentDockRadius + 1
+	if err := w.CanRefit(p.ID); err != ErrNoStable {
+		t.Fatalf("вдали от станции: %v", err)
+	}
+}

@@ -13,6 +13,7 @@ signal spec_selected(spec_id: String)
 signal ship_selected(ship_id: String)
 signal engine_selected(equipped: bool, revision: int)
 signal equipment_refresh_requested
+signal module_action(op: String, slot_id: String, item_id: String, revision: int, pilot_revision: int)
 signal closed
 
 var ship_id := ShipDef.DEFAULT_ID
@@ -25,6 +26,8 @@ var _module_info: Label
 var _engine_button: Button
 var _engine_reason: Label
 var _equipment_refresh: Button
+var _fit_box: VBoxContainer
+var _fitting: Dictionary = {}
 var _passport_info: Label
 var _passport: Dictionary = {}
 var _max_level := 0
@@ -161,6 +164,11 @@ func _ready() -> void:
 	_equipment_refresh.text = "Обновить оснащение"
 	_equipment_refresh.pressed.connect(func() -> void: equipment_refresh_requested.emit())
 	box.add_child(_equipment_refresh)
+	box.add_child(_caption("Модули"))
+	_fit_box = VBoxContainer.new()
+	_fit_box.add_theme_constant_override("separation", 6)
+	_fit_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(_fit_box)
 
 	_passport_info = Label.new()
 	_passport_info.name = "PassportInfo"
@@ -301,6 +309,7 @@ func _refresh() -> void:
 			_module_info.text = "Штатный двигатель: %s\nОткрывает M01 · Форсаж" % ("установлен" if installed else "не установлен")
 	_module_info.visible = _module_info.text != ""
 	_refresh_engine_controls()
+	_refresh_fitting()
 	_passport_info.visible = not _passport.is_empty()
 	if not _passport.is_empty():
 		var groups := {"weapon": 0, "defensive": 0, "technical": 0, "special": 0}
@@ -359,3 +368,80 @@ func _refresh_engine_controls() -> void:
 	_engine_reason.text = str(reasons.get(str(status.get("reason", "")), "Смена у станции вне боя. Снятие отключит M01 · Форсаж."))
 	if bool(status.get("pending", false)):
 		_engine_reason.text = "Сохраняем оснащение…"
+
+
+func set_fitting(data: Dictionary) -> void:
+	_fitting = data
+	_refresh_fitting()
+
+
+func _slot_title(slot_id: String) -> String:
+	var names := {
+		"weapon-1": "Орудие 1", "weapon-2": "Орудие 2", "defense-1": "Защита",
+		"tech-1": "Двигатель", "tech-2": "Реактор", "tech-3": "Электроника", "special-1": "Особый слот"
+	}
+	return str(names.get(slot_id, slot_id))
+
+
+func _refresh_fitting() -> void:
+	if _fit_box == null:
+		return
+	for child in _fit_box.get_children():
+		child.queue_free()
+	if _fitting.is_empty():
+		var wait := Label.new()
+		wait.text = "Модули читаются с сервера. Ресурсы в эти слоты не кладутся."
+		wait.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_fit_box.add_child(wait)
+		return
+	var can := bool(_fitting.get("can_change", false))
+	var summary := Label.new()
+	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	summary.text = "Масса %.0f/%.0f т · реактор %.0f/%.0f" % [float(_fitting.get("mass_tons", 0)), float(_fitting.get("mass_budget_tons", 0)), float(_fitting.get("power_draw_mw", 0)), float(_fitting.get("power_capacity_mw", 0))]
+	if not can:
+		summary.text += "\nМенять модули можно у станции, стоя на месте и вне боя."
+	_fit_box.add_child(summary)
+	var revision := int(_fitting.get("revision", 0))
+	var pilot_revision := int(_fitting.get("pilot_revision", 0))
+	for slot in _fitting.get("slots", []):
+		if not (slot is Dictionary):
+			continue
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var label := Label.new()
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var item: Dictionary = slot.get("item", {}) if slot.get("item") is Dictionary else {}
+		var title := _slot_title(str(slot.get("id", "")))
+		label.text = title + ": " + (str(item.get("name", "")) if not item.is_empty() else "пусто")
+		row.add_child(label)
+		if bool(slot.get("locked", false)):
+			var note := Label.new()
+			note.text = "кнопка выше"
+			row.add_child(note)
+		elif not item.is_empty():
+			var off := ActionButton.new()
+			off.text = "Снять"
+			off.disabled = not can
+			off.pressed.connect(module_action.emit.bind("unequip", str(slot.get("id", "")), "", revision, pilot_revision))
+			row.add_child(off)
+		else:
+			for bag_item in _fitting.get("bag", []):
+				if not (bag_item is Dictionary):
+					continue
+				var on := ActionButton.new()
+				on.text = str(bag_item.get("name", "Вставить"))
+				on.disabled = not can
+				on.pressed.connect(module_action.emit.bind("equip", str(slot.get("id", "")), str(bag_item.get("id", "")), revision, pilot_revision))
+				row.add_child(on)
+		_fit_box.add_child(row)
+	var bag: Array = _fitting.get("bag", [])
+	if bag.size() > 0:
+		var bag_label := Label.new()
+		var names: PackedStringArray = []
+		for bag_item in bag:
+			if bag_item is Dictionary:
+				names.append(str(bag_item.get("name", "")))
+		bag_label.text = "В сумке: " + ", ".join(names)
+		bag_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_fit_box.add_child(bag_label)

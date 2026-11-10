@@ -55,6 +55,7 @@ type Options struct {
 	Version       string
 	World         *world.Router                // миры систем и маршрутизация игроков (Э-1); nil: игровые сообщения отключены
 	Equipment     equipment.StarterStore       // persistent starter; nil preserves legacy fixed equipment
+	Fitting       *equipment.Service           // module inventory; nil hides the hangar bag
 	Store         world.Store                  // хранилище игроков; nil: позиции не сохраняются
 	Quests        *quest.Service               // контракты и награды; nil: функция выключена
 	Locations     location.Store               // журнал прибытий; nil: не пишется в базу
@@ -165,7 +166,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "talk":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -315,6 +316,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 	switch m.Type {
 	case "equipment_set", "equipment_get":
 		h.equipmentMsg(ctx, ss, m)
+	case "fitting_get", "fitting_set":
+		h.fittingMsg(ctx, ss, m)
 	case "buy", "purchase_status":
 		h.purchaseMsg(ctx, ss, m)
 	case "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "jump", "market", "repair", "ship_upgrade":

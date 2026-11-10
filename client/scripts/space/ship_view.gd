@@ -240,7 +240,10 @@ func set_ship(type_id: String, skin_id: String) -> void:
 ## Событие сервера → эффект («Fire», «HitShield», «HitHull», «Death», «Boost», «Scan», «Respawn», «Dock»).
 func play(effect: String, arg: Variant = null) -> void:
 	if visual != null:
-		visual.play(effect, arg)
+		if visual.visible or effect in ["Death", "Respawn"]:
+			visual.play(effect, arg)
+		if not visual.visible:
+			visual._reset_effects()
 
 
 func _add_box(size: Vector3, pos: Vector3, mat: Material) -> void:
@@ -319,7 +322,8 @@ func update_interp(local_now: float) -> void:
 			_speed_frac = lerpf(_speed_frac, spd / BASE_SPEED, clampf(dt * 10.0, 0.0, 1.0))
 			if _last_dir != Vector2.ZERO:
 				_turn = lerpf(_turn, angle_difference(_last_dir.angle(), heading.angle()) / dt, clampf(dt * 8.0, 0.0, 1.0))
-			visual.update_motion(dt, _speed_frac, -_turn, boosting)
+			if visual.visible:
+				visual.update_motion(dt, _speed_frac, -_turn, boosting)
 		if me:
 			_engine_sound()
 		_last_t = local_now
@@ -370,3 +374,14 @@ func _engine_sound(active: bool = true) -> void:
 			sfx.set_engine(SfxRules.engine_active(_speed_frac, boosting), _speed_frac, boosting)
 		else:
 			sfx.set_engine(false, 0.0, false)
+
+
+## Only presentation changes. Snapshot interpolation and target picking remain active.
+func set_full_visual(enabled: bool) -> void:
+	if visual == null or visual.visible == enabled:
+		return
+	visual.visible = enabled
+	if not enabled:
+		visual._reset_effects()
+	else:
+		visual.bank.visible = visual.alive

@@ -16,8 +16,19 @@ type Voice struct {
 	Arch     Archetype
 }
 
-// Chorus runs short AI↔AI exchanges.
-// A request is not just a line: if someone agrees, Board gives them a flight order.
+// chatScene is one conversation. Length is chosen once, from 3 to 15 lines.
+type chatScene struct {
+	topic string
+	step  int
+	need  int
+	pact  bool
+	from  string
+	kind  PactKind
+}
+
+// Chorus runs AI↔AI talks.
+// Most talks are off-topic, the way people actually write in local.
+// Sometimes a line is a real request: agreement still becomes a flight order.
 type Chorus struct {
 	Speaker *ChatSpeaker
 	Board   *Board
@@ -26,7 +37,8 @@ type Chorus struct {
 	mu         sync.Mutex
 	voices     []Voice
 	lastID     string
-	beat       int
+	rng        uint32
+	scene      *chatScene
 	follow     string
 	followLine string
 	pauseUntil time.Time
@@ -64,6 +76,21 @@ func (c *Chorus) snapshot() []Voice {
 	return out
 }
 
+func (c *Chorus) roll() uint32 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.rng == 0 {
+		c.rng = uint32(time.Now().UnixNano()) | 1
+	}
+	c.rng ^= c.rng << 13
+	c.rng ^= c.rng >> 17
+	c.rng ^= c.rng << 5
+	if c.rng == 0 {
+		c.rng = 1
+	}
+	return c.rng
+}
+
 func (c *Chorus) Run(ctx context.Context, interval time.Duration) {
 	if c == nil || c.Speaker == nil {
 		return
@@ -91,56 +118,95 @@ func (c *Chorus) turn(ctx context.Context, now time.Time) {
 	if len(voices) < 2 {
 		return
 	}
-	if c.beat == 2 && c.follow != "" {
+	if c.scene == nil {
+		c.scene = c.pickScene(voices)
+		if c.Log != nil {
+			c.Log.Info("AI talk started", "topic", c.scene.topic, "lines", c.scene.need, "pact", c.scene.pact)
+		}
+	}
+	s := c.scene
+	if s.step >= s.need {
+		c.scene = nil
+		c.follow, c.followLine = "", ""
+		c.pauseUntil = now.Add(time.Duration(18+c.roll()%25) * time.Second)
+		return
+	}
+	if s.pact && s.step < 3 {
+		c.pactTurn(ctx, voices, s, now)
+		return
+	}
+	speaker := pickOther(voices, c.lastID, int(c.roll()))
+	if speaker.ID == "" {
+		s.step++
+		return
+	}
+	topic := s.topic
+	if topic == "" {
+		topic = "quiet"
+	}
+	lines := banterLines(topic, s.step, speaker.Arch, int(c.roll()))
+	if c.sayFirst(ctx, speaker, lines) {
+		c.lastID = speaker.ID
+	}
+	s.step++
+}
+
+func (c *Chorus) pickScene(voices []Voice) *chatScene {
+	need := 3 + int(c.roll()%13) // 3..15
+	if c.Board != nil && c.roll()%5 == 0 {
+		v := voices[int(c.roll())%len(voices)]
+		return &chatScene{pact: true, need: need, from: v.ID, kind: askKind(v.Goal), topic: "quiet"}
+	}
+	topic := topicIDs[int(c.roll())%len(topicIDs)]
+	return &chatScene{topic: topic, need: need}
+}
+
+func (c *Chorus) pactTurn(ctx context.Context, voices []Voice, s *chatScene, now time.Time) {
+	switch s.step {
+	case 0:
+		speaker := findVoice(voices, s.from)
+		if speaker.ID == "" {
+			speaker = voices[int(c.roll())%len(voices)]
+			s.from = speaker.ID
+			s.kind = askKind(speaker.Goal)
+		}
+		lines := requestLines(speaker.Arch, s.kind)
+		if c.sayFirst(ctx, speaker, lines) {
+			c.Board.Ask(speaker, s.kind, now)
+			c.lastID = speaker.ID
+		}
+		s.step++
+	case 1:
+		speaker := pickOther(voices, s.from, int(c.roll()))
+		if speaker.ID == "" {
+			s.step++
+			return
+		}
+		d, ok := c.Board.Decide(speaker, now)
+		if !ok || d.Line == "" || !c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", d.Line) {
+			// Nobody took the request. Continue as ordinary talk.
+			s.pact = false
+			s.step++
+			return
+		}
+		c.Board.Commit(d, speaker.ID)
+		c.lastID = speaker.ID
+		c.follow = d.AskerID
+		c.followLine = closeLine(d)
+		s.step++
+		if c.Log != nil {
+			c.Log.Info("AI pact", "from", speaker.Name, "arch", string(speaker.Arch), "asker", d.AskerID, "goes", d.Order != nil, "lie", d.Troll)
+		}
+	default:
 		speaker := findVoice(voices, c.follow)
 		line := c.followLine
 		c.follow, c.followLine = "", ""
-		c.beat = 0
-		c.pauseUntil = now.Add(40 * time.Second)
 		if speaker.ID != "" && line != "" {
 			_ = c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", line)
 			c.lastID = speaker.ID
 		}
-		return
-	}
-	speaker := pickOther(voices, c.lastID, int(now.Unix()/12))
-	if speaker.ID == "" {
-		return
-	}
-	if c.beat == 1 && c.Board != nil {
-		if d, ok := c.Board.Decide(speaker, now); ok && d.Line != "" {
-			if c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", d.Line) {
-				c.Board.Commit(d, speaker.ID)
-				c.lastID = speaker.ID
-				c.beat = 2
-				c.follow = d.AskerID
-				c.followLine = closeLine(d)
-				if c.Log != nil {
-					c.Log.Info("AI pact", "from", speaker.Name, "arch", string(speaker.Arch), "asker", d.AskerID, "goes", d.Order != nil, "lie", d.Troll)
-				}
-				return
-			}
-		}
-	}
-	if c.beat == 0 && c.Board != nil && now.Unix()/12%3 == 0 {
-		kind := askKind(speaker.Goal)
-		lines := requestLines(speaker.Arch, kind)
-		if c.sayFirst(ctx, speaker, lines) {
-			c.Board.Ask(speaker, kind, now)
-			c.lastID = speaker.ID
-			c.beat = 1
-			return
-		}
-	}
-	lines := rotate(personaLines(speaker.Arch, speaker.Goal), int(now.Unix()/30)+len(speaker.ID))
-	if !c.sayFirst(ctx, speaker, lines) {
-		return
-	}
-	c.lastID = speaker.ID
-	c.beat++
-	if c.beat >= 3 {
-		c.beat = 0
-		c.pauseUntil = now.Add(45 * time.Second)
+		s.pact = false
+		s.step++
 	}
 }
 

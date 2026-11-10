@@ -10,6 +10,7 @@ const FrameStats := preload("res://ui/debug/frame_stats.gd")
 const AutoBattle := preload("res://ui/auto_battle.gd")
 
 signal option_changed(name: String, value: bool)
+signal hud_editor_requested
 signal closed
 
 ## Описание переключателей: ключ, подпись, пояснение, значение по умолчанию.
@@ -66,6 +67,7 @@ func _ready() -> void:
 		if o["key"] == "auto_retaliate":
 			box.add_child(_auto_target_row())
 	box.add_child(_music_section())
+	box.add_child(_interface_section())
 	var close := ActionButton.new()
 	close.text = "Закрыть"
 	close.variant = ActionButton.Variant.PRIMARY
@@ -160,6 +162,26 @@ func _sync_button(b: Button, on: bool) -> void:
 	b.set_pressed_no_signal(on)
 	b.text = "Вкл" if on else "Выкл"
 	(b as ActionButton).variant = ActionButton.Variant.PRIMARY if on else ActionButton.Variant.SECONDARY
+
+
+func _interface_section() -> Control:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	var t := Label.new()
+	t.text = "Интерфейс"
+	t.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
+	col.add_child(t)
+	var a := Label.new()
+	a.text = "Настройте игровой экран: перетащите блоки, измените размер и прозрачность, скройте лишнее. Кнопку меню скрыть нельзя."
+	a.theme_type_variation = &"MutedLabel"
+	a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(a)
+	var b := ActionButton.new()
+	b.text = "Настроить HUD"
+	b.custom_minimum_size = Vector2(0, 56)
+	b.pressed.connect(func() -> void: hud_editor_requested.emit())
+	col.add_child(b)
+	return col
 
 
 func _music() -> Node:

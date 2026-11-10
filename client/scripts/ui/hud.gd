@@ -15,6 +15,8 @@ const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 const ChatPanel := preload("res://ui/chat_panel.gd")
 const Icons := preload("res://ui/icons.gd")
 const QuestHints := preload("res://ui/quest_hints.gd")
+const LayoutStore := preload("res://ui/hud/layout_store.gd")
+const HudEditor := preload("res://ui/hud/hud_editor.gd")
 
 signal exit_requested
 signal profile_requested   # тап по карточке игрока: экран профиля
@@ -67,6 +69,15 @@ var _party_invite: Button
 var _party_join: Button
 var _party_start: Button
 var _party_leave: Button
+var _layout_doc: Dictionary = {}
+var _layout_homes: Dictionary = {}
+var _layout_lifted: Dictionary = {}
+var _layout_nodes: Dictionary = {}
+var _layout_free: Control
+var _hud_editor: Control
+var _editing := false
+var _layout_force := false
+var _cycle_target: Button
 
 @onready var _joystick: Control = %Joystick
 @onready var _reset_button: ActionButton = %ResetButton
@@ -294,6 +305,7 @@ func _ready() -> void:
 		_on_card_toggled("chat", c)
 		_keep_chat_strip())
 	_set_target_empty()
+	_boot_layout()
 
 
 ## Короткая плашка: два последних сообщения на прозрачном фоне и круглая иконка чата сбоку.
@@ -610,6 +622,12 @@ func _dock_skills() -> void:
 	_style_attack(false)
 	_auto_skills.reparent(fan, false)
 	_auto_skills.text = "Авто"
+	_cycle_target = Button.new()
+	_cycle_target.name = "CycleTargetButton"
+	_cycle_target.focus_mode = Control.FOCUS_ALL
+	_cycle_target.tooltip_text = "Ближайшая цель. Если цель уже выбрана — следующая по дальности."
+	_cycle_target.pressed.connect(_cycle_target_pressed)
+	fan.add_child(_cycle_target)
 	_place_fan()
 	_paint_auto()
 	_skills_grid.visible = false
@@ -632,8 +650,15 @@ func _place_fan() -> void:
 			_round_button(b, 46.0)
 			b.visible = false
 	_attack.position = Vector2(164, 138)
-	_auto_skills.position = Vector2(100, 176)
+	_auto_skills.position = Vector2(96, 176)
 	_round_button(_auto_skills, 48)
+	if _cycle_target != null:
+		_cycle_target.position = Vector2(200, 36)
+		_round_button(_cycle_target, 52, Color(Tokens.SURFACE, 0.82), Color(Tokens.ACCENT, 0.8))
+		Icons.apply(_cycle_target, "maximize-2", Tokens.ACCENT, 20)
+		_cycle_target.text = ""
+		_cycle_target.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_cycle_target.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 
 
 func _round_button(b: Button, side: float, fill: Variant = null, edge: Variant = null) -> void:
@@ -721,7 +746,9 @@ func _build_skills() -> void:
 		b.add_child(fill)
 		b.disabled = true
 		var slot := i
-		b.pressed.connect(func() -> void: if gateway != null: gateway.use_skill(slot))
+		b.pressed.connect(func() -> void:
+			if gateway != null and not _editing:
+				gateway.use_skill(slot))
 		_skills_grid.add_child(b)
 		_skill_buttons.append(b)
 
@@ -730,11 +757,18 @@ func _process(_delta: float) -> void:
 	if _auto_skills != null and _auto_skills.button_pressed and not _auto_skills.disabled and not UiSettings.reduce_motion():
 		var pulse := 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 220.0)
 		_auto_skills.modulate = Color(1.0, 1.0, 1.0, 0.82 + 0.18 * pulse)
-		_auto_skills.scale = Vector2.ONE * (1.0 + 0.04 * pulse)
-		_auto_skills.pivot_offset = _auto_skills.size * 0.5
+		if not _layout_has("combat.auto", "scale"):
+			_auto_skills.scale = Vector2.ONE * (1.0 + 0.04 * pulse)
+			_auto_skills.pivot_offset = _auto_skills.size * 0.5
 	elif _auto_skills != null:
 		_auto_skills.modulate = Color(0.72, 0.75, 0.8) if not _auto_skills.button_pressed else Color.WHITE
-		_auto_skills.scale = Vector2.ONE
+		if not _layout_has("combat.auto", "scale"):
+			_auto_skills.scale = Vector2.ONE
+	if _editing:
+		if gateway != null and _sent_move != Vector2.ZERO:
+			_sent_move = Vector2.ZERO
+			gateway.move_input(Vector2.ZERO)
+		return
 	if gateway == null:
 		return
 	# ручное управление с клавиатуры (проверка на компьютере): W A S D плюс джойстик
@@ -911,6 +945,8 @@ func apply_state(state: Dictionary) -> void:
 	_apply_lists(state)
 	_apply_event(state)
 	_apply_party(state)
+	_enforce_user_hides()
+	_reflow_layout()
 
 
 ## Скорость считается по реальному перемещению корабля между снимками состояния (не выдуманное число).
@@ -1070,6 +1106,7 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 		b.disabled = blocked
 		if not bool(s.get("enabled", true)):
 			b.tooltip_text = "Навык не изучен" if str(s.get("unavailable_reason", "")) == "ability_not_learned" else "Требуется установленный модуль"
+	_layout_skill_spots(state.get("skills", []))
 
 
 	_apply_cargo(state, target, ship)
@@ -1161,8 +1198,8 @@ func _add_muted(parent: Control, text: String) -> void:
 # --- действия ---
 
 func _on_attack_pressed() -> void:
-	if gateway == null or _attack.is_busy():
-		return  # защита от повторного нажатия
+	if _editing or gateway == null or _attack.is_busy():
+		return  # в редакторе HUD бой не запускается; повторное нажатие тоже отсекается
 	if bool(_last_state.get("attacking", false)):
 		_begin_attack_busy("…", false)
 		gateway.stop_attack()
@@ -1225,3 +1262,307 @@ func _apply_event(state: Dictionary) -> void:
 		when = "%d мин" % int(left / 60.0)
 	_event_label.visible = true
 	_event_label.text = "%s · %s\n%s" % [str(e.get("title", "")), when, str(e.get("text", ""))]
+
+
+func _boot_layout() -> void:
+	_layout_free = Control.new()
+	_layout_free.name = "HudFreeLayer"
+	_layout_free.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_layout_free.position = Vector2.ZERO
+	_layout_free.size = Vector2.ZERO
+	_layout_free.z_index = 8
+	add_child(_layout_free)
+	_bind_layout_nodes()
+	for id in _layout_nodes.keys():
+		var node := _layout_nodes[id] as Control
+		if node == null:
+			continue
+		_layout_homes[id] = {
+			"parent": node.get_parent(),
+			"index": node.get_index(),
+			"visible": node.visible,
+			"self_modulate": node.self_modulate,
+			"scale": node.scale,
+			"position": node.position,
+			"anchor_left": node.anchor_left,
+			"anchor_top": node.anchor_top,
+			"anchor_right": node.anchor_right,
+			"anchor_bottom": node.anchor_bottom,
+			"offset_left": node.offset_left,
+			"offset_top": node.offset_top,
+			"offset_right": node.offset_right,
+			"offset_bottom": node.offset_bottom,
+			"grow_horizontal": node.grow_horizontal,
+			"grow_vertical": node.grow_vertical,
+			"min": node.custom_minimum_size,
+		}
+	_layout_doc = LayoutStore.load_doc()
+	if not get_viewport().size_changed.is_connected(_reflow_layout):
+		get_viewport().size_changed.connect(_reflow_layout)
+	call_deferred("_reflow_layout")
+
+
+func _bind_layout_nodes() -> void:
+	_layout_nodes = {
+		"ship.joystick": _joystick,
+		"ship.bars": %BarsRow,
+		"ship.cargo": _cargo_row,
+		"ship.speed": _speed_label,
+		"player.card": _profile_card,
+		"player.quests": _quests_card,
+		"player.credits": %CreditsCard,
+		"social.chat": _chat_card,
+		"social.party": _party_box,
+		"nav.map": _map_hud_button,
+		"nav.menu": _menu_button,
+		"nav.camera": _reset_button,
+		"nav.demo": _demo_bar,
+		"combat.target": %TargetCard,
+		"combat.cycle": _cycle_target,
+		"combat.attack": _attack,
+		"combat.auto": _auto_skills,
+		"combat.autopilot": _autopilot,
+		"combat.mine": _mine_button,
+		"combat.sell": _sell_button,
+	}
+	for i in _skill_buttons.size():
+		_layout_nodes["combat.skill.%d" % i] = _skill_buttons[i]
+
+
+func _layout_item(id: String) -> Dictionary:
+	var items := LayoutStore.active_items(_layout_doc)
+	var raw: Variant = items.get(id, {})
+	return raw if raw is Dictionary else {}
+
+
+func _layout_has(id: String, key: String) -> bool:
+	return _layout_item(id).has(key)
+
+
+func _layout_skill_spots(skills: Array) -> void:
+	if _editing or skills.is_empty():
+		return
+	# Все точки внутри веера 262×232, справа от них крупная атака. За край экрана не выходят.
+	var pool: Array = [
+		[Vector2(58, 0), 56.0],
+		[Vector2(0, 56), 64.0],
+		[Vector2(0, 126), 56.0],
+		[Vector2(70, 66), 56.0],
+		[Vector2(128, 0), 52.0],
+		[Vector2(128, 60), 52.0],
+	]
+	var used: Array = []
+	for i in mini(skills.size(), _skill_buttons.size()):
+		var id := "combat.skill.%d" % i
+		if _layout_has(id, "nx"):
+			continue
+		var role := str((skills[i] as Dictionary).get("role", ""))
+		var slot := 3
+		if role == "strike":
+			slot = 0
+		elif role == "ult":
+			slot = 1
+		elif role == "module" and not used.has(2):
+			slot = 2
+		else:
+			for n in pool.size():
+				if not used.has(n):
+					slot = n
+					break
+		if used.has(slot):
+			for n in pool.size():
+				if not used.has(n):
+					slot = n
+					break
+		used.append(slot)
+		var spot: Array = pool[slot]
+		var b := _skill_buttons[i] as Control
+		b.position = spot[0]
+		b.set_meta("fan_side", float(spot[1]))
+		_round_button(b, float(spot[1]))
+
+
+func _cycle_target_pressed() -> void:
+	if _editing or gateway == null:
+		return
+	var state: Dictionary = gateway.snapshot()
+	var ship: Dictionary = state.get("ship", {})
+	if not (ship.get("pos") is Vector2):
+		return
+	var me: Vector2 = ship["pos"]
+	var cur := str(state.get("target_id", ""))
+	var rows: Array = []
+	for ob in state.get("objects", []):
+		if not (ob is Dictionary) or not (ob.get("pos") is Vector2):
+			continue
+		var id := str(ob.get("id", ""))
+		var kind := str(ob.get("kind", ""))
+		if id == "" or not (kind in ["ship", "player", "ai", "hostile"]):
+			continue
+		if str(ob.get("stance", "")) == "friendly":
+			continue
+		rows.append({"id": id, "d": me.distance_squared_to(ob["pos"])})
+	if rows.is_empty():
+		show_toast("Нет целей рядом")
+		return
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["d"]) < float(b["d"]))
+	var pick := str(rows[0]["id"])
+	if cur != "":
+		for i in rows.size():
+			if str(rows[i]["id"]) == cur:
+				pick = str(rows[(i + 1) % rows.size()]["id"])
+				break
+	gateway.set_target(pick)
+
+
+func open_hud_editor() -> void:
+	if _hud_editor != null and is_instance_valid(_hud_editor):
+		return
+	_set_menu_open(false)
+	var ed: Control = HudEditor.new()
+	ed.name = "HudEditor"
+	_hud_editor = ed
+	add_child(ed)
+	ed.call("open", self)
+
+
+func hud_editor_doc() -> Dictionary:
+	return _layout_doc
+
+
+func hud_editor_set_editing(on: bool) -> void:
+	_editing = on
+	if not on:
+		_hud_editor = null
+
+
+func hud_editor_set_doc(doc: Dictionary) -> void:
+	_layout_doc = LayoutStore.sanitize(doc)
+	LayoutStore.save_doc(_layout_doc)
+	_layout_force = true
+	_reflow_layout()
+	_layout_force = false
+
+
+func hud_editor_nodes() -> Dictionary:
+	return _layout_nodes
+
+
+func hud_editor_safe() -> Rect2:
+	var safe := get_node("%SafeArea") as Control
+	return safe.get_global_rect()
+
+
+func hud_editor_lift(id: String) -> void:
+	_lift_layout(id)
+
+
+func hud_editor_move(id: String, global_pos: Vector2) -> void:
+	var node := _layout_nodes.get(id) as Control
+	if node == null:
+		return
+	_lift_layout(id)
+	node.global_position = _clamp_layout_pos(node, global_pos)
+
+
+func _lift_layout(id: String) -> void:
+	if _layout_lifted.has(id):
+		return
+	var node := _layout_nodes.get(id) as Control
+	if node == null or _layout_free == null:
+		return
+	var gp := node.global_position
+	node.reparent(_layout_free, false)
+	node.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	node.grow_horizontal = Control.GROW_DIRECTION_END
+	node.grow_vertical = Control.GROW_DIRECTION_END
+	node.global_position = gp
+	_layout_lifted[id] = true
+
+
+func _restore_layout_home(id: String) -> void:
+	if not _layout_lifted.has(id):
+		var node0 := _layout_nodes.get(id) as Control
+		var home0: Dictionary = _layout_homes.get(id, {})
+		if node0 != null and not home0.is_empty():
+			node0.self_modulate = home0["self_modulate"]
+			node0.scale = home0["scale"]
+			node0.visible = bool(home0["visible"])
+		return
+	var node := _layout_nodes.get(id) as Control
+	var home: Dictionary = _layout_homes.get(id, {})
+	if node == null or home.is_empty():
+		return
+	var parent := home["parent"] as Node
+	if parent == null or not is_instance_valid(parent):
+		return
+	node.reparent(parent, false)
+	parent.move_child(node, mini(int(home["index"]), parent.get_child_count() - 1))
+	node.anchor_left = float(home["anchor_left"])
+	node.anchor_top = float(home["anchor_top"])
+	node.anchor_right = float(home["anchor_right"])
+	node.anchor_bottom = float(home["anchor_bottom"])
+	node.offset_left = float(home["offset_left"])
+	node.offset_top = float(home["offset_top"])
+	node.offset_right = float(home["offset_right"])
+	node.offset_bottom = float(home["offset_bottom"])
+	node.grow_horizontal = int(home["grow_horizontal"])
+	node.grow_vertical = int(home["grow_vertical"])
+	node.position = home["position"]
+	node.scale = home["scale"]
+	node.self_modulate = home["self_modulate"]
+	node.visible = bool(home["visible"])
+	node.custom_minimum_size = home["min"]
+	node.z_index = 0
+	_layout_lifted.erase(id)
+
+
+func _enforce_user_hides() -> void:
+	for id in _layout_nodes.keys():
+		var item := _layout_item(id)
+		if item.has("visible") and not bool(item["visible"]):
+			var node := _layout_nodes[id] as Control
+			if node != null:
+				node.visible = false
+
+
+func _reflow_layout() -> void:
+	if _editing and not _layout_force:
+		return
+	if _layout_nodes.is_empty():
+		return
+	var items := LayoutStore.active_items(_layout_doc)
+	var safe := hud_editor_safe()
+	for id in _layout_nodes.keys():
+		var node := _layout_nodes[id] as Control
+		if node == null:
+			continue
+		var raw: Variant = items.get(id, {})
+		if not (raw is Dictionary) or (raw as Dictionary).is_empty():
+			if _layout_lifted.has(id):
+				_restore_layout_home(id)
+			continue
+		var item: Dictionary = raw
+		if item.has("nx"):
+			_lift_layout(id)
+			var pos := safe.position + Vector2(float(item["nx"]), float(item.get("ny", 0.0))) * safe.size
+			node.global_position = _clamp_layout_pos(node, pos)
+		elif _layout_lifted.has(id):
+			_restore_layout_home(id)
+		if item.has("scale"):
+			node.scale = Vector2.ONE * float(item["scale"])
+		if item.has("opacity"):
+			node.self_modulate.a = float(item["opacity"])
+		if item.has("z"):
+			node.z_index = int(item["z"])
+		if item.has("visible"):
+			node.visible = bool(item["visible"])
+
+
+func _clamp_layout_pos(node: Control, pos: Vector2) -> Vector2:
+	var safe := hud_editor_safe()
+	var sz := node.size * node.scale.abs()
+	return Vector2(
+		clampf(pos.x, safe.position.x, maxf(safe.position.x, safe.end.x - sz.x)),
+		clampf(pos.y, safe.position.y, maxf(safe.position.y, safe.end.y - sz.y)))
+

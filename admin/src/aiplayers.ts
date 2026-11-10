@@ -33,6 +33,14 @@ export interface AiSettings {
   chat_ambient_every_sec: number;
   chat_follow_chance: number;
   disabled_captains: string[];
+  civ_enabled: boolean;
+  civ_cast: number;
+  civ_chat: boolean;
+  civ_talk_min: number;
+  civ_talk_max: number;
+  civ_interval_sec: number;
+  civ_retreat_pct: number;
+  civ_help: boolean;
 }
 
 export interface AiCaptain {

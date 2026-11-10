@@ -42,7 +42,7 @@ describe("Studio", () => {
     Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
     render(<Studio username="admin" onBack={() => {}} onLoggedOut={() => {}} />);
     await userEvent.click(screen.getByRole("button", { name: "ChatGPT" }));
-    expect(await screen.findByText(/Как обучить 300 капитанов/)).toBeTruthy();
+    expect(await screen.findByText(/Как обучить 500 капитанов/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Скопировать промпт обучения ChatGPT" }));
     await waitFor(() => expect(write).toHaveBeenCalledWith("ПРОМПТ AI_Civilization_Pack_v1"));
     expect(f.mock.calls.some((c) => String(c[0]).includes("/ai/prompt?batch=25"))).toBe(true);

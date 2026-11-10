@@ -25,15 +25,14 @@ func readStarter(ctx context.Context, q rowQuerier, owner string) (StarterState,
 	if !validOwner(owner) {
 		return StarterState{}, ErrInvalidState
 	}
-	var revision, slots int64
+	var revision int64
 	var instance, prototype, fitted *string
 	err := q.QueryRow(ctx, `
- SELECT l.revision,i.instance_id,i.prototype_id,s.instance_id,
-   (SELECT count(*) FROM player_ship_loadout_slots a WHERE a.owner_id=l.owner_id AND a.ship_type=l.ship_type)
+ SELECT l.revision,i.instance_id,i.prototype_id,s.instance_id
  FROM player_ship_loadouts l
  LEFT JOIN player_module_items i ON i.owner_id=l.owner_id AND i.ship_type=l.ship_type AND i.grant_key=$3
  LEFT JOIN player_ship_loadout_slots s ON s.owner_id=l.owner_id AND s.ship_type=l.ship_type AND s.slot_id=$4
- WHERE l.owner_id=$1 AND l.ship_type=$2`, owner, ShipType, starterGrant, world.StrizhEngineSlot).Scan(&revision, &instance, &prototype, &fitted, &slots)
+ WHERE l.owner_id=$1 AND l.ship_type=$2`, owner, ShipType, starterGrant, world.StrizhEngineSlot).Scan(&revision, &instance, &prototype, &fitted)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return StarterState{}, ErrNotInitialized
 	}
@@ -48,7 +47,11 @@ func readStarter(ctx context.Context, q rowQuerier, owner string) (StarterState,
 	s.PrototypeID = *prototype
 	s.Revision = revision
 	s.Equipped = fitted != nil
-	if !valid(s, owner) || (fitted != nil && *fitted != s.InstanceID) || (s.Equipped && slots != 1) || (!s.Equipped && slots != 0) {
+	// Engine slot must match the starter item when fitted. Total slot count
+	// is no longer constrained to 1: Fitting.Ensure and skills can add other
+	// modules to the same loadout. The specific engine slot join already
+	// guarantees consistency via the fitted pointer check above.
+	if !valid(s, owner) || (fitted != nil && *fitted != s.InstanceID) {
 		return StarterState{}, ErrInvalidState
 	}
 	return s, nil

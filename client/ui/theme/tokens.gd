@@ -17,8 +17,8 @@ const TEXT := Color("#E8F2FA")            # основной текст
 const TEXT_MUTED := Color("#93A9BF")      # вторичный текст
 const SUCCESS := Color("#5FD6A0")         # успех/«всё хорошо»
 
-const PANEL_ALPHA := 0.86     # полупрозрачность панелей
-const BORDER_ALPHA := 0.30    # прозрачность рамки (цвет ACCENT)
+const PANEL_ALPHA := 0.74     # стекло: мир просвечивает, текст остаётся на тёмной подложке
+const BORDER_ALPHA := 0.55    # светлая кромка стекла
 
 # --- Отступы и скругления ---
 const SPACE_XS := 4
@@ -26,7 +26,7 @@ const SPACE_SM := 8
 const SPACE_MD := 12
 const SPACE_LG := 16
 const SPACE_XL := 24
-const RADIUS := 10
+const RADIUS := 16
 const BORDER_WIDTH := 1
 
 # --- Размеры нажимаемых элементов и шрифтов ---

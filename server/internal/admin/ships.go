@@ -66,6 +66,7 @@ func (h *Handler) shipPut(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "ship_edit", h.clientIP(r), map[string]any{"ship": sp.ID, "version": ver})
+	h.changed("корабли")
 	writeJSON(w, http.StatusOK, map[string]any{"version": ver})
 }
 
@@ -120,6 +121,7 @@ func (h *Handler) shipPatchPublish(w http.ResponseWriter, r *http.Request, u Use
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "ship_patch_publish", h.clientIP(r), map[string]any{"preview": pid, "version": ver})
+	h.changed("корабли")
 	writeJSON(w, http.StatusOK, map[string]any{"version": ver})
 }
 
@@ -153,6 +155,7 @@ func (h *Handler) shipRollback(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	h.audit_(r.Context(), u.ID, u.Username, "ship_rollback", h.clientIP(r), map[string]any{"to": id, "version": ver})
+	h.changed("корабли")
 	writeJSON(w, http.StatusOK, map[string]any{"version": ver})
 }
 

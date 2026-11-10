@@ -500,6 +500,10 @@ func run() error {
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
 				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Civ: live, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
+				OnChanged: func(reason string) {
+					log.Info("настройки применены", "what", reason)
+					wsHandler.PushServerUpdated(reason)
+				},
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ
@@ -517,6 +521,8 @@ func run() error {
 		return err
 	case <-ctx.Done():
 		log.Info("получен сигнал остановки")
+		wsHandler.PushServerUpdated("сервер перезапускается")
+		time.Sleep(400 * time.Millisecond)
 	}
 
 	shutCtx, shutCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)

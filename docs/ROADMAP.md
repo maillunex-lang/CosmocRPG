@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | PROTO-12 | P1 | Двухклиентская приёмка прототипа | владелец | IN_PROGRESS | `tasks.json`, Э-5 |
 | PROTO-05B | P1 | Сквозная приёмка + контрольная точка | Kimi | TODO | после PROTO-12 |
-| K-1B | P1 | Корпорации: клиент | свободен | TODO | `modules/CORPORATIONS.md` |
+| K-1B | P1 | Корпорации: клиент | — | DONE (в main) | `modules/CORPORATIONS.md` |
 | K-2 | P1 | Квест deliver + глава 1 в Меридиане | ветка feature/game-sfx | DONE локально, не в main | `modules/QUESTS.md` |
 | SR-100C | P0 | Оснащение: сохранение и смена в доке | Codex | IN_PROGRESS | `docs/ships-rpg/ROADMAP.md` |
 | SR-100D | P0 | Приёмка оснащения + release | Codex | TODO | после SR-100C |

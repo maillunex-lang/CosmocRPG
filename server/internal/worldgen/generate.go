@@ -244,8 +244,11 @@ func Generate(p SystemParams, cfg Config) Layout {
 	l := Layout{System: p.ID, Name: p.Name, Seed: p.Seed, Radius: p.Radius, Hub: p.Hub,
 		Bodies: []Body{}, Stations: []Station{}, Zones: []Zone{}, Deposits: []Deposit{}, Spawns: []Spawn{}, Points: []Point{}, Lanes: []Lane{}}
 	hubName, hubZone := "Станция «Рубеж»", "Торговый узел «Рубеж»"
-	if p.ID == "redstorm" {
+	switch p.ID {
+	case "redstorm":
 		hubName, hubZone = "Форпост «Тихая пристань»", "Торговый узел «Тихая пристань»"
+	case "meridian":
+		hubName, hubZone = "Станция «Меридиан»", "Торговый узел «Меридиан»"
 	}
 	l.Stations = append(l.Stations, Station{ID: "st1", Name: hubName, Pos: p.Hub, SafeRadius: 40, Hub: true})
 	l.Zones = append(l.Zones, Zone{ID: "z-trade-1", Type: "trade", Name: hubZone, Pos: p.Hub, Radius: 55, Danger: 0})
@@ -496,7 +499,56 @@ func Generate(p SystemParams, cfg Config) Layout {
 			}
 		}
 	}
+	g.addStoryPins(&l)
 	return l
+}
+
+// storyPin — фиксированная сюжетная точка. Награда 0: посещение пишет журнал, но не выдаёт кредиты до квеста.
+type storyPin struct {
+	id, kind, name string
+}
+
+func (g *gen) addStoryPins(l *Layout) {
+	var pins []storyPin
+	switch g.p.ID {
+	case "redstorm":
+		// Главы 3–4. Форпост, контейнер dr-1 и контур an-1 уже есть и здесь не дублируются.
+		pins = []storyPin{
+			{"beacon-03", "anomaly", "Повреждённый контрольный маяк"},
+			{"shelter-05", "derelict", "Защищённая точка диагностики"},
+			{"clk-01", "anomaly", "Эталонный контрольный маяк"},
+			{"data-02", "derelict", "Локальный буферный модуль"},
+		}
+	case "meridian":
+		pins = []storyPin{
+			{"archive", "derelict", "Нейтральный архив"},
+			{"relay-02", "anomaly", "Периферийный ретранслятор"},
+			{"protocol-index", "signal", "Указатель испытаний протокола"},
+		}
+	default:
+		return
+	}
+	for _, pin := range pins {
+		c, ok := g.pinSpot(18)
+		if !ok {
+			continue
+		}
+		l.Zones = append(l.Zones, Zone{ID: "z-story-" + pin.id, Type: "explore", Name: pin.name, Pos: pos(c), Radius: round1(c.r), Danger: 0})
+		l.Points = append(l.Points, Point{ID: pin.id, Kind: pin.kind, Name: pin.name, Pos: pos(circle{c.x, c.y, 0}), Radius: 22})
+		g.blockers = append(g.blockers, c)
+	}
+}
+
+func (g *gen) pinSpot(radius float64) (circle, bool) {
+	for _, b := range []band{bandNear, bandMid, bandFar, {120, 1200}} {
+		if c, ok := g.placeAbs(radius, b, 8); ok {
+			return c, true
+		}
+	}
+	if c, ok := g.placeAbs(radius*0.6, band{100, 1250}, 0); ok {
+		return c, true
+	}
+	return circle{}, false
 }
 
 func mkDeposit(l Layout, rid string, res ResourceCfg, zone, name string, c circle, k float64) Deposit {

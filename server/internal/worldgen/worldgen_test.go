@@ -195,8 +195,68 @@ func TestRedStormNamesStayOnExistingObjects(t *testing.T) {
 	if derelict != 1 || contour != 1 {
 		t.Fatalf("точки главы: контейнер %d, контур %d", derelict, contour)
 	}
+	want := map[string]string{
+		"beacon-03":  "Повреждённый контрольный маяк",
+		"shelter-05": "Защищённая точка диагностики",
+		"clk-01":     "Эталонный контрольный маяк",
+		"data-02":    "Локальный буферный модуль",
+	}
+	got := map[string]Point{}
+	for _, p := range l.Points {
+		if _, ok := want[p.ID]; ok {
+			got[p.ID] = p
+			if p.Hidden || p.Reward != 0 {
+				t.Fatalf("сюжетная точка не должна быть скрытой или платной: %+v", p)
+			}
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("в Красном Шторме нет всех сюжетных точек: %v", got)
+	}
+	for id, name := range want {
+		if got[id].Name != name {
+			t.Fatalf("%s: %q", id, got[id].Name)
+		}
+	}
 	home := Generate(aurora, cfg)
 	if home.Stations[0].Name != "Станция «Рубеж»" {
 		t.Fatalf("Аврора потеряла свою станцию: %s", home.Stations[0].Name)
+	}
+}
+
+func TestMeridianStoryLocations(t *testing.T) {
+	cfg := DefaultConfig()
+	var meridian SystemParams
+	for _, p := range cfg.Systems {
+		if p.ID == "meridian" {
+			meridian = p
+		}
+	}
+	if meridian.ID == "" {
+		t.Fatal("нет Меридиана")
+	}
+	l := Generate(meridian, cfg)
+	if errs := l.Validate(); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if l.Stations[0].Name != "Станция «Меридиан»" || l.Stations[0].ID != "st1" {
+		t.Fatalf("хаб Меридиана: %+v", l.Stations[0])
+	}
+	want := map[string]string{
+		"archive":        "Нейтральный архив",
+		"relay-02":       "Периферийный ретранслятор",
+		"protocol-index": "Указатель испытаний протокола",
+	}
+	got := map[string]bool{}
+	for _, p := range l.Points {
+		if name, ok := want[p.ID]; ok {
+			if p.Name != name || p.Hidden {
+				t.Fatalf("точка Меридиана: %+v", p)
+			}
+			got[p.ID] = true
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("не все точки Меридиана: %v", got)
 	}
 }

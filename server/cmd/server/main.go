@@ -426,7 +426,9 @@ func run() error {
 				if err != nil || len(profiles) == 0 {
 					return
 				}
-				farm.RunGoalOnce(ctx, []string{profiles[0].ID})
+				// choose goal by profession
+				goal := aiciv.GoalForProfile(profiles[0])
+				farm.RunGoalOnce(ctx, []string{profiles[0].ID}, goal)
 			}()
 			log.Info("AI civilization goal runner scheduled (farm_credits chain)")
 		}

@@ -6,25 +6,38 @@ package aiciv
 
 var topicIDs = []string{"food", "sleep", "music", "home", "pet", "movie", "shift", "tea", "quiet", "rain", "brb", "smack"}
 
-func banterLines(topic string, step int, arch Archetype, salt int) []string {
+func banterLines(topic string, step int, arch Archetype, speakerID string, salt int) []string {
+	style := StyleOf(speakerID)
 	var out []string
+	out = append(out, linkedTurn(topic, step, style)...)
 	beats, ok := threads[topic]
 	if !ok || len(beats) == 0 {
-		beats = threads["quiet"]
+		if len(out) == 0 {
+			beats = threads["quiet"]
+			ok = true
+		}
 	}
-	if step < 0 {
-		step = 0
+	if ok && len(beats) > 0 {
+		if step < 0 {
+			step = 0
+		}
+		if step < len(beats) {
+			out = append(out, beats[step]...)
+		} else if len(out) == 0 {
+			out = append(out, tails[(step+salt)%len(tails)])
+		}
 	}
-	if step < len(beats) {
-		out = append(out, beats[step]...)
-	} else {
-		out = append(out, tails[(step+salt)%len(tails)])
-	}
-	// Personality colors a reply, it does not replace the topic.
 	if step%3 == 1 {
 		out = append(out, tint(topic, arch)...)
 	}
-	return rotate(uniqueNonEmpty(out), salt)
+	if step >= 6 && len(out) < 3 {
+		out = append(out, tails[(step+salt)%len(tails)])
+	}
+	rest := uniqueNonEmpty(out)
+	if speakerID != "" && len(rest) > 1 && len(linkedTurn(topic, step, style)) == 0 {
+		rest = orderBy(rest, speakerID)
+	}
+	return rest
 }
 
 func uniqueNonEmpty(in []string) []string {
@@ -47,6 +60,15 @@ var tails = []string{
 	"интересная мысль, но у меня щит садится.",
 	"давайте ещё одну и хватит, а то сектор уснёт.",
 	"я запомню это, когда будет скучно.",
+	"на этом я выдохну и вернусь к курсу.",
+	"слышал. отвечу уже после стыковки.",
+	"не буду повторять, мысль и так ясна.",
+	"если коротко: я согласен и молчу.",
+	"ну всё, а то мы сами себя перебьём.",
+	"я рядом, просто больше не разжёвываю.",
+	"запишу себе на люк и полечу.",
+	"спор хороший. победителя нет, и ладно.",
+	"дальше без меня, я на манёвре.",
 }
 
 var threads = map[string][][]string{

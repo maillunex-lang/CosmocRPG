@@ -35,16 +35,17 @@ type Chorus struct {
 	Live    *Live
 	Log     *slog.Logger
 
-	mu         sync.Mutex
-	voices     []Voice
-	lastID     string
-	rng        uint32
-	scene      *chatScene
-	follow     string
-	followLine string
-	pauseUntil time.Time
-	nextLine   time.Time
-	baseGap    time.Duration
+	mu           sync.Mutex
+	voices       []Voice
+	lastID       string
+	rng          uint32
+	scene        *chatScene
+	follow       string
+	followLine   string
+	recentTopics []string
+	pauseUntil   time.Time
+	nextLine     time.Time
+	baseGap      time.Duration
 }
 
 func NewChorus(s *ChatSpeaker, log *slog.Logger) *Chorus {
@@ -145,6 +146,7 @@ func (c *Chorus) turn(ctx context.Context, now time.Time) {
 	}
 	s := c.scene
 	if s.step >= s.need {
+		c.noteTopic(s.topic)
 		c.scene = nil
 		c.follow, c.followLine = "", ""
 		c.pauseUntil = now.Add(time.Duration(18+c.roll()%25) * time.Second)
@@ -163,7 +165,7 @@ func (c *Chorus) turn(ctx context.Context, now time.Time) {
 	if topic == "" {
 		topic = "quiet"
 	}
-	lines := banterLines(topic, s.step, speaker.Arch, int(c.roll()))
+	lines := banterLines(topic, s.step, speaker.Arch, speaker.ID, int(c.roll()))
 	if c.sayFirst(ctx, speaker, lines) {
 		c.lastID = speaker.ID
 	}
@@ -192,8 +194,42 @@ func (c *Chorus) pickScene(voices []Voice) *chatScene {
 		v := voices[int(c.roll())%len(voices)]
 		return &chatScene{pact: true, need: need, from: v.ID, kind: askKind(v.Goal), topic: "quiet"}
 	}
-	topic := topicIDs[int(c.roll())%len(topicIDs)]
+	topic := c.nextTopic()
 	return &chatScene{topic: topic, need: need}
+}
+
+func (c *Chorus) noteTopic(topic string) {
+	if topic == "" || topic == "quiet" {
+		return
+	}
+	c.recentTopics = append(c.recentTopics, topic)
+	if len(c.recentTopics) > 4 {
+		c.recentTopics = c.recentTopics[len(c.recentTopics)-4:]
+	}
+}
+
+func (c *Chorus) nextTopic() string {
+	pool := topicIDs
+	if c.roll()%3 != 0 {
+		pool = chainTopics()
+	}
+	start := int(c.roll())
+	for i := 0; i < len(pool); i++ {
+		topic := pool[(start+i)%len(pool)]
+		if !c.heardTopic(topic) {
+			return topic
+		}
+	}
+	return pool[start%len(pool)]
+}
+
+func (c *Chorus) heardTopic(topic string) bool {
+	for _, t := range c.recentTopics {
+		if t == topic {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Chorus) pactTurn(ctx context.Context, voices []Voice, s *chatScene, now time.Time) {
@@ -205,7 +241,7 @@ func (c *Chorus) pactTurn(ctx context.Context, voices []Voice, s *chatScene, now
 			s.from = speaker.ID
 			s.kind = askKind(speaker.Goal)
 		}
-		lines := requestLines(speaker.Arch, s.kind)
+		lines := orderBy(append(requestLines(speaker.Arch, s.kind), askExtras(s.kind)...), speaker.ID)
 		if c.sayFirst(ctx, speaker, lines) {
 			c.Board.Ask(speaker, s.kind, now)
 			c.lastID = speaker.ID
@@ -218,8 +254,21 @@ func (c *Chorus) pactTurn(ctx context.Context, voices []Voice, s *chatScene, now
 			return
 		}
 		d, ok := c.Board.Decide(speaker, now)
-		if !ok || d.Line == "" || !c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", d.Line) {
-			// Nobody took the request. Continue as ordinary talk.
+		if !ok || d.Line == "" {
+			s.pact = false
+			s.step++
+			return
+		}
+		said := false
+		for _, line := range orderBy(answerChoices(d, speaker), speaker.ID) {
+			if line == "" || !c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", line) {
+				continue
+			}
+			d.Line = line
+			said = true
+			break
+		}
+		if !said {
 			s.pact = false
 			s.step++
 			return
@@ -236,8 +285,7 @@ func (c *Chorus) pactTurn(ctx context.Context, voices []Voice, s *chatScene, now
 		speaker := findVoice(voices, c.follow)
 		line := c.followLine
 		c.follow, c.followLine = "", ""
-		if speaker.ID != "" && line != "" {
-			_ = c.Speaker.Say(ctx, speaker.ID, speaker.Name, "general", line)
+		if speaker.ID != "" && line != "" && c.sayFirst(ctx, speaker, orderBy(closeChoices(line), speaker.ID)) {
 			c.lastID = speaker.ID
 		}
 		s.pact = false
@@ -256,6 +304,42 @@ func closeLine(d Decision) string {
 	default:
 		return "понял, тогда не жду."
 	}
+}
+
+func answerChoices(d Decision, who Voice) []string {
+	lines := []string{d.Line}
+	switch {
+	case d.Troll:
+		lines = append(lines,
+			"стой там, я уже почти в кресле.",
+			"жди у обломков, только не геройствуй.",
+			"помощь в пути. ну, она так думает.",
+		)
+	case d.Refused:
+		lines = append(lines,
+			"не в этот заход, курс занят.",
+			"без меня. не обижайся, трюм не пустой.",
+			"сейчас никак, у меня своя точка.",
+		)
+	default:
+		lines = append(lines,
+			"метку вижу, подхожу без суеты.",
+			"буду рядом, только не мельтеши по курсу.",
+			"взял направление. стой, где написал.",
+			acceptLine(who.Arch, PactWing),
+		)
+	}
+	return uniqueNonEmpty(lines)
+}
+
+func closeChoices(primary string) []string {
+	return uniqueNonEmpty([]string{
+		primary,
+		"принял. стою, где договорились.",
+		"тогда дальше сам, без обид.",
+		"вижу отметку, не торопись.",
+		"ладно, остаюсь на своём курсе.",
+	})
 }
 
 func (c *Chorus) sayFirst(ctx context.Context, v Voice, lines []string) bool {

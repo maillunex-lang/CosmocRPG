@@ -100,7 +100,9 @@ func _ready() -> void:
 		if _has_waypoint and selected == "@point":
 			waypoint_requested.emit(_waypoint)
 		elif selected != "":
-			autopilot_requested.emit(selected))
+			autopilot_requested.emit(selected)
+		elif QuestHints.can_route(state, layout):
+			autopilot_requested.emit("@quest"))
 	side.add_child(_auto)
 	_favorite = ActionButton.new()
 	_favorite.pressed.connect(_toggle_favorite)
@@ -547,8 +549,14 @@ func _refresh_info() -> void:
 		var hint := QuestHints.prefix(state)
 		if hint != "":
 			_info.text = hint + "\n" + _info.text
-		_auto.disabled = true
+		if QuestHints.can_route(state, layout):
+			_auto.disabled = false
+			_auto.text = "Автопилот к заданию"
+		else:
+			_auto.disabled = true
+			_auto.text = "Автопилот к цели"
 	else:
+		_auto.text = "Автопилот к цели"
 		_info.text = "%s\nРасстояние: %.1f км" % [name_, dist_km] if dist_km >= 0.0 else name_
 		_auto.disabled = false
 

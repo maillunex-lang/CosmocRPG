@@ -14,6 +14,7 @@ const ActionButton := preload("res://ui/components/action_button.gd")
 const UiGateway := preload("res://ui/gateway/ui_gateway.gd")
 const ChatPanel := preload("res://ui/chat_panel.gd")
 const Icons := preload("res://ui/icons.gd")
+const QuestHints := preload("res://ui/quest_hints.gd")
 
 signal exit_requested
 signal profile_requested   # тап по карточке игрока: экран профиля
@@ -28,6 +29,7 @@ signal corporation_requested
 signal settings_requested   # пункт меню «Настройки»
 signal chat_requested   # пункт меню «Чат» или кнопка «Окно» в карточке: окно чата поверх игры
 signal quest_log_requested   # карточка «Задания»: описание и маршрут
+signal guide_autopilot_requested   # автопилот без выбранной цели: вести к заданию
 signal modal_opened   # открыто модальное окно (жесты камеры нужно завершить)
 
 const BUSY_TIMEOUT := 2.0
@@ -255,7 +257,17 @@ func _ready() -> void:
 	_exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_system_button.pressed.connect(func() -> void: if gateway != null and gateway.has_method("demo_next_system"): gateway.demo_next_system())
 	_attack.pressed.connect(_on_attack_pressed)
-	_autopilot.toggled.connect(func(on: bool) -> void: if gateway != null: gateway.set_autopilot(on))
+	_autopilot.toggled.connect(func(on: bool) -> void:
+		if gateway == null:
+			return
+		if on and str(gateway.snapshot().get("target_id", "")) == "":
+			var lay := {}
+			if "layout" in gateway:
+				lay = gateway.layout
+			if QuestHints.can_route(gateway.snapshot(), lay):
+				guide_autopilot_requested.emit()
+				return
+		gateway.set_autopilot(on))
 	_auto_skills.toggled.connect(func(on: bool) -> void: if gateway != null: gateway.set_auto_skills(on))
 	_quests_card.toggled.connect(func(c: bool) -> void: _on_card_toggled("quests", c))
 	_quests_card.gui_input.connect(func(ev: InputEvent) -> void:
@@ -650,7 +662,11 @@ func _apply_buttons(state: Dictionary, target: Dictionary, ship: Dictionary) -> 
 
 
 	_apply_cargo(state, target, ship)
-	_autopilot.disabled = not has_target and not state.get("autopilot", false)
+	var lay := {}
+	if gateway != null and "layout" in gateway:
+		lay = gateway.layout
+	var guided := QuestHints.can_route(state, lay)
+	_autopilot.disabled = not has_target and not guided and not state.get("autopilot", false)
 	_set_toggle(_autopilot, "Автопилот", bool(state.get("autopilot", false)))
 	_auto_skills.disabled = not combat_ok
 	_set_toggle(_auto_skills, "Авто" if combat_ok else "Авто · скоро", bool(state.get("auto_skills", false)))

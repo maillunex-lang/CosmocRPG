@@ -23,6 +23,7 @@ const StationScreen := preload("res://ui/station_screen.gd")
 const ChatOverlay := preload("res://ui/chat_overlay.gd")
 const MapScreen := preload("res://ui/map_screen.gd")
 const QuestLog := preload("res://ui/quest_log.gd")
+const QuestHints := preload("res://ui/quest_hints.gd")
 const SettingsScreen := preload("res://ui/settings_screen.gd")
 const DialogueCard := preload("res://ui/dialogue_card.gd")
 const Nameplates := preload("res://ui/nameplates.gd")
@@ -123,6 +124,8 @@ func _ready() -> void:
 	_hud.shop_requested.connect(open_shop)
 	_hud.map_requested.connect(open_map)
 	_hud.quest_log_requested.connect(open_quest_log)
+	_hud.guide_autopilot_requested.connect(func() -> void:
+		_fly_to_quest(QuestHints.guide_quest(gateway.snapshot())))
 	_hud.settings_requested.connect(open_settings)
 	_hud.profile_requested.connect(open_profile)
 	_hud.corporation_requested.connect(open_corporation)
@@ -142,6 +145,7 @@ func _ready() -> void:
 	talk.name = "DialogueCard"
 	add_child(talk)
 	talk.bind(gateway)
+	talk.route_ready.connect(_on_briefing_done)
 	var t_state := Time.get_ticks_msec()
 	_on_state(gateway.snapshot())
 	stats.mark("мир+фон", float(Time.get_ticks_msec() - t_state))
@@ -417,7 +421,9 @@ func open_map() -> Control:
 		if not id.begins_with("gate:"):
 			gateway.set_target(id))
 	m.autopilot_requested.connect(func(id: String) -> void:
-		if id.begins_with("gate:"):
+		if id == "@quest":
+			_fly_to_quest(QuestHints.guide_quest(_map_state()))
+		elif id.begins_with("gate:"):
 			_fly_gate(id.trim_prefix("gate:"))
 		else:
 			gateway.set_target(id)
@@ -474,7 +480,31 @@ func _fly_gate(system_id: String) -> bool:
 	return false
 
 
+func _on_briefing_done() -> void:
+	var q := QuestHints.guide_quest(gateway.snapshot())
+	if _outbound(q):
+		_fly_to_quest(q)
+		return
+	# Снимок может ещё показывать только что закрытый разговор. Следующий кадр мира уже с новым заданием.
+	if str(q.get("kind", "")) == "talk" and gateway.has_signal("state_updated"):
+		gateway.state_updated.connect(_fly_outbound_once, CONNECT_ONE_SHOT)
+
+
+func _fly_outbound_once(st: Dictionary) -> void:
+	var q := QuestHints.guide_quest(st)
+	if _outbound(q):
+		_fly_to_quest(q)
+
+
+func _outbound(q: Dictionary) -> bool:
+	return str(q.get("kind", "")) in ["visit", "jump", "reach", "mine", "kill"]
+
+
 func _fly_to_quest(q: Dictionary) -> void:
+	if q.is_empty():
+		if _hud != null:
+			_hud.show_toast("Нет активного задания")
+		return
 	var snap: Dictionary = gateway.snapshot()
 	var cur := str(snap.get("system", {}).get("id", ""))
 	var need := str(q.get("system", ""))
@@ -486,58 +516,48 @@ func _fly_to_quest(q: Dictionary) -> void:
 		if not _fly_gate(str(q.get("target", ""))) and _hud != null:
 			_hud.show_toast("Ворота к системе задания не найдены")
 		return
-	var id := _quest_object_id(q, snap)
+	var id := QuestHints.object_id(snap, q)
 	if id != "":
+		var at: Variant = _object_pos(snap, id)
+		if at is Vector2 and _ship_pos(snap).distance_to(at) <= 14.0:
+			if _hud != null:
+				_hud.show_toast("Вы уже у цели")
+			return
 		gateway.set_target(id)
 		gateway.set_autopilot(true)
+		if _hud != null:
+			_hud.show_toast("Курс: %s" % str(q.get("title", "задание")))
+		return
+	var lay: Dictionary = gateway.layout if "layout" in gateway else {}
+	var wp: Variant = QuestHints.layout_destination(lay, q)
+	if wp is Vector2:
+		if _ship_pos(snap).distance_to(wp) <= 14.0:
+			if _hud != null:
+				_hud.show_toast("Вы уже у цели")
+			return
+		gateway.set_waypoint(wp)
+		if _hud != null:
+			_hud.show_toast("Курс: %s" % str(q.get("title", "задание")))
 		return
 	if _hud != null:
 		_hud.show_toast("Цель задания сейчас не видна")
 
 
-func _quest_object_id(q: Dictionary, snap: Dictionary) -> String:
-	var target := str(q.get("target", ""))
-	var marker := str(q.get("marker", ""))
-	var kind := str(q.get("kind", ""))
-	var me := Vector2.ZERO
+func _ship_pos(snap: Dictionary) -> Vector2:
 	var ship: Variant = snap.get("ship", {})
 	if ship is Dictionary and (ship as Dictionary).get("pos") is Vector2:
-		me = (ship as Dictionary)["pos"]
-	var best := ""
-	var best_d := 1.0e12
+		return (ship as Dictionary)["pos"]
+	return Vector2.ZERO
+
+
+func _object_pos(snap: Dictionary, id: String) -> Variant:
 	for raw in snap.get("objects", []):
 		if typeof(raw) != TYPE_DICTIONARY:
 			continue
 		var o: Dictionary = raw
-		if bool(o.get("dead", false)):
-			continue
-		var id := str(o.get("id", ""))
-		var okind := str(o.get("kind", ""))
-		if target != "" and id == target:
-			return id
-		var hit := false
-		if marker != "" and okind == marker and (target == "" or target == okind or target == id):
-			hit = true
-		elif kind == "kill" and okind == "hostile" and target == "":
-			hit = true
-		elif kind == "mine" and okind == "deposit" and (target == "" or str(o.get("resource", "")) == target):
-			hit = true
-		elif kind == "visit" and (okind == target or (marker != "" and okind == marker and (target == "" or target == okind or target == id))):
-			hit = true
-		elif kind in ["sell", "deliver", "talk", "report"] and okind == "station":
-			hit = true
-		elif kind == "reach" and okind == "station" and (target == "" or target == "station"):
-			hit = true
-		if not hit:
-			continue
-		var pos: Variant = o.get("pos", Vector2.ZERO)
-		var d := 0.0
-		if pos is Vector2:
-			d = me.distance_to(pos)
-		if d < best_d:
-			best_d = d
-			best = id
-	return best
+		if str(o.get("id", "")) == id and o.get("pos") is Vector2:
+			return o["pos"]
+	return null
 
 
 ## Окно чата поверх игры (R-61): полупрозрачное, наполовину или на весь экран; под ним видна игра и работает управление.

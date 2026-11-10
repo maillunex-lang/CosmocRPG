@@ -66,6 +66,21 @@ func _run() -> void:
 	m.selected = ""
 	m._refresh_info()
 	_c(m._auto.disabled, "без цели автопилот недоступен")
+	var guided_state: Dictionary = data["state"].duplicate(true)
+	guided_state["system"] = {"id": "aurora"}
+	guided_state["quests"] = [{"id": "ch01_q02", "kind": "visit", "target": "aur-beacon", "marker": "signal", "system": "aurora", "title": "Первый маршрут"}]
+	(guided_state["objects"] as Array).append({"id": "aur-beacon", "kind": "signal", "name": "Маяк", "pos": Vector2(400, 200), "dead": false})
+	m.set_data(data["layout"], guided_state)
+	m.selected = ""
+	m._refresh_info()
+	_c(not m._auto.disabled and m._auto.text == "Автопилот к заданию", "после обучения автопилот доступен без выбранной точки")
+	var guided: Array = []
+	m.autopilot_requested.connect(func(id: String) -> void: guided.append(id))
+	m._auto.pressed.emit()
+	_c(guided == ["@quest"], "кнопка ведёт к заданию, а не остаётся на месте")
+	m.set_data(data["layout"], data["state"])
+	m.selected = ""
+	m._refresh_info()
 	# Скрытая цель не остаётся доступной автопилоту и не выбирается.
 	m.select("dep-1")
 	m.set_filter("deposit", false)

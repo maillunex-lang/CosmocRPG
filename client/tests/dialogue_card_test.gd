@@ -72,5 +72,13 @@ func _run() -> void:
 		if b.text == "Понятно":
 			ok = true
 	_c(skip == null and ok, "после итога пропуска больше нет")
+	var routed := [false]
+	card.route_ready.connect(func() -> void: routed[0] = true)
+	card._close()
+	_c(routed[0], "закрытие итога запускает маршрут следующего задания")
+	routed[0] = false
+	card._show({"speaker": "Ирина Ларс", "text": "Ещё вопрос.", "done": false, "choices": [{"id": "ready", "text": "Я готов."}]})
+	card._close()
+	_c(not routed[0], "незакрытый разговор маршрут не включает")
 	print("Итого: проверок %d, провалов %d" % [_n, _f])
 	quit(1 if _f > 0 else 0)

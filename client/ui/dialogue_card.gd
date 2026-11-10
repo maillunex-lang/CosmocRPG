@@ -5,6 +5,8 @@ const Rules := preload("res://ui/dialogue_rules.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 
+signal route_ready
+
 var _gateway: Node
 var _open_btn: Button
 var _panel: PanelContainer
@@ -14,6 +16,7 @@ var _choices: VBoxContainer
 var _skip: Button
 var _close_btn: Button
 var _open := false
+var _completed := false
 
 
 func bind(gateway: Node) -> void:
@@ -106,6 +109,7 @@ func _ask_open() -> void:
 
 func _show(data: Dictionary) -> void:
 	_open = true
+	_completed = bool(data.get("done", false))
 	_open_btn.visible = false
 	_panel.visible = true
 	_speaker.text = str(data.get("speaker", ""))
@@ -140,10 +144,14 @@ func _skip_talk() -> void:
 
 
 func _close() -> void:
+	var go := _completed
+	_completed = false
 	_open = false
 	_panel.visible = false
 	if _gateway != null and _gateway.has_method("snapshot"):
 		_on_state(_gateway.snapshot())
+	if go:
+		route_ready.emit()
 
 
 func _box() -> StyleBoxFlat:

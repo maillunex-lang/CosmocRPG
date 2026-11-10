@@ -402,6 +402,42 @@ func _run() -> void:
 	await _verify_layout(Vector2i(1280, 720), Vector4i(0, 0, 0, 0), "1280x720", "всё развёрнуто, цель, тревоги")
 	await _verify_layout(Vector2i(1572, 720), Vector4i(0, 0, 0, 0), "1572x720", "всё развёрнуто, цель, тревоги")
 
+	# После допуска к вылету автопилот сам берёт учебный маяк, даже если игрок ничего не выбирал.
+	c = await _make()
+	gw = c["gw"]
+	gw._objects["aur-beacon"] = {"id": "aur-beacon", "name": "Контрольный учебный маяк", "kind": "signal", "stance": "neutral", "is_ai": false, "pos": Vector2(400, 180), "dir": Vector2(0, -1)}
+	gw._quests = [{"id": "ch01_q02", "title": "Первый маршрут", "text": "К маяку.", "kind": "visit", "target": "aur-beacon", "marker": "signal", "system": "xi", "progress": 0, "goal": 1}]
+	gw._publish()
+	await process_frame
+	var guide_button := _n(c, "%AutopilotButton") as Button
+	_check(not guide_button.disabled and str(gw.snapshot().get("target_id", "")) == "", "после обучения автопилот доступен без выбранной цели")
+	guide_button.toggled.emit(true)
+	await process_frame
+	_check(str(gw.snapshot().get("target_id", "")) == "aur-beacon" and bool(gw.snapshot().get("autopilot", false)), "кнопка ведёт к учебному маяку")
+	gw._target_id = ""
+	gw._autopilot = false
+	gw._quests = [{"id": "ch01_q01", "title": "Допуск к вылету", "kind": "talk", "target": "irina", "system": "xi", "marker": "station", "progress": 0, "goal": 1}]
+	gw._publish()
+	await process_frame
+	var card: Node = c["screen"].get_node("DialogueCard")
+	card._show({"speaker": "Ирина Ларс", "text": "Итог.", "done": true, "choices": []})
+	card._close()
+	_check(str(gw.snapshot().get("target_id", "")) == "" and not bool(gw.snapshot().get("autopilot", false)), "пока в снимке ещё разговор, корабль стоит")
+	gw._quests = [{"id": "ch01_q02", "title": "Первый маршрут", "kind": "visit", "target": "aur-beacon", "marker": "signal", "system": "xi", "progress": 0, "goal": 1}]
+	gw._publish()
+	await process_frame
+	_check(str(gw.snapshot().get("target_id", "")) == "aur-beacon" and bool(gw.snapshot().get("autopilot", false)), "закрытие итога обучения включает курс к маяку")
+	gw._target_id = ""
+	gw._autopilot = false
+	gw._quests = [{"id": "ch01_q06", "title": "Чужой интерес", "kind": "talk", "target": "irina", "system": "xi", "progress": 0, "goal": 1}]
+	gw._publish()
+	await process_frame
+	card._show({"speaker": "Тея Норд", "text": "Итог.", "done": true, "choices": []})
+	card._close()
+	await process_frame
+	_check(str(gw.snapshot().get("target_id", "")) == "" and not bool(gw.snapshot().get("autopilot", false)), "следующий разговор автопилот не включает")
+	_free(c)
+
 	UiSettings.override("reduce_motion", null)
 	print("Итого: проверок %d, провалов %d" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)

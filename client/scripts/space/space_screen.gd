@@ -27,6 +27,7 @@ const SettingsScreen := preload("res://ui/settings_screen.gd")
 const DialogueCard := preload("res://ui/dialogue_card.gd")
 const Nameplates := preload("res://ui/nameplates.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
+const QuestCompass := preload("res://ui/quest_compass.gd")
 const WorldDecor := preload("res://scripts/space/world_decor.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const SfxRules := preload("res://audio/sfx.gd")
@@ -53,6 +54,7 @@ var _ship_speed := 0.0
 var _last_me_pos := Vector2.ZERO
 var _plates: Control   # экранные подписи объектов
 var _decor: Node3D   # декор живых локаций (строится по раскладке сервера)
+var _compass: Control
 
 @onready var _hud: Control = %Hud
 @onready var _bg: Control = %SpaceBackground
@@ -107,6 +109,10 @@ func _ready() -> void:
 	if gateway.get_parent() == null:
 		add_child(gateway)
 	_hud.bind(gateway)
+	_compass = QuestCompass.new()
+	_compass.name = "QuestCompass"
+	add_child(_compass)
+	move_child(_compass, _hud.get_index())
 	_plates = Nameplates.new()
 	_plates.name = "Nameplates"
 	add_child(_plates)
@@ -160,6 +166,7 @@ func _process(delta: float) -> void:
 		if _decor != null:
 			_decor.update(p, delta)
 	_update_ship_labels(delta, me)
+	_update_compass()
 	# фон: сдвиг только от перемещения корабля в экранных осях; вращение, наклон и масштаб камеры фон не трогают
 	var prof: Resource = _bg.profile
 	if prof != null:
@@ -168,6 +175,89 @@ func _process(delta: float) -> void:
 
 ## Подписи объектов: экранный слой (ui/nameplates.gd). Показываются цель, свой корабль, ближайшие враги и игроки, станции,
 ## находки рядом; не больше MAX_PLATES, без пересечений; дальние бледнее. Принципы MMO: лимит, приоритет цели, затухание по расстоянию.
+
+func _update_compass() -> void:
+	if _compass == null or gateway == null or _camera == null:
+		return
+	var aim := _quest_aim(gateway.snapshot())
+	if not bool(aim.get("ok", false)):
+		_compass.clear_aim()
+		return
+	var world: Vector2 = aim["pos"]
+	var p3 := Vector3(world.x, 0.0, world.y)
+	var behind := _camera.is_position_behind(p3)
+	var projected := _camera.unproject_position(p3)
+	var vp := _camera.get_viewport().get_visible_rect().size
+	var mapped := projected
+	if vp.x > 1.0 and vp.y > 1.0 and _compass.size.x > 1.0:
+		mapped = Vector2(projected.x / vp.x * _compass.size.x, projected.y / vp.y * _compass.size.y)
+	_compass.set_aim(mapped, behind, float(aim["meters"]), str(aim["title"]))
+
+
+func _quest_aim(snap: Dictionary) -> Dictionary:
+	var quests: Array = snap.get("quests", [])
+	if quests.is_empty() or typeof(quests[0]) != TYPE_DICTIONARY:
+		return {"ok": false}
+	var q: Dictionary = quests[0]
+	var title := str(q.get("title", "Задание"))
+	if title.length() > 18:
+		title = title.substr(0, 17) + "…"
+	var cur := ""
+	var system: Variant = snap.get("system", {})
+	if system is Dictionary:
+		cur = str((system as Dictionary).get("id", ""))
+	var need := str(q.get("system", ""))
+	var kind := str(q.get("kind", ""))
+	var pos := Vector2.ZERO
+	var found := false
+	if (need != "" and cur != "" and need != cur) or kind == "jump":
+		var gate_to := need if need != "" and need != cur else str(q.get("target", ""))
+		for raw_gate in gateway.jump_gates():
+			if typeof(raw_gate) != TYPE_DICTIONARY:
+				continue
+			var gate: Dictionary = raw_gate
+			if gate_to != "" and str(gate.get("to", "")) != gate_to:
+				continue
+			var raw: Variant = gate.get("pos", [])
+			if raw is Array and raw.size() >= 2:
+				pos = Vector2(float(raw[0]), float(raw[1]))
+				found = true
+				title = "Ворота"
+				break
+	if not found:
+		var id := _quest_object_id(q, snap)
+		if id == "":
+			return {"ok": false}
+		for raw in snap.get("objects", []):
+			if typeof(raw) != TYPE_DICTIONARY:
+				continue
+			var o: Dictionary = raw
+			if str(o.get("id", "")) != id:
+				continue
+			var p: Variant = o.get("pos", null)
+			if p is Vector2:
+				pos = p
+				found = true
+			elif p is Array and p.size() >= 2:
+				pos = Vector2(float(p[0]), float(p[1]))
+				found = true
+			break
+	if not found:
+		return {"ok": false}
+	var me := Vector2.ZERO
+	var ship: Variant = snap.get("ship", {})
+	if ship is Dictionary:
+		var sp: Variant = (ship as Dictionary).get("pos", null)
+		if sp is Vector2:
+			me = sp
+		elif sp is Array and sp.size() >= 2:
+			me = Vector2(float(sp[0]), float(sp[1]))
+	var units := me.distance_to(pos)
+	if units < 4.0:
+		return {"ok": false}
+	return {"ok": true, "pos": pos, "meters": units * 100.0, "title": title}
+
+
 func _update_ship_labels(_delta: float, me: Node3D) -> void:
 	var cam: Camera3D = _rig.camera
 	if cam == null or _plates == null:

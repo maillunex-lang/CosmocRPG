@@ -389,8 +389,17 @@ func run() error {
 		// AIC-030: координация со старым Manager — резервация капитанов новой системой
 		reservation := aiciv.NewReservation(10 * time.Minute)
 		agent.SetReservations(reservation)
-		// TODO: CivilizationDirector будет вызывать reservation.Reserve при взятии капитана под управление
 		log.Info("AI civilization reservation attached to old Manager")
+		if cfg.FeatureAICivilizationGateway {
+			dir := aiciv.NewDirector(reservation, 8, log)
+			// candidatesFn: studio captain IDs; Director reserves them so old Manager skips them.
+			// Actual Gateway open + combat is a later step.
+			go dir.Run(ctx, 15*time.Second, func() []string {
+				// placeholder: empty until we wire studio list; Director is safe with empty.
+				return nil
+			})
+			log.Info("AI civilization Director started (gateway flag)")
+		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
 		dlg.Push = wsHandler.PushChat // реплики ИИ должны доходить до живых клиентов, а не только попадать в историю

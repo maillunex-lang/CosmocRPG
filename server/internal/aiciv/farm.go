@@ -21,6 +21,7 @@ type FarmController struct {
 	World     WorldView
 	Speaker   *ChatSpeaker
 	Chorus    *Chorus
+	Board     *Board
 	Res       *Reservation
 	Endpoint  string
 	Fallback  []string
@@ -109,13 +110,14 @@ func (f *FarmController) RunCast(ctx context.Context, members []CastMember) {
 		if goal == "" {
 			goal = GoalFarmCredits
 		}
+		arch := ArchetypeFor(m.ID, goal)
 		if f.Chorus != nil {
-			f.Chorus.Add(Voice{ID: m.ID, Name: name, Goal: goal})
+			f.Chorus.Add(Voice{ID: m.ID, Name: name, Goal: goal, Arch: arch})
 		}
 		if f.Log != nil {
 			f.Log.Info("AI civilization: agent joined", "captain", m.ID, "name", name, "goal", string(goal), "player", playerID)
 		}
-		runner := &GoalRunner{World: f.World, Store: f.Store, Log: f.Log, LowHull: f.LowHull, Name: name}
+		runner := &GoalRunner{World: f.World, Store: f.Store, Board: f.Board, Log: f.Log, LowHull: f.LowHull, Name: name}
 		go runner.RunGoal(ctx, g, m.ID, playerID, goal)
 		open = append(open, g)
 	}

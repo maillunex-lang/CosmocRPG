@@ -383,6 +383,7 @@ func run() error {
 		World: universe, Store: markedPlayers, AIActorGuard: aiGuard, Equipment: equipment.NewPGStore(pool), ShipPassports: &passports, Quests: quests, Locations: visits, Corp: corpSvc, Accounts: account.NewService(playerStore), RequireCharacter: true, Shop: shop.NewService(shop.NewPGStore(pool)), Chat: chatSvc, Pilot: pilot.NewService(pilot.NewPGStore(pool)), Ships: shipxp.NewService(shipxp.NewPGStore(pool)),
 	})
 	var agent *aiagent.Manager
+	var live *aiciv.Live
 	if cfg.FeatureAI {
 		studioSvc := aistudio.NewService(aistudio.NewPGStore(pool))
 		agent = aiagent.NewManager(gameWorld, aiagent.StudioSource{Svc: studioSvc}, aiagent.NewPGStore(pool), log) // ИИ-1 живёт в Авроре (Э-1)
@@ -390,6 +391,23 @@ func run() error {
 		reservation := aiciv.NewReservation(10 * time.Minute)
 		agent.SetReservations(reservation)
 		log.Info("AI civilization reservation attached to old Manager")
+		live = aiciv.NewLive(aiciv.DefaultKnobs())
+		if st, ok, err := aiagent.NewPGStore(pool).Load(ctx); err == nil && ok && st.Validate() == nil {
+			live.Set(aiciv.Knobs{Enabled: st.CivEnabled, Cast: st.CivCast, Chat: st.CivChat, TalkMin: st.CivTalkMin, TalkMax: st.CivTalkMax, IntervalSec: st.CivIntervalSec, RetreatPct: st.CivRetreatPct, Help: st.CivHelp})
+		}
+		go func() {
+			tick := time.NewTicker(3 * time.Second)
+			defer tick.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-tick.C:
+					s := agent.Settings()
+					live.Set(aiciv.Knobs{Enabled: s.CivEnabled, Cast: s.CivCast, Chat: s.CivChat, TalkMin: s.CivTalkMin, TalkMax: s.CivTalkMax, IntervalSec: s.CivIntervalSec, RetreatPct: s.CivRetreatPct, Help: s.CivHelp})
+				}
+			}
+		}()
 		if cfg.FeatureAICivilizationGateway {
 			dir := aiciv.NewDirector(reservation, 8, log)
 			// candidatesFn: real captain IDs from active AI Studio version.
@@ -413,6 +431,7 @@ func run() error {
 			board := aiciv.NewBoard()
 			chorus := aiciv.NewChorus(speaker, log)
 			chorus.Board = board
+			chorus.Live = live
 			go chorus.Run(ctx, 12*time.Second)
 			farm := &aiciv.FarmController{
 				Bootstrap: &aiciv.Bootstrapper{Source: aiagent.StudioSource{Svc: studioSvc}, Store: aiState, Catalog: gameWorld},
@@ -421,29 +440,25 @@ func run() error {
 				Speaker:   speaker,
 				Chorus:    chorus,
 				Board:     board,
+				Live:      live,
 				Res:       reservation,
 				Endpoint:  "ws://127.0.0.1:" + strings.TrimPrefix(cfg.HTTPAddr, ":") + "/ws",
 				Fallback:  []string{"dr1", "dr2"},
 				Log:       log,
 			}
-			go func() {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(3 * time.Second):
-				}
+			go farm.Supervise(ctx, func(n int) []aiciv.CastMember {
 				profiles, err := aiagent.StudioSource{Svc: studioSvc}.Profiles(ctx)
 				if err != nil || len(profiles) == 0 {
-					return
+					return nil
 				}
-				cast := aiciv.PickCast(profiles, 3)
+				cast := aiciv.PickCast(profiles, n)
 				members := make([]aiciv.CastMember, 0, len(cast))
 				for _, p := range cast {
 					members = append(members, aiciv.CastMember{ID: p.ID, Name: p.Name, Goal: aiciv.GoalForProfile(p)})
 				}
-				farm.RunCast(ctx, members)
-			}()
-			log.Info("AI civilization cast scheduled (up to 3 voices)")
+				return members
+			})
+			log.Info("AI civilization follows admin settings")
 		}
 		// ИИ-2: ответы капитанов в общем и личном чате из обучения AI Studio
 		dlg := aiagent.NewDialogue(studioSvc, chatSvc, agent, log)
@@ -495,7 +510,7 @@ func run() error {
 			Handler: admin.NewHandler(store, log, admin.Options{
 				SessionTTL: cfg.AdminSessionTTL, CookieSecure: cfg.AdminCookieSecure, TrustProxy: cfg.AdminTrustProxy,
 				Version: version, StartedAt: time.Now(), WSSessions: wsHandler.Sessions,
-				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
+				AI: aistudio.NewService(aistudio.NewPGStore(pool)), Agent: agent, Civ: live, Ships: ships, World: worldCfg, LivingEnabled: cfg.FeatureLiving, Chat: chatSvc, Design: designSvc, Media: mediaSvc,
 			}).Routes(),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       60 * time.Second, // загрузка ZIP до 16 МБ

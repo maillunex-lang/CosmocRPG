@@ -5,6 +5,8 @@ render_mode cull_back, depth_draw_opaque;
 uniform vec3 base_color : source_color = vec3(0.4, 0.55, 0.8);
 uniform int style = 0;   // 0 камень, 1 газ, 2 лёд
 uniform float seed = 1.0;
+uniform float atmosphere_strength : hint_range(0.0, 2.0) = 0.8;
+uniform vec3 atmosphere_color : source_color = vec3(0.25, 0.6, 1.0);
 
 float hash(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21) + seed);
@@ -38,6 +40,6 @@ void fragment() {
 	}
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	ALBEDO = c;
-	EMISSION = base_color * rim * 0.9;
+	EMISSION = base_color * rim * 0.9 + atmosphere_color * rim * atmosphere_strength;
 	ROUGHNESS = 0.95;
 }

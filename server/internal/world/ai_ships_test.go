@@ -25,6 +25,8 @@ func aiWorld(t *testing.T) *World {
 
 func TestSpawnDespawnAndCounts(t *testing.T) {
 	w := aiWorld(t)
+	// Раскладка уже содержит местных пилотов; проверяем добавление одного капитана.
+	baseline := w.AICount()
 	w.Join(Record{ID: "p1", Name: "Игрок"})
 	if !w.SpawnAI(AISpawn{ID: "cpt-0001", Name: "Валун", Behavior: AIMiner, ShipType: "TMP-MINE", Seed: 1}) {
 		t.Fatal("ИИ не появился")
@@ -38,19 +40,19 @@ func TestSpawnDespawnAndCounts(t *testing.T) {
 	if w.SpawnAI(AISpawn{ID: ""}) {
 		t.Fatal("пустой идентификатор")
 	}
-	if w.AICount() != 1 || w.PlayerCount() != 1 {
+	if w.AICount() != baseline+1 || w.PlayerCount() != 1 {
 		t.Fatalf("ИИ не должны считаться игроками: ИИ %d, игроков %d", w.AICount(), w.PlayerCount())
 	}
-	if ids := w.AIIDs(); len(ids) != 1 || ids[0] != "cpt-0001" {
+	if ids := w.AIIDs(); w.aiByID["cpt-0001"] == nil {
 		t.Fatalf("идентификаторы: %v", ids)
 	}
-	if !w.DespawnAI("cpt-0001") || w.DespawnAI("cpt-0001") || w.AICount() != 0 {
+	if !w.DespawnAI("cpt-0001") || w.DespawnAI("cpt-0001") || w.AICount() != baseline {
 		t.Fatal("удаление ИИ")
 	}
 	if !w.SpawnAI(AISpawn{ID: "cpt-0002", ShipType: "НЕТ-ТАКОГО"}) {
 		t.Fatal("неизвестный корабль заменяется кораблём по умолчанию")
 	}
-	if typ := w.ais[0].ShipType; typ != DefaultShip {
+	if typ := w.ais[len(w.ais)-1].ShipType; typ != DefaultShip {
 		t.Fatalf("корабль по умолчанию: %s", typ)
 	}
 }

@@ -65,7 +65,14 @@ static func _err(msg: String) -> Dictionary:
 
 ## Проверка подписи RSA-SHA256 (общая для манифестов обновлений и контента). Возвращает "" если подпись верна, иначе текст ошибки.
 static func verify_signature(data: PackedByteArray, sig_b64: String, public_pem: String) -> String:
-	var sig := Marshalls.base64_to_raw(sig_b64.strip_edges())
+	var encoded := sig_b64.strip_edges()
+	if encoded.is_empty():
+		return "Подпись манифеста отсутствует"
+	var syntax := RegEx.new()
+	syntax.compile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$")
+	if encoded.length() > 16384 or syntax.search(encoded) == null:
+		return "Некорректный формат подписи: обновление отклонено"
+	var sig := Marshalls.base64_to_raw(encoded)
 	if sig.size() == 0:
 		return "Подпись манифеста отсутствует"
 	var key := CryptoKey.new()

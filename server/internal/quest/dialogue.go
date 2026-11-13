@@ -29,6 +29,11 @@ func Dialogue(questID string) (Scene, bool) {
 	return sceneFor(questID)
 }
 
+// DialogueVersion keeps active older quests on their original dialogue.
+func DialogueVersion(questID string, version int) (Scene, bool) {
+	return sceneFor(dialogueKey(questID, version))
+}
+
 // Reply — то, что клиент показывает в окне разговора.
 type Reply struct {
 	QuestID string   `json:"quest_id"`
@@ -66,7 +71,7 @@ func (s *Service) Talk(ctx context.Context, pid, system, choice string) (Reply, 
 	if !found {
 		return Reply{}, nil, ErrNoDialogue
 	}
-	scene, ok := Dialogue(d.ID)
+	scene, ok := DialogueVersion(d.ID, d.Version)
 	if !ok {
 		return Reply{}, nil, ErrNoDialogue
 	}

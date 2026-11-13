@@ -3,22 +3,22 @@ extends RefCounted
 ## где заданы цвета и размеры интерфейса. Размеры логические: база 1280x720, масштаб даёт stretch.
 
 # --- Палитра (утверждена владельцем) ---
-const BG := Color("#081421")          # фон
-const SURFACE := Color("#14283C")     # поверхности
-const ACCENT := Color("#42C6E5")      # основной акцент
-const ACCENT_2 := Color("#9575E8")    # вторичный акцент
-const RARE := Color("#F3C46B")        # редкие награды
-const DANGER := Color("#F16C79")      # опасность
+const BG := Color("#0B0F14")          # фон
+const SURFACE := Color("#19212B")     # поверхности
+const ACCENT := Color("#E7AC53")      # основной акцент
+const ACCENT_2 := Color("#65A7CE")    # вторичный акцент
+const RARE := Color("#F2C56B")        # редкие награды
+const DANGER := Color("#D96565")      # опасность
 
 # --- Производные (не входят в утверждённую палитру, подобраны к ней) ---
-const SURFACE_RAISED := Color("#1D3854")  # наведение/нажатие на поверхности
-const SURFACE_SUNKEN := Color("#0C1B2C")  # поля ввода, углублённые области
-const TEXT := Color("#E8F2FA")            # основной текст
-const TEXT_MUTED := Color("#93A9BF")      # вторичный текст
-const SUCCESS := Color("#5FD6A0")         # успех/«всё хорошо»
+const SURFACE_RAISED := Color("#24303C")  # наведение/нажатие на поверхности
+const SURFACE_SUNKEN := Color("#10171F")  # поля ввода, углублённые области
+const TEXT := Color("#EFF2F5")            # основной текст
+const TEXT_MUTED := Color("#A7B1BE")      # вторичный текст
+const SUCCESS := Color("#79C99B")         # успех/«всё хорошо»
 
-const PANEL_ALPHA := 0.74     # стекло: мир просвечивает, текст остаётся на тёмной подложке
-const BORDER_ALPHA := 0.55    # светлая кромка стекла
+const PANEL_ALPHA := 0.94     # стекло: мир просвечивает, текст остаётся на тёмной подложке
+const BORDER_ALPHA := 0.7    # светлая кромка стекла
 
 # --- Отступы и скругления ---
 const SPACE_XS := 4
@@ -26,7 +26,7 @@ const SPACE_SM := 8
 const SPACE_MD := 12
 const SPACE_LG := 16
 const SPACE_XL := 24
-const RADIUS := 16
+const RADIUS := 12
 const BORDER_WIDTH := 1
 
 # --- Размеры нажимаемых элементов и шрифтов ---

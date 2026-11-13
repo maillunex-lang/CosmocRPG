@@ -349,9 +349,9 @@ func _draw() -> void:
 			continue
 		if kind != "station":
 			_pickables.append({"id": oid, "pos": p, "name": str(o.get("name", ""))})
-		if QuestHints.marker(state) == kind:
+		if marked:
 			draw_arc(sc, 14, 0, TAU, 24, Color(Tokens.RARE, 0.9), 2.0, true)
-		var show_name := kind in ["anomaly", "derelict", "signal", "convoy", "patrol"] or oid == selected
+		var show_name := marked or kind in ["anomaly", "derelict", "signal", "convoy", "patrol"] or oid == selected
 		if _zoom < 2.2 and oid != selected and not marked:
 			show_name = false
 		if show_name:

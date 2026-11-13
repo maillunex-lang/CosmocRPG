@@ -519,7 +519,7 @@ func open_quest_log() -> Control:
 	add_child(layer)
 	layer.add_child(log)
 	log.theme = theme
-	log.set_quests(gateway.snapshot().get("quests", []))
+	log.set_quests(gateway.snapshot().get("quests", []), gateway.snapshot())
 	log.fly_requested.connect(func(q: Dictionary) -> void:
 		_fly_to_quest(q)
 		layer.queue_free())
@@ -558,6 +558,7 @@ func _outbound(q: Dictionary) -> bool:
 
 
 func _fly_to_quest(q: Dictionary) -> void:
+	q = QuestHints.delivery_step(q, gateway.snapshot())
 	if q.is_empty():
 		if _hud != null:
 			_hud.show_toast("Нет активного задания")

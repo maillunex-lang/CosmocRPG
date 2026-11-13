@@ -155,7 +155,7 @@ func TestPGCannotDeleteFittedItemWithoutUnfitting(t *testing.T) {
 	requireUnchanged(t, f.store, before)
 }
 
-func TestPGDoesNotSilentlyDiscardUnsupportedSlots(t *testing.T) {
+func TestPGStarterPreservesAdditionalSlots(t *testing.T) {
 	f := makeFixture(t, "postgres")
 	ctx := context.Background()
 	before, err := f.store.Ensure(ctx, f.owners[0])
@@ -168,11 +168,21 @@ func TestPGDoesNotSilentlyDiscardUnsupportedSlots(t *testing.T) {
 	if _, err := f.pool.Exec(ctx, `INSERT INTO player_ship_loadout_slots(owner_id,ship_type,slot_id,instance_id) VALUES($1,$2,'tech-2','extra-module')`, before.OwnerID, ShipType); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.store.Ensure(ctx, before.OwnerID); !errors.Is(err, ErrInvalidState) {
-		t.Fatalf("unsupported loadout accepted by bootstrap: %v", err)
+	// Адаптер стартового двигателя обслуживает только свой слот. Остальные
+	// модули принадлежат GeneralPGStore и не должны исчезать при reconnect.
+	if got, err := f.store.Ensure(ctx, before.OwnerID); err != nil || got != before {
+		t.Fatalf("starter bootstrap changed with additional module: %+v %v", got, err)
 	}
-	if _, err := f.store.SetEngine(ctx, before.OwnerID, 0, false); !errors.Is(err, ErrInvalidState) {
-		t.Fatalf("unsupported loadout rewritten: %v", err)
+	removed, err := f.store.SetEngine(ctx, before.OwnerID, 0, false)
+	if err != nil || removed.Equipped || removed.Revision != 1 {
+		t.Fatalf("starter engine removal failed: %+v %v", removed, err)
+	}
+	var retained string
+	if err := f.pool.QueryRow(ctx, `SELECT instance_id FROM player_ship_loadout_slots WHERE owner_id=$1 AND slot_id='tech-2'`, before.OwnerID).Scan(&retained); err != nil || retained != "extra-module" {
+		t.Fatalf("additional module lost: %q %v", retained, err)
+	}
+	if _, err := f.store.SetEngine(ctx, before.OwnerID, 1, true); err != nil {
+		t.Fatal(err)
 	}
 	var count int
 	var revision int64
@@ -182,7 +192,7 @@ func TestPGDoesNotSilentlyDiscardUnsupportedSlots(t *testing.T) {
 	if err := f.pool.QueryRow(ctx, `SELECT revision FROM player_ship_loadouts WHERE owner_id=$1 AND ship_type=$2`, before.OwnerID, ShipType).Scan(&revision); err != nil {
 		t.Fatal(err)
 	}
-	if count != 2 || revision != 0 {
-		t.Fatalf("unsupported slots changed: %d/%d", count, revision)
+	if count != 2 || revision != 2 {
+		t.Fatalf("additional slots lost or revision incorrect: %d/%d", count, revision)
 	}
 }

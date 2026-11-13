@@ -50,6 +50,7 @@ var auroraEvents = []eventDef{
 	{"sweep", "Досмотр сектора", "Один досмотрщик проходит мимо станции и разворачивается. Допроса нет."},
 	{"meteor", "Строй обломков", "Три обломка идут строем через сектор. Это не рейс и не сигнал «Арго»."},
 	{"runner", "Бегущий след", "Одиночка уходит к краю и не ищет драки. Догонять не обязательно."},
+	{"leviathan", "⚠ Левиафан Разлома", "Редкий мировой босс появился в секторе. У него три фазы; награды получат все участники рядом с событием."},
 }
 
 type liveEvent struct {
@@ -100,6 +101,9 @@ func (w *World) rollLife() float64 {
 func (w *World) pickEvent() eventDef {
 	pool := make([]eventDef, 0, len(auroraEvents))
 	for _, d := range auroraEvents {
+		if d.id == "leviathan" && w.rng().Intn(6) != 0 {
+			continue
+		}
 		if d.id != w.lastEventID {
 			pool = append(pool, d)
 		}
@@ -190,6 +194,11 @@ func (w *World) startLiveEvent(def eventDef, life float64) {
 	switch def.id {
 	case "convoy":
 		add(&npc{ID: "dyn-convoy", Name: "Грузовик «Северный свет»", Kind: "convoy", Stance: "neutral", Pos: c, Heading: ev.dir})
+	case "leviathan":
+		cfg := worldgen.EnemyCfg{Name: "Левиафан Разлома", Speed: 10, ChaseSpeed: 18, Aggro: 260, Leash: 420, AttackRange: 42, Damage: 16, Period: 1.1, Reward: 1000}
+		add(&npc{ID: "dyn-leviathan", Name: "Левиафан Разлома", Kind: "hostile", Stance: "hostile", Pos: c, Heading: ev.dir,
+			Hull: 18000, HullMax: 18000, Shield: 6000, ShieldMax: 6000, respawn: 0, ephemeral: true,
+			ai: &aiState{cfg: cfg, tier: "worldboss", home: c, patrolR: 100}})
 	case "raid":
 		cfg := worldgen.EnemyCfg{Speed: 9, ChaseSpeed: 14, Aggro: 180, Leash: 320, AttackRange: 26, Damage: 10, Period: 1.4, Reward: 20}
 		for i, name := range []string{"Налётчик коридора", "Второй налётчик"} {
@@ -420,6 +429,26 @@ func (w *World) tickLiveEvent(dt float64) {
 			return
 		}
 		w.coast("dyn-runner", ev, 16, dt)
+	case "leviathan":
+		n := w.anyNPC("dyn-leviathan")
+		if n == nil || n.deadUntil > w.t || n.ai == nil {
+			return
+		}
+		ratio := n.Hull / math.Max(n.HullMax, 1)
+		switch {
+		case ratio <= 0.33:
+			n.ai.cfg.Speed = 18
+			n.ai.cfg.Damage = 34
+			ev.text = "Фаза 3: Левиафан перегружен и наносит усиленный урон. Держитесь рядом для награды."
+		case ratio <= 0.66:
+			n.ai.cfg.Speed = 14
+			n.ai.cfg.Damage = 24
+			ev.text = "Фаза 2: щит Левиафана разрушен, он ускорился и вызывает ударные волны."
+		default:
+			n.ai.cfg.Speed = 10
+			n.ai.cfg.Damage = 16
+			ev.text = "Фаза 1: пробейте щит Левиафана Разлома."
+		}
 	}
 	// Участие считается сервером по близости к центру события. Награда выдаётся один раз при завершении.
 	if ev.participants == nil {

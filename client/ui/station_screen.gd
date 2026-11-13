@@ -19,6 +19,7 @@ var _repair_btn: ActionButton
 var _repair_info: Label
 var _upgrade_btn: ActionButton
 var _upgrade_info: Label
+var _sell_btn: ActionButton
 var _rows: VBoxContainer
 
 
@@ -79,6 +80,12 @@ func _ready() -> void:
 	_upgrade_btn.pressed.connect(func() -> void: if _gateway != null: _gateway.ship_upgrade())
 	col.add_child(_upgrade_btn)
 
+	_sell_btn = ActionButton.new()
+	_sell_btn.text = "Продать весь груз"
+	Icons.apply(_sell_btn, "coins", Tokens.SUCCESS, 22)
+	_sell_btn.pressed.connect(func() -> void: if _gateway != null: _gateway.sell())
+	col.add_child(_sell_btn)
+
 	var res_title := Label.new()
 	res_title.text = "Склад ресурсов (цена за единицу)"
 	res_title.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
@@ -110,6 +117,10 @@ func _reload() -> void:
 func _on_market(data: Dictionary) -> void:
 	_notice.text = ""
 	_credits = int(_gateway.snapshot().get("credits", -1))
+	var ship: Dictionary = _gateway.snapshot().get("ship", {}) if _gateway.snapshot().get("ship") is Dictionary else {}
+	var cargo_used := float(ship.get("cargo_used", 0.0))
+	_sell_btn.disabled = cargo_used <= 0.0
+	_sell_btn.text = "Продать груз (%d ед.)" % int(round(cargo_used)) if cargo_used > 0.0 else "Продать весь груз"
 	var rc := int(data.get("repair_cost", -1))
 	if rc < 0:
 		_repair_info.text = "Ремонт: только у станции"

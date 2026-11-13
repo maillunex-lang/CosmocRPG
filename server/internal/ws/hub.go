@@ -466,6 +466,18 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 				}
 			}
 		}
+		routes := []map[string]any{}
+		if cfg != nil {
+			switch cfg.System().ID {
+			case "aurora":
+				routes = append(routes, map[string]any{"to": "meridian", "resource": "iron_ore", "reason": "Меридиану нужна руда", "risk": "низкий"})
+				routes = append(routes, map[string]any{"to": "redstorm", "resource": "scrap", "reason": "На Красном Шторме дефицит лома", "risk": "высокий"})
+			case "meridian":
+				routes = append(routes, map[string]any{"to": "aurora", "resource": "crystals", "reason": "Аврора покупает кристаллы", "risk": "средний"})
+			case "redstorm":
+				routes = append(routes, map[string]any{"to": "meridian", "resource": "gas", "reason": "Меридиан испытывает нехватку газа", "risk": "высокий"})
+			}
+		}
 		var repairCost, upgradeCost int64 = -1, -1
 		if c, err := h.opts.World.For(ss.pid).RepairCost(ss.pid); err == nil {
 			repairCost = c
@@ -475,7 +487,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 				upgradeCost = int64(lvl) * 1000
 			}
 		}
-		reply(Message{Type: "market", ID: m.ID, Payload: mustJSON(map[string]any{"prices": prices, "trends": trends, "repair_cost": repairCost, "upgrade_cost": upgradeCost})})
+		reply(Message{Type: "market", ID: m.ID, Payload: mustJSON(map[string]any{"prices": prices, "trends": trends, "routes": routes, "repair_cost": repairCost, "upgrade_cost": upgradeCost})})
 	case "repair":
 		cost, err := h.opts.World.For(ss.pid).RepairCost(ss.pid)
 		if err != nil {

@@ -21,6 +21,7 @@ var _upgrade_btn: ActionButton
 var _upgrade_info: Label
 var _sell_btn: ActionButton
 var _rows: VBoxContainer
+var _routes: VBoxContainer
 
 
 func _ready() -> void:
@@ -94,6 +95,9 @@ func _ready() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
+	_routes = VBoxContainer.new()
+	_routes.add_theme_constant_override("separation", 4)
+	col.add_child(_routes)
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 6)
 	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -140,6 +144,16 @@ func _on_market(data: Dictionary) -> void:
 		_upgrade_btn.disabled = _credits >= 0 and _credits < uc
 	for c in _rows.get_children():
 		c.queue_free()
+	for c in _routes.get_children():
+		c.queue_free()
+	var routes: Array = data.get("routes", []) if data.get("routes") is Array else []
+	for route in routes:
+		if route is Dictionary:
+			var hint := Label.new()
+			hint.text = "Маршрут: %s → %s · %s · риск: %s" % [str(route.get("resource", "")), str(route.get("to", "")), str(route.get("reason", "")), str(route.get("risk", ""))]
+			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hint.add_theme_color_override("font_color", Tokens.RARE)
+			_routes.add_child(hint)
 	var prices: Dictionary = data.get("prices", {})
 	var trends: Dictionary = data.get("trends", {})
 	for res in prices:

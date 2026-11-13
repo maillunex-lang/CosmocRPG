@@ -326,6 +326,14 @@ func _adapt_viewport() -> void:
 	var narrow: bool = w < 820.0
 	var left_w: float = 214.0 if not compact else 176.0
 	var right_w: float = 248.0 if not compact else 208.0
+	var columns := get_node("SafeArea/Columns") as HBoxContainer
+	var left_stack := columns.get_node("LeftStack") as Control
+	var center_stack := columns.get_node("CenterStack") as Control
+	var right_stack := columns.get_node("RightStack") as Control
+	columns.add_theme_constant_override("separation", 8)
+	left_stack.custom_minimum_size.x = left_w
+	right_stack.custom_minimum_size.x = right_w
+	center_stack.custom_minimum_size.x = maxf(220.0, w - left_w - right_w - 56.0)
 	_profile_card.custom_minimum_size.x = left_w
 	_quests_card.custom_minimum_size.x = left_w
 	_chat_card.custom_minimum_size.x = left_w

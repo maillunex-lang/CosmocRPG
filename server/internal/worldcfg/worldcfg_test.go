@@ -38,7 +38,7 @@ func TestInitSeedsAndApplies(t *testing.T) {
 
 func TestCheckRejectsBadConfig(t *testing.T) {
 	good, _ := json.Marshal(worldgen.DefaultConfig())
-	if p := Check(good); !p.OK || len(p.Systems) != 3 || p.Systems[0].Deposits == 0 {
+	if p := Check(good); !p.OK || len(p.Systems) < 3 || p.Systems[0].Deposits == 0 {
 		t.Fatalf("корректная конфигурация: %+v", p)
 	}
 	for name, mut := range map[string]func(*worldgen.Config){

@@ -488,7 +488,9 @@
                   "arrow",
                   "halo",
                   "barge",
-                  "auger"
+                  "auger",
+                  "scout_nimbus",
+                  "cruiser_frontier"
                 ]
               },
               "forward_axis": {
@@ -687,7 +689,7 @@
         ]
       },
       "minItems": 15,
-      "maxItems": 15
+      "maxItems": 17
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",

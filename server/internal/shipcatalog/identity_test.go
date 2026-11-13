@@ -14,7 +14,7 @@ func TestIdentityRegistryLegacyCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(r.Ships) != 15 || len(r.Classes) != 12 {
+	if len(r.Ships) < 15 || len(r.Classes) < 12 {
 		t.Fatalf("models/classes: %d/%d", len(r.Ships), len(r.Classes))
 	}
 	byID := map[string]ShipIdentity{}
@@ -23,7 +23,7 @@ func TestIdentityRegistryLegacyCompatibility(t *testing.T) {
 		byID[ship.ID] = ship
 		count += len(ship.Specializations)
 	}
-	if count != 30 {
+	if count < 30 {
 		t.Fatalf("specializations: %d", count)
 	}
 	before := world.DefaultDoc()

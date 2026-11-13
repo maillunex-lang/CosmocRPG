@@ -638,6 +638,112 @@
           "energy": 30
         }
       }
+    },
+    {
+      "id": "SCT-002",
+      "name": "Скаут «Нимб»",
+      "class": "Разведчик дальнего радиуса",
+      "role": "Дальняя разведка",
+      "temporary": false,
+      "specs": [
+        "scout",
+        "navigator"
+      ],
+      "default_spec": "scout",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        9,
+        6.5,
+        2.2
+      ],
+      "crew": 1,
+      "engines": 2,
+      "weapons": "1 лёгкая пушка",
+      "hull": 1800,
+      "shield": 800,
+      "armor": 80,
+      "energy": 160,
+      "cargo": 18,
+      "speed": 15.0,
+      "shield_regen": 14,
+      "shield_regen_delay": 3,
+      "energy_regen": 12,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 18,
+          "shots": 2,
+          "range": 26,
+          "period": 1.0,
+          "energy": 2
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.9,
+          "duration": 4,
+          "cooldown": 12,
+          "energy": 20
+        },
+        "scan": {
+          "name": "Широкий сканер",
+          "spec": "scout",
+          "radius": 95,
+          "reveal": 20,
+          "cooldown": 22,
+          "energy": 30
+        }
+      }
+    },
+    {
+      "id": "CRU-002",
+      "name": "Крейсер «Предел»",
+      "class": "Крейсер-экспедиционник",
+      "role": "Тяжёлая оборона",
+      "temporary": false,
+      "specs": [
+        "flagship",
+        "bombard"
+      ],
+      "default_spec": "flagship",
+      "skins": [
+        "a"
+      ],
+      "dimensions_m": [
+        140,
+        48,
+        22
+      ],
+      "crew": 18,
+      "engines": 6,
+      "weapons": "12 тяжёлых орудий, 6 ракетных установок",
+      "hull": 4200,
+      "shield": 1800,
+      "armor": 900,
+      "energy": 450,
+      "cargo": 28,
+      "speed": 9.5,
+      "shield_regen": 45,
+      "shield_regen_delay": 7,
+      "energy_regen": 15,
+      "abilities": {
+        "pulse": {
+          "name": "Импульсные орудия",
+          "damage": 95,
+          "shots": 4,
+          "range": 44,
+          "period": 1.5,
+          "energy": 6
+        },
+        "boost": {
+          "name": "Форсаж",
+          "speed_mul": 1.25,
+          "duration": 3,
+          "cooldown": 25,
+          "energy": 55
+        }
+      }
     }
   ],
   "starters": {

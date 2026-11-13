@@ -10,10 +10,20 @@
         "id": "FTR-001",
         "name": "Стриж",
         "class": "Лёгкий истребитель",
-        "specs": ["interceptor", "scout"],
+        "specs": [
+          "interceptor",
+          "scout"
+        ],
         "default_spec": "interceptor",
-        "skins": ["a", "b"],
-        "dimensions_m": [12, 8.4, 2.8],
+        "skins": [
+          "a",
+          "b"
+        ],
+        "dimensions_m": [
+          12,
+          8.4,
+          2.8
+        ],
         "crew": 1,
         "engines": 2,
         "weapons": "2 энергетические пушки, 1 ракетная точка",
@@ -27,10 +37,39 @@
         "shield_regen_delay": 4,
         "energy_regen": 8,
         "abilities": {
-          "pulse": {"name": "Сдвоенный импульс", "damage": 22, "shots": 2, "range": 30, "period": 1.0, "energy": 2},
-          "boost": {"name": "Форсаж", "speed_mul": 1.8, "duration": 3, "cooldown": 12, "energy": 20},
-          "intercept": {"name": "Перехват", "spec": "interceptor", "max_dist": 40, "min_dist": 10, "range": 50, "damage_mul": 2.5, "cooldown": 10, "energy": 30},
-          "scan": {"name": "Импульсный сканер", "spec": "scout", "radius": 60, "reveal": 15, "cooldown": 20, "energy": 25}
+          "pulse": {
+            "name": "Сдвоенный импульс",
+            "damage": 22,
+            "shots": 2,
+            "range": 30,
+            "period": 1.0,
+            "energy": 2
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.8,
+            "duration": 3,
+            "cooldown": 12,
+            "energy": 20
+          },
+          "intercept": {
+            "name": "Перехват",
+            "spec": "interceptor",
+            "max_dist": 40,
+            "min_dist": 10,
+            "range": 50,
+            "damage_mul": 2.5,
+            "cooldown": 10,
+            "energy": 30
+          },
+          "scan": {
+            "name": "Импульсный сканер",
+            "spec": "scout",
+            "radius": 60,
+            "reveal": 15,
+            "cooldown": 20,
+            "energy": 25
+          }
         },
         "role": "Боевой / разведывательный",
         "temporary": false
@@ -53,7 +92,13 @@
         "visual"
       ],
       "mass_tons": 18,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 7,
       "turn_rate_deg_s": 150,
       "signature": 12,
@@ -65,46 +110,66 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "S",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "S",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "S",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "S",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "S",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["FTR-001:interceptor", "FTR-001:scout"],
+      "specializations": [
+        "FTR-001:interceptor",
+        "FTR-001:scout"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -160,7 +225,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-S-START",
@@ -170,7 +237,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-S-START",
@@ -180,7 +249,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-S-START",
@@ -200,7 +271,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -211,38 +284,67 @@
         "insurance_premium_credits": 600,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "assault", "threat_tier": 1, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "assault",
+        "threat_tier": 1,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:FTR-001",
         "silhouette": "dart",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [4.2, 1.4, 6.0],
+        "collision_half_extents_m": [
+          4.2,
+          1.4,
+          6.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-0.98, 0, -4.8]
+            "position_m": [
+              -0.98,
+              0,
+              -4.8
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [0.98, 0, -4.8]
+            "position_m": [
+              0.98,
+              0,
+              -4.8
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-1.12, 0, 5.4]
+            "position_m": [
+              -1.12,
+              0,
+              5.4
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [1.12, 0, 5.4]
+            "position_m": [
+              1.12,
+              0,
+              5.4
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -258,10 +360,20 @@
         "class": "Тяжёлый истребитель",
         "role": "Боевой",
         "temporary": true,
-        "specs": ["interceptor", "scout"],
+        "specs": [
+          "interceptor",
+          "scout"
+        ],
         "default_spec": "interceptor",
-        "skins": ["a", "b"],
-        "dimensions_m": [13, 9.2, 3.2],
+        "skins": [
+          "a",
+          "b"
+        ],
+        "dimensions_m": [
+          13,
+          9.2,
+          3.2
+        ],
         "crew": 1,
         "engines": 2,
         "weapons": "3 энергетические пушки, 2 ракетные точки",
@@ -275,10 +387,39 @@
         "shield_regen_delay": 4,
         "energy_regen": 9,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 28, "shots": 2, "range": 32, "period": 1.0, "energy": 2},
-          "boost": {"name": "Форсаж", "speed_mul": 1.7, "duration": 3, "cooldown": 13, "energy": 22},
-          "intercept": {"name": "Перехват", "spec": "interceptor", "max_dist": 40, "min_dist": 10, "range": 50, "damage_mul": 2.5, "cooldown": 10, "energy": 30},
-          "scan": {"name": "Импульсный сканер", "spec": "scout", "radius": 60, "reveal": 15, "cooldown": 20, "energy": 25}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 28,
+            "shots": 2,
+            "range": 32,
+            "period": 1.0,
+            "energy": 2
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.7,
+            "duration": 3,
+            "cooldown": 13,
+            "energy": 22
+          },
+          "intercept": {
+            "name": "Перехват",
+            "spec": "interceptor",
+            "max_dist": 40,
+            "min_dist": 10,
+            "range": 50,
+            "damage_mul": 2.5,
+            "cooldown": 10,
+            "energy": 30
+          },
+          "scan": {
+            "name": "Импульсный сканер",
+            "spec": "scout",
+            "radius": 60,
+            "reveal": 15,
+            "cooldown": 20,
+            "energy": 25
+          }
         }
       },
       "preliminary_fields": [
@@ -299,7 +440,13 @@
         "visual"
       ],
       "mass_tons": 26,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 5.5,
       "turn_rate_deg_s": 120,
       "signature": 18,
@@ -311,58 +458,83 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "S",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "S",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "S",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "S",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "S",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "S",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["FTR-002:hunter", "FTR-002:assault"],
+      "specializations": [
+        "FTR-002:hunter",
+        "FTR-002:assault"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -418,7 +590,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-S-START",
@@ -428,7 +602,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-S-START",
@@ -438,7 +614,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-S-START",
@@ -458,7 +636,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -469,43 +649,76 @@
         "insurance_premium_credits": 1000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "assault", "threat_tier": 1, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "assault",
+        "threat_tier": 1,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:FTR-002",
         "silhouette": "delta",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [4.6, 1.6, 6.5],
+        "collision_half_extents_m": [
+          4.6,
+          1.6,
+          6.5
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-1.61, 0, -5.2]
+            "position_m": [
+              -1.61,
+              0,
+              -5.2
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [0.0, 0, -5.2]
+            "position_m": [
+              0.0,
+              0,
+              -5.2
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [1.61, 0, -5.2]
+            "position_m": [
+              1.61,
+              0,
+              -5.2
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-1.2267, 0, 5.85]
+            "position_m": [
+              -1.2267,
+              0,
+              5.85
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [1.2267, 0, 5.85]
+            "position_m": [
+              1.2267,
+              0,
+              5.85
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -521,10 +734,19 @@
         "class": "Корвет",
         "role": "Боевой",
         "temporary": true,
-        "specs": ["hunter", "guard"],
+        "specs": [
+          "hunter",
+          "guard"
+        ],
         "default_spec": "hunter",
-        "skins": ["a"],
-        "dimensions_m": [24, 14, 5],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          24,
+          14,
+          5
+        ],
         "crew": 2,
         "engines": 2,
         "weapons": "4 энергетические пушки",
@@ -538,8 +760,21 @@
         "shield_regen_delay": 4,
         "energy_regen": 10,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 34, "shots": 2, "range": 30, "period": 1.1, "energy": 3},
-          "boost": {"name": "Форсаж", "speed_mul": 1.5, "duration": 3, "cooldown": 15, "energy": 25}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 34,
+            "shots": 2,
+            "range": 30,
+            "period": 1.1,
+            "energy": 3
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.5,
+            "duration": 3,
+            "cooldown": 15,
+            "energy": 25
+          }
         }
       },
       "preliminary_fields": [
@@ -560,7 +795,13 @@
         "visual"
       ],
       "mass_tons": 95,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 4.5,
       "turn_rate_deg_s": 95,
       "signature": 35,
@@ -572,58 +813,85 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "M",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "M",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "M",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "M",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["COR-001:hunter", "COR-001:guard"],
+      "specializations": [
+        "COR-001:hunter",
+        "COR-001:guard"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -679,7 +947,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-M-START",
@@ -689,7 +959,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-M-START",
@@ -699,7 +971,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-M-START",
@@ -719,7 +993,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -730,38 +1006,67 @@
         "insurance_premium_credits": 2750,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "assault", "threat_tier": 2, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "assault",
+        "threat_tier": 2,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:COR-001",
         "silhouette": "twin_hull",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [7.0, 2.5, 12.0],
+        "collision_half_extents_m": [
+          7.0,
+          2.5,
+          12.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-1.6333, 0, -9.6]
+            "position_m": [
+              -1.6333,
+              0,
+              -9.6
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [1.6333, 0, -9.6]
+            "position_m": [
+              1.6333,
+              0,
+              -9.6
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-1.8667, 0, 10.8]
+            "position_m": [
+              -1.8667,
+              0,
+              10.8
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [1.8667, 0, 10.8]
+            "position_m": [
+              1.8667,
+              0,
+              10.8
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -777,10 +1082,19 @@
         "class": "Корвет",
         "role": "Боевой",
         "temporary": true,
-        "specs": ["raider", "guard"],
+        "specs": [
+          "raider",
+          "guard"
+        ],
         "default_spec": "raider",
-        "skins": ["a"],
-        "dimensions_m": [22, 13, 4.6],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          22,
+          13,
+          4.6
+        ],
         "crew": 2,
         "engines": 3,
         "weapons": "3 энергетические пушки, 2 ракетные точки",
@@ -794,8 +1108,21 @@
         "shield_regen_delay": 4,
         "energy_regen": 11,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 30, "shots": 3, "range": 28, "period": 0.9, "energy": 3},
-          "boost": {"name": "Форсаж", "speed_mul": 1.7, "duration": 3, "cooldown": 14, "energy": 25}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 30,
+            "shots": 3,
+            "range": 28,
+            "period": 0.9,
+            "energy": 3
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.7,
+            "duration": 3,
+            "cooldown": 14,
+            "energy": 25
+          }
         }
       },
       "preliminary_fields": [
@@ -816,7 +1143,13 @@
         "visual"
       ],
       "mass_tons": 82,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 5,
       "turn_rate_deg_s": 110,
       "signature": 30,
@@ -828,58 +1161,84 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "M",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "M",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "M",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "M",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["COR-002:raider", "COR-002:guard"],
+      "specializations": [
+        "COR-002:raider",
+        "COR-002:guard"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -935,7 +1294,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-M-START",
@@ -945,7 +1306,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-M-START",
@@ -955,7 +1318,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-M-START",
@@ -975,7 +1340,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -986,48 +1353,85 @@
         "insurance_premium_credits": 3000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "assault", "threat_tier": 2, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "assault",
+        "threat_tier": 2,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:COR-002",
         "silhouette": "needle",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [6.5, 2.3, 11.0],
+        "collision_half_extents_m": [
+          6.5,
+          2.3,
+          11.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-2.275, 0, -8.8]
+            "position_m": [
+              -2.275,
+              0,
+              -8.8
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [0.0, 0, -8.8]
+            "position_m": [
+              0.0,
+              0,
+              -8.8
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [2.275, 0, -8.8]
+            "position_m": [
+              2.275,
+              0,
+              -8.8
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-2.6, 0, 9.9]
+            "position_m": [
+              -2.6,
+              0,
+              9.9
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [0.0, 0, 9.9]
+            "position_m": [
+              0.0,
+              0,
+              9.9
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [2.6, 0, 9.9]
+            "position_m": [
+              2.6,
+              0,
+              9.9
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -1043,10 +1447,19 @@
         "class": "Фрегат",
         "role": "Универсальный",
         "temporary": true,
-        "specs": ["escort", "support"],
+        "specs": [
+          "escort",
+          "support"
+        ],
         "default_spec": "escort",
-        "skins": ["a"],
-        "dimensions_m": [48, 22, 9],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          48,
+          22,
+          9
+        ],
         "crew": 6,
         "engines": 3,
         "weapons": "6 энергетических пушек, 2 ракетные установки",
@@ -1060,8 +1473,21 @@
         "shield_regen_delay": 5,
         "energy_regen": 12,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 46, "shots": 3, "range": 34, "period": 1.2, "energy": 4},
-          "boost": {"name": "Форсаж", "speed_mul": 1.4, "duration": 3, "cooldown": 18, "energy": 35}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 46,
+            "shots": 3,
+            "range": 34,
+            "period": 1.2,
+            "energy": 4
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.4,
+            "duration": 3,
+            "cooldown": 18,
+            "energy": 35
+          }
         }
       },
       "preliminary_fields": [
@@ -1082,7 +1508,13 @@
         "visual"
       ],
       "mass_tons": 550,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 3,
       "turn_rate_deg_s": 65,
       "signature": 85,
@@ -1094,76 +1526,110 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "M",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "M",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "M",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "M",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "M",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         }
       ],
-      "specializations": ["FRG-001:escort", "FRG-001:support"],
+      "specializations": [
+        "FRG-001:escort",
+        "FRG-001:support"
+      ],
       "allowed_abilities": [
         "C03",
         "C05",
@@ -1216,7 +1682,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-M-START",
@@ -1226,7 +1694,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-M-START",
@@ -1236,7 +1706,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-M-START",
@@ -1256,7 +1728,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "SUP-M-START",
@@ -1266,7 +1740,10 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["S01", "S02"]
+          "ability_ids": [
+            "S01",
+            "S02"
+          ]
         }
       ],
       "economy": {
@@ -1277,48 +1754,85 @@
         "insurance_premium_credits": 9000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "support", "threat_tier": 3, "ability_interval_s": 4, "max_drones": 0},
+      "npc": {
+        "role": "support",
+        "threat_tier": 3,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:FRG-001",
         "silhouette": "spine",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [11.0, 4.5, 24.0],
+        "collision_half_extents_m": [
+          11.0,
+          4.5,
+          24.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-3.85, 0, -19.2]
+            "position_m": [
+              -3.85,
+              0,
+              -19.2
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [0.0, 0, -19.2]
+            "position_m": [
+              0.0,
+              0,
+              -19.2
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [3.85, 0, -19.2]
+            "position_m": [
+              3.85,
+              0,
+              -19.2
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-4.4, 0, 21.6]
+            "position_m": [
+              -4.4,
+              0,
+              21.6
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [0.0, 0, 21.6]
+            "position_m": [
+              0.0,
+              0,
+              21.6
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [4.4, 0, 21.6]
+            "position_m": [
+              4.4,
+              0,
+              21.6
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -1334,10 +1848,19 @@
         "class": "Фрегат",
         "role": "Тяжёлая броня",
         "temporary": true,
-        "specs": ["bulwark", "escort"],
+        "specs": [
+          "bulwark",
+          "escort"
+        ],
         "default_spec": "bulwark",
-        "skins": ["a"],
-        "dimensions_m": [52, 24, 10],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          52,
+          24,
+          10
+        ],
         "crew": 6,
         "engines": 4,
         "weapons": "5 энергетических пушек, 2 ракетные установки",
@@ -1351,8 +1874,21 @@
         "shield_regen_delay": 5,
         "energy_regen": 11,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 44, "shots": 3, "range": 32, "period": 1.2, "energy": 4},
-          "boost": {"name": "Форсаж", "speed_mul": 1.35, "duration": 3, "cooldown": 18, "energy": 35}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 44,
+            "shots": 3,
+            "range": 32,
+            "period": 1.2,
+            "energy": 4
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.35,
+            "duration": 3,
+            "cooldown": 18,
+            "energy": 35
+          }
         }
       },
       "preliminary_fields": [
@@ -1373,7 +1909,13 @@
         "visual"
       ],
       "mass_tons": 700,
-      "resistances": {"kinetic": 0.05, "thermal": 0, "energy": 0, "explosive": 0.05, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0.05,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0.05,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 2.5,
       "turn_rate_deg_s": 55,
       "signature": 110,
@@ -1385,82 +1927,121 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-4",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "M",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "M",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "M",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "M",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "M",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["FRG-002:bulwark", "FRG-002:escort"],
+      "specializations": [
+        "FRG-002:bulwark",
+        "FRG-002:escort"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -1516,7 +2097,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-M-START",
@@ -1526,7 +2109,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-M-START",
@@ -1536,7 +2121,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-M-START",
@@ -1556,7 +2143,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -1567,53 +2156,94 @@
         "insurance_premium_credits": 10500,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "siege", "threat_tier": 3, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "siege",
+        "threat_tier": 3,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:FRG-002",
         "silhouette": "bastion",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [12.0, 5.0, 26.0],
+        "collision_half_extents_m": [
+          12.0,
+          5.0,
+          26.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-4.2, 0, -20.8]
+            "position_m": [
+              -4.2,
+              0,
+              -20.8
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [0.0, 0, -20.8]
+            "position_m": [
+              0.0,
+              0,
+              -20.8
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [4.2, 0, -20.8]
+            "position_m": [
+              4.2,
+              0,
+              -20.8
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-5.76, 0, 23.4]
+            "position_m": [
+              -5.76,
+              0,
+              23.4
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [-1.92, 0, 23.4]
+            "position_m": [
+              -1.92,
+              0,
+              23.4
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [1.92, 0, 23.4]
+            "position_m": [
+              1.92,
+              0,
+              23.4
+            ]
           },
           {
             "id": "engine-4",
             "kind": "engine",
-            "position_m": [5.76, 0, 23.4]
+            "position_m": [
+              5.76,
+              0,
+              23.4
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -1629,10 +2259,19 @@
         "class": "Эсминец",
         "role": "Ракетные удары",
         "temporary": true,
-        "specs": ["striker", "siege"],
+        "specs": [
+          "striker",
+          "siege"
+        ],
         "default_spec": "striker",
-        "skins": ["a"],
-        "dimensions_m": [80, 32, 14],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          80,
+          32,
+          14
+        ],
         "crew": 12,
         "engines": 4,
         "weapons": "8 тяжёлых орудий, 4 ракетные установки",
@@ -1646,8 +2285,21 @@
         "shield_regen_delay": 6,
         "energy_regen": 13,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 70, "shots": 4, "range": 40, "period": 1.4, "energy": 5},
-          "boost": {"name": "Форсаж", "speed_mul": 1.3, "duration": 3, "cooldown": 22, "energy": 45}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 70,
+            "shots": 4,
+            "range": 40,
+            "period": 1.4,
+            "energy": 5
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.3,
+            "duration": 3,
+            "cooldown": 22,
+            "energy": 45
+          }
         }
       },
       "preliminary_fields": [
@@ -1668,7 +2320,13 @@
         "visual"
       ],
       "mass_tons": 2400,
-      "resistances": {"kinetic": 0.05, "thermal": 0, "energy": 0, "explosive": 0.05, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0.05,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0.05,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 1.8,
       "turn_rate_deg_s": 40,
       "signature": 180,
@@ -1680,82 +2338,120 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-4",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "L",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "L",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "L",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "L",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "L",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "L",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["DST-001:striker", "DST-001:siege"],
+      "specializations": [
+        "DST-001:striker",
+        "DST-001:siege"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -1811,7 +2507,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-L-START",
@@ -1821,7 +2519,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-L-START",
@@ -1831,7 +2531,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-L-START",
@@ -1851,7 +2553,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -1862,58 +2566,103 @@
         "insurance_premium_credits": 27500,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "siege", "threat_tier": 4, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "siege",
+        "threat_tier": 4,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:DST-001",
         "silhouette": "hammer",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [16.0, 7.0, 40.0],
+        "collision_half_extents_m": [
+          16.0,
+          7.0,
+          40.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-6.72, 0, -32.0]
+            "position_m": [
+              -6.72,
+              0,
+              -32.0
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [-2.24, 0, -32.0]
+            "position_m": [
+              -2.24,
+              0,
+              -32.0
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [2.24, 0, -32.0]
+            "position_m": [
+              2.24,
+              0,
+              -32.0
+            ]
           },
           {
             "id": "weapon-4",
             "kind": "weapon",
-            "position_m": [6.72, 0, -32.0]
+            "position_m": [
+              6.72,
+              0,
+              -32.0
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-7.68, 0, 36.0]
+            "position_m": [
+              -7.68,
+              0,
+              36.0
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [-2.56, 0, 36.0]
+            "position_m": [
+              -2.56,
+              0,
+              36.0
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [2.56, 0, 36.0]
+            "position_m": [
+              2.56,
+              0,
+              36.0
+            ]
           },
           {
             "id": "engine-4",
             "kind": "engine",
-            "position_m": [7.68, 0, 36.0]
+            "position_m": [
+              7.68,
+              0,
+              36.0
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -1929,10 +2678,19 @@
         "class": "Крейсер",
         "role": "Командный",
         "temporary": true,
-        "specs": ["flagship", "bombard"],
+        "specs": [
+          "flagship",
+          "bombard"
+        ],
         "default_spec": "flagship",
-        "skins": ["a"],
-        "dimensions_m": [140, 48, 22],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          140,
+          48,
+          22
+        ],
         "crew": 18,
         "engines": 6,
         "weapons": "12 тяжёлых орудий, 6 ракетных установок",
@@ -1946,8 +2704,21 @@
         "shield_regen_delay": 7,
         "energy_regen": 15,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 95, "shots": 4, "range": 44, "period": 1.5, "energy": 6},
-          "boost": {"name": "Форсаж", "speed_mul": 1.25, "duration": 3, "cooldown": 25, "energy": 55}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 95,
+            "shots": 4,
+            "range": 44,
+            "period": 1.5,
+            "energy": 6
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.25,
+            "duration": 3,
+            "cooldown": 25,
+            "energy": 55
+          }
         }
       },
       "preliminary_fields": [
@@ -1968,7 +2739,13 @@
         "visual"
       ],
       "mass_tons": 8500,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 1.2,
       "turn_rate_deg_s": 28,
       "signature": 320,
@@ -1980,100 +2757,146 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-4",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-4",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "L",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "L",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "L",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "L",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "tech-5",
           "group": "technical",
           "max_size": "L",
-          "categories": ["electronics", "support", "cargo"]
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "L",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "L",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         },
         {
           "id": "special-3",
           "group": "special",
           "max_size": "L",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         }
       ],
-      "specializations": ["CRU-001:flagship", "CRU-001:bombard"],
+      "specializations": [
+        "CRU-001:flagship",
+        "CRU-001:bombard"
+      ],
       "allowed_abilities": [
         "C03",
         "C05",
@@ -2126,7 +2949,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-L-START",
@@ -2136,7 +2961,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-L-START",
@@ -2146,7 +2973,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-L-START",
@@ -2166,7 +2995,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "SUP-L-START",
@@ -2176,7 +3007,10 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["S01", "S02"]
+          "ability_ids": [
+            "S01",
+            "S02"
+          ]
         }
       ],
       "economy": {
@@ -2187,68 +3021,121 @@
         "insurance_premium_credits": 70000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "support", "threat_tier": 6, "ability_interval_s": 4, "max_drones": 0},
+      "npc": {
+        "role": "support",
+        "threat_tier": 6,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:CRU-001",
         "silhouette": "keel",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [24.0, 11.0, 70.0],
+        "collision_half_extents_m": [
+          24.0,
+          11.0,
+          70.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-10.08, 0, -56.0]
+            "position_m": [
+              -10.08,
+              0,
+              -56.0
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [-3.36, 0, -56.0]
+            "position_m": [
+              -3.36,
+              0,
+              -56.0
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [3.36, 0, -56.0]
+            "position_m": [
+              3.36,
+              0,
+              -56.0
+            ]
           },
           {
             "id": "weapon-4",
             "kind": "weapon",
-            "position_m": [10.08, 0, -56.0]
+            "position_m": [
+              10.08,
+              0,
+              -56.0
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-13.7143, 0, 63.0]
+            "position_m": [
+              -13.7143,
+              0,
+              63.0
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [-8.2286, 0, 63.0]
+            "position_m": [
+              -8.2286,
+              0,
+              63.0
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [-2.7429, 0, 63.0]
+            "position_m": [
+              -2.7429,
+              0,
+              63.0
+            ]
           },
           {
             "id": "engine-4",
             "kind": "engine",
-            "position_m": [2.7429, 0, 63.0]
+            "position_m": [
+              2.7429,
+              0,
+              63.0
+            ]
           },
           {
             "id": "engine-5",
             "kind": "engine",
-            "position_m": [8.2286, 0, 63.0]
+            "position_m": [
+              8.2286,
+              0,
+              63.0
+            ]
           },
           {
             "id": "engine-6",
             "kind": "engine",
-            "position_m": [13.7143, 0, 63.0]
+            "position_m": [
+              13.7143,
+              0,
+              63.0
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -2273,16 +3160,38 @@
         "class": "Линкор",
         "role": "Прорыв и тяжёлая оборона",
         "temporary": true,
-        "specs": ["dreadnought", "fortress"],
+        "specs": [
+          "dreadnought",
+          "fortress"
+        ],
         "default_spec": "dreadnought",
-        "skins": ["a"],
-        "dimensions_m": [360, 150, 64],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          360,
+          150,
+          64
+        ],
         "crew": 20,
         "engines": 8,
         "weapons": "Временное импульсное вооружение",
         "abilities": {
-          "pulse": {"name": "Сдвоенный импульс", "damage": 80, "shots": 4, "range": 110, "period": 2, "energy": 24},
-          "boost": {"name": "Форсаж", "energy": 80, "cooldown": 22, "duration": 5, "speed_mul": 2}
+          "pulse": {
+            "name": "Сдвоенный импульс",
+            "damage": 80,
+            "shots": 4,
+            "range": 110,
+            "period": 2,
+            "energy": 24
+          },
+          "boost": {
+            "name": "Форсаж",
+            "energy": 80,
+            "cooldown": 22,
+            "duration": 5,
+            "speed_mul": 2
+          }
         }
       },
       "preliminary_fields": [
@@ -2304,7 +3213,13 @@
         "visual"
       ],
       "mass_tons": 45000,
-      "resistances": {"kinetic": 0.05, "thermal": 0, "energy": 0, "explosive": 0.05, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0.05,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0.05,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 0.65,
       "turn_rate_deg_s": 16,
       "signature": 650,
@@ -2316,112 +3231,166 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "XL",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "XL",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-3",
           "group": "weapon",
           "max_size": "XL",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-4",
           "group": "weapon",
           "max_size": "XL",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-5",
           "group": "weapon",
           "max_size": "XL",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "XL",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "XL",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "XL",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-4",
           "group": "defensive",
           "max_size": "XL",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-5",
           "group": "defensive",
           "max_size": "XL",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "XL",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "XL",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "XL",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "XL",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "tech-5",
           "group": "technical",
           "max_size": "XL",
-          "categories": ["electronics", "support", "cargo"]
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "XL",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "XL",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-3",
           "group": "special",
           "max_size": "XL",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["BSH-001:dreadnought", "BSH-001:fortress"],
+      "specializations": [
+        "BSH-001:dreadnought",
+        "BSH-001:fortress"
+      ],
       "allowed_abilities": [
         "C01",
         "C02",
@@ -2477,7 +3446,9 @@
           "size": "XL",
           "mass_tons": 32,
           "power_mw": 320,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-XL-START",
@@ -2487,7 +3458,9 @@
           "size": "XL",
           "mass_tons": 32,
           "power_mw": 320,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-XL-START",
@@ -2497,7 +3470,9 @@
           "size": "XL",
           "mass_tons": 32,
           "power_mw": 320,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-XL-START",
@@ -2517,7 +3492,9 @@
           "size": "XL",
           "mass_tons": 32,
           "power_mw": 320,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -2528,83 +3505,148 @@
         "insurance_premium_credits": 300000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "siege", "threat_tier": 8, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "siege",
+        "threat_tier": 8,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:BSH-001",
         "silhouette": "wedge",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [75.0, 32.0, 180.0],
+        "collision_half_extents_m": [
+          75.0,
+          32.0,
+          180.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-35.0, 0, -144.0]
+            "position_m": [
+              -35.0,
+              0,
+              -144.0
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [-17.5, 0, -144.0]
+            "position_m": [
+              -17.5,
+              0,
+              -144.0
+            ]
           },
           {
             "id": "weapon-3",
             "kind": "weapon",
-            "position_m": [0.0, 0, -144.0]
+            "position_m": [
+              0.0,
+              0,
+              -144.0
+            ]
           },
           {
             "id": "weapon-4",
             "kind": "weapon",
-            "position_m": [17.5, 0, -144.0]
+            "position_m": [
+              17.5,
+              0,
+              -144.0
+            ]
           },
           {
             "id": "weapon-5",
             "kind": "weapon",
-            "position_m": [35.0, 0, -144.0]
+            "position_m": [
+              35.0,
+              0,
+              -144.0
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-46.6667, 0, 162.0]
+            "position_m": [
+              -46.6667,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [-33.3333, 0, 162.0]
+            "position_m": [
+              -33.3333,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [-20.0, 0, 162.0]
+            "position_m": [
+              -20.0,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-4",
             "kind": "engine",
-            "position_m": [-6.6667, 0, 162.0]
+            "position_m": [
+              -6.6667,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-5",
             "kind": "engine",
-            "position_m": [6.6667, 0, 162.0]
+            "position_m": [
+              6.6667,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-6",
             "kind": "engine",
-            "position_m": [20.0, 0, 162.0]
+            "position_m": [
+              20.0,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-7",
             "kind": "engine",
-            "position_m": [33.3333, 0, 162.0]
+            "position_m": [
+              33.3333,
+              0,
+              162.0
+            ]
           },
           {
             "id": "engine-8",
             "kind": "engine",
-            "position_m": [46.6667, 0, 162.0]
+            "position_m": [
+              46.6667,
+              0,
+              162.0
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -2629,16 +3671,38 @@
         "class": "Дрононосец",
         "role": "Управление дронами",
         "temporary": true,
-        "specs": ["swarm_commander", "tactical_carrier"],
+        "specs": [
+          "swarm_commander",
+          "tactical_carrier"
+        ],
         "default_spec": "swarm_commander",
-        "skins": ["a"],
-        "dimensions_m": [240, 120, 45],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          240,
+          120,
+          45
+        ],
         "crew": 20,
         "engines": 6,
         "weapons": "Временное импульсное вооружение",
         "abilities": {
-          "pulse": {"name": "Сдвоенный импульс", "damage": 36, "shots": 2, "range": 70, "period": 1.4, "energy": 10},
-          "boost": {"name": "Форсаж", "energy": 80, "cooldown": 22, "duration": 5, "speed_mul": 2}
+          "pulse": {
+            "name": "Сдвоенный импульс",
+            "damage": 36,
+            "shots": 2,
+            "range": 70,
+            "period": 1.4,
+            "energy": 10
+          },
+          "boost": {
+            "name": "Форсаж",
+            "energy": 80,
+            "cooldown": 22,
+            "duration": 5,
+            "speed_mul": 2
+          }
         }
       },
       "preliminary_fields": [
@@ -2660,7 +3724,13 @@
         "visual"
       ],
       "mass_tons": 17000,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 0.9,
       "turn_rate_deg_s": 22,
       "signature": 460,
@@ -2672,88 +3742,130 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "L",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "L",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "L",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "L",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "L",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "L",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "tech-5",
           "group": "technical",
           "max_size": "L",
-          "categories": ["electronics", "support", "cargo"]
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "L",
-          "categories": ["drone", "electronics"]
+          "categories": [
+            "drone",
+            "electronics"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "L",
-          "categories": ["drone", "electronics"]
+          "categories": [
+            "drone",
+            "electronics"
+          ]
         },
         {
           "id": "special-3",
           "group": "special",
           "max_size": "L",
-          "categories": ["drone", "electronics"]
+          "categories": [
+            "drone",
+            "electronics"
+          ]
         },
         {
           "id": "special-4",
           "group": "special",
           "max_size": "L",
-          "categories": ["drone", "electronics"]
+          "categories": [
+            "drone",
+            "electronics"
+          ]
         }
       ],
-      "specializations": ["CAR-001:swarm_commander", "CAR-001:tactical_carrier"],
+      "specializations": [
+        "CAR-001:swarm_commander",
+        "CAR-001:tactical_carrier"
+      ],
       "allowed_abilities": [
         "C03",
         "C05",
@@ -2805,7 +3917,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-L-START",
@@ -2815,7 +3929,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-L-START",
@@ -2825,7 +3941,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-L-START",
@@ -2845,7 +3963,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "DRN-L-START",
@@ -2855,7 +3975,9 @@
           "size": "L",
           "mass_tons": 8,
           "power_mw": 80,
-          "ability_ids": ["R01"]
+          "ability_ids": [
+            "R01"
+          ]
         }
       ],
       "economy": {
@@ -2866,58 +3988,103 @@
         "insurance_premium_credits": 190000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "carrier", "threat_tier": 7, "ability_interval_s": 6, "max_drones": 12},
+      "npc": {
+        "role": "carrier",
+        "threat_tier": 7,
+        "ability_interval_s": 6,
+        "max_drones": 12
+      },
       "visual": {
         "placeholder_id": "placeholder:CAR-001",
         "silhouette": "hive",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [60.0, 22.5, 120.0],
+        "collision_half_extents_m": [
+          60.0,
+          22.5,
+          120.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-14.0, 0, -96.0]
+            "position_m": [
+              -14.0,
+              0,
+              -96.0
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [14.0, 0, -96.0]
+            "position_m": [
+              14.0,
+              0,
+              -96.0
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-34.2857, 0, 108.0]
+            "position_m": [
+              -34.2857,
+              0,
+              108.0
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [-20.5714, 0, 108.0]
+            "position_m": [
+              -20.5714,
+              0,
+              108.0
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [-6.8571, 0, 108.0]
+            "position_m": [
+              -6.8571,
+              0,
+              108.0
+            ]
           },
           {
             "id": "engine-4",
             "kind": "engine",
-            "position_m": [6.8571, 0, 108.0]
+            "position_m": [
+              6.8571,
+              0,
+              108.0
+            ]
           },
           {
             "id": "engine-5",
             "kind": "engine",
-            "position_m": [20.5714, 0, 108.0]
+            "position_m": [
+              20.5714,
+              0,
+              108.0
+            ]
           },
           {
             "id": "engine-6",
             "kind": "engine",
-            "position_m": [34.2857, 0, 108.0]
+            "position_m": [
+              34.2857,
+              0,
+              108.0
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -2942,16 +4109,38 @@
         "class": "РЭБ",
         "role": "Подавление и диверсии",
         "temporary": true,
-        "specs": ["jammer", "saboteur"],
+        "specs": [
+          "jammer",
+          "saboteur"
+        ],
         "default_spec": "jammer",
-        "skins": ["a"],
-        "dimensions_m": [58, 26, 10],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          58,
+          26,
+          10
+        ],
         "crew": 6,
         "engines": 3,
         "weapons": "Временное импульсное вооружение",
         "abilities": {
-          "pulse": {"name": "Сдвоенный импульс", "damage": 24, "shots": 2, "range": 50, "period": 1, "energy": 7},
-          "boost": {"name": "Форсаж", "energy": 40, "cooldown": 22, "duration": 5, "speed_mul": 2}
+          "pulse": {
+            "name": "Сдвоенный импульс",
+            "damage": 24,
+            "shots": 2,
+            "range": 50,
+            "period": 1,
+            "energy": 7
+          },
+          "boost": {
+            "name": "Форсаж",
+            "energy": 40,
+            "cooldown": 22,
+            "duration": 5,
+            "speed_mul": 2
+          }
         }
       },
       "preliminary_fields": [
@@ -2973,7 +4162,13 @@
         "visual"
       ],
       "mass_tons": 950,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0.1},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0.1
+      },
       "acceleration_units_s2": 2.8,
       "turn_rate_deg_s": 60,
       "signature": 60,
@@ -2985,76 +4180,112 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "weapon-2",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "M",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "M",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "M",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "tech-5",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics", "support", "cargo"]
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "M",
-          "categories": ["electronics", "support"]
+          "categories": [
+            "electronics",
+            "support"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "M",
-          "categories": ["electronics", "support"]
+          "categories": [
+            "electronics",
+            "support"
+          ]
         },
         {
           "id": "special-3",
           "group": "special",
           "max_size": "M",
-          "categories": ["electronics", "support"]
+          "categories": [
+            "electronics",
+            "support"
+          ]
         }
       ],
-      "specializations": ["EWR-001:jammer", "EWR-001:saboteur"],
+      "specializations": [
+        "EWR-001:jammer",
+        "EWR-001:saboteur"
+      ],
       "allowed_abilities": [
         "C06",
         "D01",
@@ -3100,7 +4331,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-M-START",
@@ -3110,7 +4343,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-M-START",
@@ -3120,7 +4355,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-M-START",
@@ -3140,7 +4377,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "ELE-M-EW-START",
@@ -3150,7 +4389,10 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E03", "E05"]
+          "ability_ids": [
+            "E03",
+            "E05"
+          ]
         }
       ],
       "economy": {
@@ -3161,43 +4403,76 @@
         "insurance_premium_credits": 32500,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "ewar", "threat_tier": 5, "ability_interval_s": 4, "max_drones": 0},
+      "npc": {
+        "role": "ewar",
+        "threat_tier": 5,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:EWR-001",
         "silhouette": "trident",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [13.0, 5.0, 29.0],
+        "collision_half_extents_m": [
+          13.0,
+          5.0,
+          29.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [-3.0333, 0, -23.2]
+            "position_m": [
+              -3.0333,
+              0,
+              -23.2
+            ]
           },
           {
             "id": "weapon-2",
             "kind": "weapon",
-            "position_m": [3.0333, 0, -23.2]
+            "position_m": [
+              3.0333,
+              0,
+              -23.2
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-5.2, 0, 26.1]
+            "position_m": [
+              -5.2,
+              0,
+              26.1
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [0.0, 0, 26.1]
+            "position_m": [
+              0.0,
+              0,
+              26.1
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [5.2, 0, 26.1]
+            "position_m": [
+              5.2,
+              0,
+              26.1
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -3213,10 +4488,19 @@
         "class": "Разведчик",
         "role": "Разведка",
         "temporary": true,
-        "specs": ["scout", "navigator"],
+        "specs": [
+          "scout",
+          "navigator"
+        ],
         "default_spec": "scout",
-        "skins": ["a"],
-        "dimensions_m": [9, 6.5, 2.2],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          9,
+          6.5,
+          2.2
+        ],
         "crew": 1,
         "engines": 2,
         "weapons": "1 лёгкая пушка",
@@ -3230,9 +4514,29 @@
         "shield_regen_delay": 3,
         "energy_regen": 12,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 18, "shots": 2, "range": 26, "period": 1.0, "energy": 2},
-          "boost": {"name": "Форсаж", "speed_mul": 1.9, "duration": 4, "cooldown": 12, "energy": 20},
-          "scan": {"name": "Широкий сканер", "spec": "scout", "radius": 95, "reveal": 20, "cooldown": 22, "energy": 30}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 18,
+            "shots": 2,
+            "range": 26,
+            "period": 1.0,
+            "energy": 2
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.9,
+            "duration": 4,
+            "cooldown": 12,
+            "energy": 20
+          },
+          "scan": {
+            "name": "Широкий сканер",
+            "spec": "scout",
+            "radius": 95,
+            "reveal": 20,
+            "cooldown": 22,
+            "energy": 30
+          }
         }
       },
       "preliminary_fields": [
@@ -3253,7 +4557,13 @@
         "visual"
       ],
       "mass_tons": 11,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 9,
       "turn_rate_deg_s": 180,
       "signature": 7,
@@ -3265,52 +4575,78 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "S",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "S",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "S",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "S",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "S",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "S",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "S",
-          "categories": ["drone", "support", "cargo"]
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["SCT-001:explorer", "SCT-001:navigator"],
+      "specializations": [
+        "SCT-001:explorer",
+        "SCT-001:navigator"
+      ],
       "allowed_abilities": [
         "C01",
         "D01",
@@ -3355,7 +4691,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-S-START",
@@ -3365,7 +4703,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-S-START",
@@ -3375,7 +4715,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-S-START",
@@ -3395,7 +4737,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         }
       ],
       "economy": {
@@ -3406,33 +4750,58 @@
         "insurance_premium_credits": 900,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "scout", "threat_tier": 1, "ability_interval_s": 4, "max_drones": 0},
+      "npc": {
+        "role": "scout",
+        "threat_tier": 1,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:SCT-001",
         "silhouette": "arrow",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [3.25, 1.1, 4.5],
+        "collision_half_extents_m": [
+          3.25,
+          1.1,
+          4.5
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [0.0, 0, -3.6]
+            "position_m": [
+              0.0,
+              0,
+              -3.6
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-0.8667, 0, 4.05]
+            "position_m": [
+              -0.8667,
+              0,
+              4.05
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [0.8667, 0, 4.05]
+            "position_m": [
+              0.8667,
+              0,
+              4.05
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -3448,10 +4817,19 @@
         "class": "Корабль поддержки",
         "role": "Поддержка",
         "temporary": true,
-        "specs": ["shield_support", "medic"],
+        "specs": [
+          "shield_support",
+          "medic"
+        ],
         "default_spec": "shield_support",
-        "skins": ["a"],
-        "dimensions_m": [36, 18, 8],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          36,
+          18,
+          8
+        ],
         "crew": 4,
         "engines": 3,
         "weapons": "2 оборонительные пушки",
@@ -3465,8 +4843,21 @@
         "shield_regen_delay": 4,
         "energy_regen": 14,
         "abilities": {
-          "pulse": {"name": "Импульсные орудия", "damage": 26, "shots": 2, "range": 28, "period": 1.2, "energy": 3},
-          "boost": {"name": "Форсаж", "speed_mul": 1.4, "duration": 3, "cooldown": 16, "energy": 30}
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 26,
+            "shots": 2,
+            "range": 28,
+            "period": 1.2,
+            "energy": 3
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.4,
+            "duration": 3,
+            "cooldown": 16,
+            "energy": 30
+          }
         }
       },
       "preliminary_fields": [
@@ -3487,7 +4878,13 @@
         "visual"
       ],
       "mass_tons": 300,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 3.5,
       "turn_rate_deg_s": 75,
       "signature": 70,
@@ -3499,76 +4896,113 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "M",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-2",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "defense-3",
           "group": "defensive",
           "max_size": "M",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "M",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "M",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "tech-4",
           "group": "technical",
           "max_size": "M",
-          "categories": ["repair", "support", "electronics"]
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
         },
         {
           "id": "tech-5",
           "group": "technical",
           "max_size": "M",
-          "categories": ["electronics", "support", "cargo"]
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "M",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "M",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         },
         {
           "id": "special-3",
           "group": "special",
           "max_size": "M",
-          "categories": ["support", "drone"]
+          "categories": [
+            "support",
+            "drone"
+          ]
         }
       ],
-      "specializations": ["SUP-001:shield_support", "SUP-001:medic"],
+      "specializations": [
+        "SUP-001:shield_support",
+        "SUP-001:medic"
+      ],
       "allowed_abilities": [
         "C03",
         "C05",
@@ -3621,7 +5055,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-M-START",
@@ -3631,7 +5067,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-M-START",
@@ -3641,7 +5079,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-M-START",
@@ -3661,7 +5101,9 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "SUP-M-START",
@@ -3671,7 +5113,10 @@
           "size": "M",
           "mass_tons": 2,
           "power_mw": 20,
-          "ability_ids": ["S01", "S02"]
+          "ability_ids": [
+            "S01",
+            "S02"
+          ]
         }
       ],
       "economy": {
@@ -3682,38 +5127,67 @@
         "insurance_premium_credits": 12000,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "support", "threat_tier": 3, "ability_interval_s": 4, "max_drones": 0},
+      "npc": {
+        "role": "support",
+        "threat_tier": 3,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:SUP-001",
         "silhouette": "halo",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [9.0, 4.0, 18.0],
+        "collision_half_extents_m": [
+          9.0,
+          4.0,
+          18.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [0.0, 0, -14.4]
+            "position_m": [
+              0.0,
+              0,
+              -14.4
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-3.6, 0, 16.2]
+            "position_m": [
+              -3.6,
+              0,
+              16.2
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [0.0, 0, 16.2]
+            "position_m": [
+              0.0,
+              0,
+              16.2
+            ]
           },
           {
             "id": "engine-3",
             "kind": "engine",
-            "position_m": [3.6, 0, 16.2]
+            "position_m": [
+              3.6,
+              0,
+              16.2
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -3729,10 +5203,18 @@
         "class": "Лёгкий транспорт",
         "role": "Торговля и логистика",
         "temporary": true,
-        "specs": ["hauler"],
+        "specs": [
+          "hauler"
+        ],
         "default_spec": "hauler",
-        "skins": ["a"],
-        "dimensions_m": [18, 10, 4],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          18,
+          10,
+          4
+        ],
         "crew": 1,
         "engines": 2,
         "weapons": "1 оборонительная пушка",
@@ -3746,8 +5228,21 @@
         "shield_regen_delay": 5,
         "energy_regen": 8,
         "abilities": {
-          "pulse": {"name": "Оборонительный импульс", "damage": 14, "shots": 2, "range": 25, "period": 1.2, "energy": 2},
-          "boost": {"name": "Форсаж", "speed_mul": 1.5, "duration": 3, "cooldown": 14, "energy": 25}
+          "pulse": {
+            "name": "Оборонительный импульс",
+            "damage": 14,
+            "shots": 2,
+            "range": 25,
+            "period": 1.2,
+            "energy": 2
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.5,
+            "duration": 3,
+            "cooldown": 14,
+            "energy": 25
+          }
         }
       },
       "preliminary_fields": [
@@ -3768,7 +5263,13 @@
         "visual"
       ],
       "mass_tons": 45,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 3.5,
       "turn_rate_deg_s": 80,
       "signature": 28,
@@ -3780,46 +5281,66 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "S",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "S",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "S",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "S",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "S",
-          "categories": ["cargo", "electronics"]
+          "categories": [
+            "cargo",
+            "electronics"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "S",
-          "categories": ["cargo", "electronics"]
+          "categories": [
+            "cargo",
+            "electronics"
+          ]
         }
       ],
-      "specializations": ["TMP-HAUL:hauler", "TMP-HAUL:smuggler"],
+      "specializations": [
+        "TMP-HAUL:hauler",
+        "TMP-HAUL:smuggler"
+      ],
       "allowed_abilities": [
         "D01",
         "D02",
@@ -3858,7 +5379,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-S-START",
@@ -3868,7 +5391,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-S-START",
@@ -3878,7 +5403,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-S-START",
@@ -3898,7 +5425,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "CRG-S-START",
@@ -3908,7 +5437,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["I04"]
+          "ability_ids": [
+            "I04"
+          ]
         }
       ],
       "economy": {
@@ -3919,33 +5450,58 @@
         "insurance_premium_credits": 750,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "hauler", "threat_tier": 1, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "hauler",
+        "threat_tier": 1,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:TMP-HAUL",
         "silhouette": "barge",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [5.0, 2.0, 9.0],
+        "collision_half_extents_m": [
+          5.0,
+          2.0,
+          9.0
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [0.0, 0, -7.2]
+            "position_m": [
+              0.0,
+              0,
+              -7.2
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-1.3333, 0, 8.1]
+            "position_m": [
+              -1.3333,
+              0,
+              8.1
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [1.3333, 0, 8.1]
+            "position_m": [
+              1.3333,
+              0,
+              8.1
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }
@@ -3961,10 +5517,18 @@
         "class": "Лёгкий добытчик",
         "role": "Добыча и переработка",
         "temporary": true,
-        "specs": ["miner"],
+        "specs": [
+          "miner"
+        ],
         "default_spec": "miner",
-        "skins": ["a"],
-        "dimensions_m": [15, 9, 4],
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          15,
+          9,
+          4
+        ],
         "crew": 1,
         "engines": 2,
         "weapons": "1 оборонительная пушка",
@@ -3978,9 +5542,28 @@
         "shield_regen_delay": 5,
         "energy_regen": 8,
         "abilities": {
-          "pulse": {"name": "Оборонительный импульс", "damage": 16, "shots": 2, "range": 25, "period": 1.1, "energy": 2},
-          "boost": {"name": "Форсаж", "speed_mul": 1.5, "duration": 3, "cooldown": 14, "energy": 25},
-          "mine": {"name": "Добывающий лазер", "range": 22, "period": 1.0, "damage": 5, "energy": 0}
+          "pulse": {
+            "name": "Оборонительный импульс",
+            "damage": 16,
+            "shots": 2,
+            "range": 25,
+            "period": 1.1,
+            "energy": 2
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.5,
+            "duration": 3,
+            "cooldown": 14,
+            "energy": 25
+          },
+          "mine": {
+            "name": "Добывающий лазер",
+            "range": 22,
+            "period": 1.0,
+            "damage": 5,
+            "energy": 0
+          }
         }
       },
       "preliminary_fields": [
@@ -4001,7 +5584,13 @@
         "visual"
       ],
       "mass_tons": 38,
-      "resistances": {"kinetic": 0, "thermal": 0, "energy": 0, "explosive": 0, "electromagnetic": 0},
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
       "acceleration_units_s2": 4,
       "turn_rate_deg_s": 85,
       "signature": 25,
@@ -4013,46 +5602,66 @@
           "id": "weapon-1",
           "group": "weapon",
           "max_size": "S",
-          "categories": ["weapon"]
+          "categories": [
+            "weapon"
+          ]
         },
         {
           "id": "defense-1",
           "group": "defensive",
           "max_size": "S",
-          "categories": ["shield", "armor"]
+          "categories": [
+            "shield",
+            "armor"
+          ]
         },
         {
           "id": "tech-1",
           "group": "technical",
           "max_size": "S",
-          "categories": ["engine"]
+          "categories": [
+            "engine"
+          ]
         },
         {
           "id": "tech-2",
           "group": "technical",
           "max_size": "S",
-          "categories": ["reactor"]
+          "categories": [
+            "reactor"
+          ]
         },
         {
           "id": "tech-3",
           "group": "technical",
           "max_size": "S",
-          "categories": ["electronics"]
+          "categories": [
+            "electronics"
+          ]
         },
         {
           "id": "special-1",
           "group": "special",
           "max_size": "S",
-          "categories": ["industrial", "cargo"]
+          "categories": [
+            "industrial",
+            "cargo"
+          ]
         },
         {
           "id": "special-2",
           "group": "special",
           "max_size": "S",
-          "categories": ["industrial", "cargo"]
+          "categories": [
+            "industrial",
+            "cargo"
+          ]
         }
       ],
-      "specializations": ["TMP-MINE:geologist", "TMP-MINE:industrialist"],
+      "specializations": [
+        "TMP-MINE:geologist",
+        "TMP-MINE:industrialist"
+      ],
       "allowed_abilities": [
         "D01",
         "D02",
@@ -4092,7 +5701,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["W01"]
+          "ability_ids": [
+            "W01"
+          ]
         },
         {
           "id": "DEF-S-START",
@@ -4102,7 +5713,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["D01"]
+          "ability_ids": [
+            "D01"
+          ]
         },
         {
           "id": "ENG-S-START",
@@ -4112,7 +5725,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["M01"]
+          "ability_ids": [
+            "M01"
+          ]
         },
         {
           "id": "REA-S-START",
@@ -4132,7 +5747,9 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["E01"]
+          "ability_ids": [
+            "E01"
+          ]
         },
         {
           "id": "IND-S-START",
@@ -4142,7 +5759,10 @@
           "size": "S",
           "mass_tons": 0.5,
           "power_mw": 5,
-          "ability_ids": ["I01", "I02"]
+          "ability_ids": [
+            "I01",
+            "I02"
+          ]
         }
       ],
       "economy": {
@@ -4153,33 +5773,860 @@
         "insurance_premium_credits": 800,
         "insurance_payout_fraction": 0.7
       },
-      "npc": {"role": "miner", "threat_tier": 1, "ability_interval_s": 6, "max_drones": 0},
+      "npc": {
+        "role": "miner",
+        "threat_tier": 1,
+        "ability_interval_s": 6,
+        "max_drones": 0
+      },
       "visual": {
         "placeholder_id": "placeholder:TMP-MINE",
         "silhouette": "auger",
         "forward_axis": "-Z",
         "up_axis": "+Y",
-        "collision_half_extents_m": [4.5, 2.0, 7.5],
+        "collision_half_extents_m": [
+          4.5,
+          2.0,
+          7.5
+        ],
         "mounts": [
           {
             "id": "weapon-1",
             "kind": "weapon",
-            "position_m": [0.0, 0, -6.0]
+            "position_m": [
+              0.0,
+              0,
+              -6.0
+            ]
           },
           {
             "id": "engine-1",
             "kind": "engine",
-            "position_m": [-1.2, 0, 6.75]
+            "position_m": [
+              -1.2,
+              0,
+              6.75
+            ]
           },
           {
             "id": "engine-2",
             "kind": "engine",
-            "position_m": [1.2, 0, 6.75]
+            "position_m": [
+              1.2,
+              0,
+              6.75
+            ]
           },
           {
             "id": "vfx-center",
             "kind": "vfx",
-            "position_m": [0, 0, 0]
+            "position_m": [
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCT-002",
+      "name": "Скаут «Нимб»",
+      "class_id": "scout",
+      "description": "Разведчик для исследования маршрутов и поиска скрытых объектов. Дальние сенсоры и малая сигнатура важнее прямой огневой мощи.",
+      "base": {
+        "id": "SCT-002",
+        "name": "Скаут «Нимб»",
+        "class": "Разведчик дальнего радиуса",
+        "role": "Дальняя разведка",
+        "temporary": false,
+        "specs": [
+          "scout",
+          "navigator"
+        ],
+        "default_spec": "scout",
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          9,
+          6.5,
+          2.2
+        ],
+        "crew": 1,
+        "engines": 2,
+        "weapons": "1 лёгкая пушка",
+        "hull": 1800,
+        "shield": 800,
+        "armor": 80,
+        "energy": 160,
+        "cargo": 18,
+        "speed": 15.0,
+        "shield_regen": 14,
+        "shield_regen_delay": 3,
+        "energy_regen": 12,
+        "abilities": {
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 18,
+            "shots": 2,
+            "range": 26,
+            "period": 1.0,
+            "energy": 2
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.9,
+            "duration": 4,
+            "cooldown": 12,
+            "energy": 20
+          },
+          "scan": {
+            "name": "Широкий сканер",
+            "spec": "scout",
+            "radius": 95,
+            "reveal": 20,
+            "cooldown": 22,
+            "energy": 30
+          }
+        }
+      },
+      "preliminary_fields": [
+        "description",
+        "mass_tons",
+        "resistances",
+        "acceleration_units_s2",
+        "turn_rate_deg_s",
+        "signature",
+        "sensor_range_units",
+        "reactor_power_mw",
+        "module_mass_budget_tons",
+        "slots",
+        "allowed_abilities",
+        "starter_kit",
+        "economy",
+        "npc",
+        "visual"
+      ],
+      "mass_tons": 11,
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
+      "acceleration_units_s2": 9,
+      "turn_rate_deg_s": 180,
+      "signature": 7,
+      "sensor_range_units": 450,
+      "reactor_power_mw": 160,
+      "module_mass_budget_tons": 10,
+      "slots": [
+        {
+          "id": "weapon-1",
+          "group": "weapon",
+          "max_size": "S",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "defense-1",
+          "group": "defensive",
+          "max_size": "S",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "tech-1",
+          "group": "technical",
+          "max_size": "S",
+          "categories": [
+            "engine"
+          ]
+        },
+        {
+          "id": "tech-2",
+          "group": "technical",
+          "max_size": "S",
+          "categories": [
+            "reactor"
+          ]
+        },
+        {
+          "id": "tech-3",
+          "group": "technical",
+          "max_size": "S",
+          "categories": [
+            "electronics"
+          ]
+        },
+        {
+          "id": "tech-4",
+          "group": "technical",
+          "max_size": "S",
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
+        },
+        {
+          "id": "special-1",
+          "group": "special",
+          "max_size": "S",
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
+        },
+        {
+          "id": "special-2",
+          "group": "special",
+          "max_size": "S",
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
+        }
+      ],
+      "specializations": [
+        "SCT-002:explorer",
+        "SCT-002:navigator"
+      ],
+      "allowed_abilities": [
+        "C01",
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08",
+        "E09",
+        "E10",
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05",
+        "M06",
+        "M07",
+        "M08",
+        "M09",
+        "M10",
+        "W01",
+        "W14"
+      ],
+      "starter_kit": [
+        {
+          "id": "LAS-S-START",
+          "slot_id": "weapon-1",
+          "family": "LAS",
+          "category": "weapon",
+          "size": "S",
+          "mass_tons": 0.5,
+          "power_mw": 5,
+          "ability_ids": [
+            "W01"
+          ]
+        },
+        {
+          "id": "DEF-S-START",
+          "slot_id": "defense-1",
+          "family": "DEF",
+          "category": "shield",
+          "size": "S",
+          "mass_tons": 0.5,
+          "power_mw": 5,
+          "ability_ids": [
+            "D01"
+          ]
+        },
+        {
+          "id": "ENG-S-START",
+          "slot_id": "tech-1",
+          "family": "ENG",
+          "category": "engine",
+          "size": "S",
+          "mass_tons": 0.5,
+          "power_mw": 5,
+          "ability_ids": [
+            "M01"
+          ]
+        },
+        {
+          "id": "REA-S-START",
+          "slot_id": "tech-2",
+          "family": "REA",
+          "category": "reactor",
+          "size": "S",
+          "mass_tons": 0.5,
+          "power_mw": 0,
+          "ability_ids": []
+        },
+        {
+          "id": "ELE-S-START",
+          "slot_id": "tech-3",
+          "family": "ELE",
+          "category": "electronics",
+          "size": "S",
+          "mass_tons": 0.5,
+          "power_mw": 5,
+          "ability_ids": [
+            "E01"
+          ]
+        }
+      ],
+      "economy": {
+        "acquisition": "starter",
+        "price_credits": 18000,
+        "pilot_level": 1,
+        "repair_credits_per_hull": 0.4,
+        "insurance_premium_credits": 900,
+        "insurance_payout_fraction": 0.7
+      },
+      "npc": {
+        "role": "scout",
+        "threat_tier": 1,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
+      "visual": {
+        "placeholder_id": "placeholder:SCT-002",
+        "silhouette": "scout_nimbus",
+        "forward_axis": "-Z",
+        "up_axis": "+Y",
+        "collision_half_extents_m": [
+          3.25,
+          1.1,
+          4.5
+        ],
+        "mounts": [
+          {
+            "id": "weapon-1",
+            "kind": "weapon",
+            "position_m": [
+              0.0,
+              0,
+              -3.6
+            ]
+          },
+          {
+            "id": "engine-1",
+            "kind": "engine",
+            "position_m": [
+              -0.8667,
+              0,
+              4.05
+            ]
+          },
+          {
+            "id": "engine-2",
+            "kind": "engine",
+            "position_m": [
+              0.8667,
+              0,
+              4.05
+            ]
+          },
+          {
+            "id": "vfx-center",
+            "kind": "vfx",
+            "position_m": [
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "CRU-002",
+      "name": "Крейсер «Предел»",
+      "class_id": "cruiser",
+      "description": "Командный крейсер с развитой технической инфраструктурой. Поддерживает координацию группы и тяжёлый огонь на средней дистанции.",
+      "base": {
+        "id": "CRU-002",
+        "name": "Крейсер «Предел»",
+        "class": "Крейсер-экспедиционник",
+        "role": "Тяжёлая оборона",
+        "temporary": false,
+        "specs": [
+          "flagship",
+          "bombard"
+        ],
+        "default_spec": "flagship",
+        "skins": [
+          "a"
+        ],
+        "dimensions_m": [
+          140,
+          48,
+          22
+        ],
+        "crew": 18,
+        "engines": 6,
+        "weapons": "12 тяжёлых орудий, 6 ракетных установок",
+        "hull": 4200,
+        "shield": 1800,
+        "armor": 900,
+        "energy": 450,
+        "cargo": 28,
+        "speed": 9.5,
+        "shield_regen": 45,
+        "shield_regen_delay": 7,
+        "energy_regen": 15,
+        "abilities": {
+          "pulse": {
+            "name": "Импульсные орудия",
+            "damage": 95,
+            "shots": 4,
+            "range": 44,
+            "period": 1.5,
+            "energy": 6
+          },
+          "boost": {
+            "name": "Форсаж",
+            "speed_mul": 1.25,
+            "duration": 3,
+            "cooldown": 25,
+            "energy": 55
+          }
+        }
+      },
+      "preliminary_fields": [
+        "description",
+        "mass_tons",
+        "resistances",
+        "acceleration_units_s2",
+        "turn_rate_deg_s",
+        "signature",
+        "sensor_range_units",
+        "reactor_power_mw",
+        "module_mass_budget_tons",
+        "slots",
+        "allowed_abilities",
+        "starter_kit",
+        "economy",
+        "npc",
+        "visual"
+      ],
+      "mass_tons": 8500,
+      "resistances": {
+        "kinetic": 0,
+        "thermal": 0,
+        "energy": 0,
+        "explosive": 0,
+        "electromagnetic": 0
+      },
+      "acceleration_units_s2": 1.2,
+      "turn_rate_deg_s": 28,
+      "signature": 320,
+      "sensor_range_units": 340,
+      "reactor_power_mw": 2400,
+      "module_mass_budget_tons": 800,
+      "slots": [
+        {
+          "id": "weapon-1",
+          "group": "weapon",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "weapon-2",
+          "group": "weapon",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "weapon-3",
+          "group": "weapon",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "weapon-4",
+          "group": "weapon",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "defense-1",
+          "group": "defensive",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "defense-2",
+          "group": "defensive",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "defense-3",
+          "group": "defensive",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "defense-4",
+          "group": "defensive",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "tech-1",
+          "group": "technical",
+          "max_size": "L",
+          "categories": [
+            "engine"
+          ]
+        },
+        {
+          "id": "tech-2",
+          "group": "technical",
+          "max_size": "L",
+          "categories": [
+            "reactor"
+          ]
+        },
+        {
+          "id": "tech-3",
+          "group": "technical",
+          "max_size": "L",
+          "categories": [
+            "electronics"
+          ]
+        },
+        {
+          "id": "tech-4",
+          "group": "technical",
+          "max_size": "L",
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
+        },
+        {
+          "id": "tech-5",
+          "group": "technical",
+          "max_size": "L",
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
+        },
+        {
+          "id": "special-1",
+          "group": "special",
+          "max_size": "L",
+          "categories": [
+            "support",
+            "drone"
+          ]
+        },
+        {
+          "id": "special-2",
+          "group": "special",
+          "max_size": "L",
+          "categories": [
+            "support",
+            "drone"
+          ]
+        },
+        {
+          "id": "special-3",
+          "group": "special",
+          "max_size": "L",
+          "categories": [
+            "support",
+            "drone"
+          ]
+        }
+      ],
+      "specializations": [
+        "CRU-002:flagship",
+        "CRU-002:bombard"
+      ],
+      "allowed_abilities": [
+        "C03",
+        "C05",
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "E01",
+        "E02",
+        "E07",
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05",
+        "M06",
+        "M07",
+        "M08",
+        "M09",
+        "M10",
+        "R02",
+        "R03",
+        "R05",
+        "R06",
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "W01",
+        "W02",
+        "W03",
+        "W04"
+      ],
+      "starter_kit": [
+        {
+          "id": "LAS-L-START",
+          "slot_id": "weapon-1",
+          "family": "LAS",
+          "category": "weapon",
+          "size": "L",
+          "mass_tons": 8,
+          "power_mw": 80,
+          "ability_ids": [
+            "W01"
+          ]
+        },
+        {
+          "id": "DEF-L-START",
+          "slot_id": "defense-1",
+          "family": "DEF",
+          "category": "shield",
+          "size": "L",
+          "mass_tons": 8,
+          "power_mw": 80,
+          "ability_ids": [
+            "D01"
+          ]
+        },
+        {
+          "id": "ENG-L-START",
+          "slot_id": "tech-1",
+          "family": "ENG",
+          "category": "engine",
+          "size": "L",
+          "mass_tons": 8,
+          "power_mw": 80,
+          "ability_ids": [
+            "M01"
+          ]
+        },
+        {
+          "id": "REA-L-START",
+          "slot_id": "tech-2",
+          "family": "REA",
+          "category": "reactor",
+          "size": "L",
+          "mass_tons": 8,
+          "power_mw": 0,
+          "ability_ids": []
+        },
+        {
+          "id": "ELE-L-START",
+          "slot_id": "tech-3",
+          "family": "ELE",
+          "category": "electronics",
+          "size": "L",
+          "mass_tons": 8,
+          "power_mw": 80,
+          "ability_ids": [
+            "E01"
+          ]
+        },
+        {
+          "id": "SUP-L-START",
+          "slot_id": "special-1",
+          "family": "SUP",
+          "category": "support",
+          "size": "L",
+          "mass_tons": 8,
+          "power_mw": 80,
+          "ability_ids": [
+            "S01",
+            "S02"
+          ]
+        }
+      ],
+      "economy": {
+        "acquisition": "station_shipyard",
+        "price_credits": 1400000,
+        "pilot_level": 35,
+        "repair_credits_per_hull": 1.75,
+        "insurance_premium_credits": 70000,
+        "insurance_payout_fraction": 0.7
+      },
+      "npc": {
+        "role": "support",
+        "threat_tier": 6,
+        "ability_interval_s": 4,
+        "max_drones": 0
+      },
+      "visual": {
+        "placeholder_id": "placeholder:CRU-002",
+        "silhouette": "cruiser_frontier",
+        "forward_axis": "-Z",
+        "up_axis": "+Y",
+        "collision_half_extents_m": [
+          24.0,
+          11.0,
+          70.0
+        ],
+        "mounts": [
+          {
+            "id": "weapon-1",
+            "kind": "weapon",
+            "position_m": [
+              -10.08,
+              0,
+              -56.0
+            ]
+          },
+          {
+            "id": "weapon-2",
+            "kind": "weapon",
+            "position_m": [
+              -3.36,
+              0,
+              -56.0
+            ]
+          },
+          {
+            "id": "weapon-3",
+            "kind": "weapon",
+            "position_m": [
+              3.36,
+              0,
+              -56.0
+            ]
+          },
+          {
+            "id": "weapon-4",
+            "kind": "weapon",
+            "position_m": [
+              10.08,
+              0,
+              -56.0
+            ]
+          },
+          {
+            "id": "engine-1",
+            "kind": "engine",
+            "position_m": [
+              -13.7143,
+              0,
+              63.0
+            ]
+          },
+          {
+            "id": "engine-2",
+            "kind": "engine",
+            "position_m": [
+              -8.2286,
+              0,
+              63.0
+            ]
+          },
+          {
+            "id": "engine-3",
+            "kind": "engine",
+            "position_m": [
+              -2.7429,
+              0,
+              63.0
+            ]
+          },
+          {
+            "id": "engine-4",
+            "kind": "engine",
+            "position_m": [
+              2.7429,
+              0,
+              63.0
+            ]
+          },
+          {
+            "id": "engine-5",
+            "kind": "engine",
+            "position_m": [
+              8.2286,
+              0,
+              63.0
+            ]
+          },
+          {
+            "id": "engine-6",
+            "kind": "engine",
+            "position_m": [
+              13.7143,
+              0,
+              63.0
+            ]
+          },
+          {
+            "id": "vfx-center",
+            "kind": "vfx",
+            "position_m": [
+              0,
+              0,
+              0
+            ]
           }
         ]
       }

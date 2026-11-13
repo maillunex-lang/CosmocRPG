@@ -26,7 +26,7 @@
     "ships": {
       "type": "array",
       "minItems": 15,
-      "maxItems": 15,
+      "maxItems": 17,
       "items": {
         "type": "object",
         "additionalProperties": false,

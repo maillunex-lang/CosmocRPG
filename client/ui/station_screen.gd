@@ -156,6 +156,7 @@ func _on_market(data: Dictionary) -> void:
 			_routes.add_child(hint)
 	var prices: Dictionary = data.get("prices", {})
 	var trends: Dictionary = data.get("trends", {})
+	var history: Dictionary = data.get("history", {})
 	for res in prices:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
@@ -166,7 +167,13 @@ func _on_market(data: Dictionary) -> void:
 		row.add_child(name)
 		var price := Label.new()
 		var trend := str(trends.get(res, "стабильно"))
-		price.text = "%d кр. · %s" % [int(ceil(float(prices[res]))), trend]
+		var points: Array = history.get(res, []) if history.get(res) is Array else []
+		var spark := ""
+		if points.size() >= 2:
+			var first := float(points[0])
+			var last := float(points[points.size() - 1])
+			spark = " ↑" if last > first * 1.02 else (" ↓" if last < first * 0.98 else " →")
+		price.text = "%d кр. · %s%s" % [int(ceil(float(prices[res]))), trend, spark]
 		price.custom_minimum_size.x = 110
 		row.add_child(price)
 		var b := ActionButton.new()

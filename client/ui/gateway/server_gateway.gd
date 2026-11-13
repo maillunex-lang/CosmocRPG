@@ -854,6 +854,14 @@ func corporation_leave() -> void:
 	_send_corporation("corp_leave", {})
 
 
+func corporation_donate(amount: int) -> void:
+	_send_corporation("corp_donate", {"amount": amount})
+
+
+func corporation_treasury() -> void:
+	_send_corporation("corp_treasury", {})
+
+
 func _send_corporation(action: String, payload: Dictionary) -> void:
 	if corporation_busy():
 		return

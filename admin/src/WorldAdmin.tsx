@@ -9,6 +9,7 @@ const err = (e: unknown) => (e instanceof ApiError ? e.message : "Неизвес
 export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string; onBack: () => void; onLoggedOut: () => void }) {
   const [text, setText] = useState("");
   const [version, setVersion] = useState(0);
+  const [systemId, setSystemId] = useState("");
   const [versions, setVersions] = useState<WorldVersion[]>([]);
   const [enabled, setEnabled] = useState(true);
   const [check, setCheck] = useState<WorldCheck | null>(null);
@@ -21,10 +22,18 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
   const load = useCallback(() => {
     worldApi.get().then((d) => {
       setText(JSON.stringify(d.config, null, 2));
+      setSystemId(String(((d.config as any)?.systems?.[0]?.id) ?? ""));
       setVersion(d.version); setVersions(d.versions ?? []); setEnabled(d.living_enabled); setCheck(d.preview); setChecked(JSON.stringify(d.config, null, 2));
     }).catch((e) => setError(err(e)));
   }, []);
   useEffect(load, [load]);
+
+  function applySystemField(field: string, value: number) {
+    let cfg: any;
+    try { cfg = JSON.parse(text); } catch { setError("Сначала исправьте JSON"); return; }
+    cfg.systems = (cfg.systems ?? []).map((system: any) => system.id === systemId ? { ...system, [field]: Math.max(0, Math.min(6, Math.round(value))) } : system);
+    setText(JSON.stringify(cfg, null, 2)); setChecked(""); setCheck(null);
+  }
 
   async function runCheck() {
     setError(""); setMsg("");
@@ -35,7 +44,7 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
 
   function applyDensity(mode: Density) {
     let cfg: any;
-    try { cfg = JSON.parse(text); } catch { setError("Сна$7#0#b#0 з#0#3$0$3#7и$2е к#e$0$0#5#a$2н$bй JSON"); return; }
+    try { cfg = JSON.parse(text); } catch { setError("\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0438\u0441\u043f\u0440\u0430\u0432\u044c\u0442\u0435 JSON"); return; }
     const presets: Record<Density, any> = {
       balanced: { planets: 3, belts: 2, pirate_zones: 2, stations: 2, anomalies: 3, derelicts: 2, caches: 2, debris_fields: 2 },
       dense: { planets: 5, belts: 4, pirate_zones: 3, stations: 4, anomalies: 5, derelicts: 4, caches: 4, debris_fields: 4 },
@@ -45,7 +54,7 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
     cfg.systems = (cfg.systems ?? []).map((system: any) => ({ ...system, ...values }));
     cfg.systems = cfg.systems.map((system: any) => ({ ...system, features: Array.from(new Set([...(system.features ?? []), "busy_lanes", "debris_field", "anomalies"])) }));
     const next = JSON.stringify(cfg, null, 2);
-    setText(next); setChecked(""); setCheck(null); setMsg("Ша#1л#e#d п#b#e$2но$1ти «" + mode + "» пр#8#cенён. На#6м#8те «Про#2ерить».");
+    setText(next); setChecked(""); setCheck(null); setMsg("\u0428\u0430\u0431\u043b\u043e\u043d \u043f\u043b\u043e\u0442\u043d\u043e\u0441\u0442\u0438 \u00ab" + mode + "\u00bb \u043f\u0440\u0438\u043c\u0435\u043d\u0451\u043d. \u041d\u0430\u0436\u043c\u0438\u0442\u0435 \u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c\u00bb.");
   }
 
   async function publish() {
@@ -66,6 +75,9 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
   }
 
   const canPublish = !busy && check?.ok === true && checked === text;
+  let parsedSystems: any[] = [];
+  try { parsedSystems = (JSON.parse(text).systems ?? []) as any[]; } catch { /* редактор покажет ошибку JSON */ }
+  const selectedSystem = parsedSystems.find((system) => system.id === systemId) ?? parsedSystems[0];
 
   return (
     <main className="dashboard studio">
@@ -80,10 +92,22 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
       <section className="card" aria-label="Конфигурация мира">
         <h2>Конфигурация (версия {version})</h2>
         <p className="muted">Системы (радиус, seed, число планет, поясов, пиратских зон, станций, аномалий), враги по уровням, ресурсы и цены, графические пресеты low/medium/high. Сначала «Проверить», затем «Опубликовать».</p>
+        <section className="system-editor" aria-label="Редактор системы">
+          <h3>Параметры системы</h3>
+          <div className="grid2">
+            <label>Система<select value={selectedSystem?.id ?? ""} onChange={(e) => setSystemId(e.target.value)}>
+              {parsedSystems.map((system) => <option key={system.id} value={system.id}>{system.name} ({system.id})</option>)}
+            </select></label>
+            {(["planets", "belts", "stations", "pirate_zones", "anomalies", "derelicts", "caches", "debris_fields"] as const).map((field) => (
+              <label key={field}>{({ planets: "Планеты", belts: "Астероидные пояса", stations: "Станции", pirate_zones: "Пиратские зоны", anomalies: "Аномалии", derelicts: "Заброшенные объекты", caches: "Тайники", debris_fields: "Поля обломков" } as Record<string, string>)[field]}<input type="number" min={0} max={6} value={selectedSystem?.[field] ?? 0} onChange={(e) => applySystemField(field, Number(e.target.value))} /></label>
+            ))}
+          </div>
+          <p className="muted">Изменения применяются к тексту конфигурации. Нажмите «Проверить», затем «Опубликовать».</p>
+        </section>
         <textarea className="prompt mono" rows={22} value={text} aria-label="Конфигурация мира (JSON)" spellCheck={false} onChange={(e) => setText(e.target.value)} />
         <div className="card editor-tools" aria-label="Генератор наполнения локаций">
           <h3>Генератор локаций</h3>
-          <p className="muted">Быстро заполнить системы процедурными планетами, поясами, станциями, аномалиями и полями обломков. Seed сохраняется, поэтому раскладка детерминированна.а</p>
+          <p className="muted">Быстро заполнить системы процедурными планетами, поясами, станциями, аномалиями и полями обломков. Seed сохраняется, поэтому раскладка детерминированна.</p>
           <div className="row wrap">
             <button className="secondary" onClick={() => applyDensity("frontier")}>Фронтир</button>
             <button onClick={() => applyDensity("balanced")}>Сбалансированно</button>

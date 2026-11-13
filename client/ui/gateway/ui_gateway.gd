@@ -223,3 +223,11 @@ func corporation_join(_name: String) -> void:
 
 func corporation_leave() -> void:
 	corporation_failed.emit("Корпорации доступны только при игре на сервере")
+
+
+func corporation_donate(_amount: int) -> void:
+	corporation_failed.emit("Казна доступна только при игре на сервере")
+
+
+func corporation_treasury() -> void:
+	pass

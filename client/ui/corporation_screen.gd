@@ -23,6 +23,9 @@ var _leave: Button
 var _refresh: Button
 var _corp_title: Label
 var _treasury: Label
+var _donate_input: LineEdit
+var _donate: Button
+var _journal: Label
 var _task: Label
 var _alliance: Label
 var _members: VBoxContainer
@@ -86,6 +89,13 @@ func _ready() -> void:
 	_corp_title.theme_type_variation = &"SectionLabel"
 	_treasury = _label(_details, "")
 	_treasury.name = "Treasury"
+	var donate_row := HBoxContainer.new()
+	_details.add_child(donate_row)
+	_donate_input = _make_input(donate_row, "DonationAmount", "Сумма пожертвования", 12)
+	_donate_input.custom_minimum_size.x = 220
+	_donate = _button(donate_row, "DonateTreasury", "Пополнить казну", _donate_pressed)
+	_journal = _label(_details, "")
+	_journal.name = "TreasuryJournal"
 	_task = _label(_details, "")
 	_task.name = "CorporationTask"
 	_alliance = _label(_details, "")
@@ -168,6 +178,15 @@ func _on_data(data: Dictionary) -> void:
 	if not corp.is_empty():
 		_corp_title.text = "[%s] %s" % [str(corp.get("tag", "")), str(corp.get("name", ""))]
 		_treasury.text = "Казна: %s кредитов" % str(int(corp.get("treasury", 0)))
+		var journal: Array = data.get("treasury_journal", []) if data.get("treasury_journal") is Array else []
+		if journal.is_empty():
+			_journal.text = "История казны: пока нет операций"
+		else:
+			var rows := PackedStringArray(["История казны:"])
+			for entry in journal.slice(0, 5):
+				if entry is Dictionary:
+					rows.append("• %s +%d кр. · баланс %d" % [str(entry.get("player_id", "участник")), int(entry.get("amount", 0)), int(entry.get("balance", 0))])
+			_journal.text = "\n".join(rows)
 		var task: Dictionary = data.get("task", {}) if data.get("task") is Dictionary else {}
 		if task.is_empty():
 			_task.text = ""
@@ -206,15 +225,24 @@ func _on_busy(busy: bool) -> void:
 
 
 func _update_actions() -> void:
-	if _create == null or _join == null or _leave == null:
+	if _create == null or _join == null or _leave == null or _donate == null:
 		return
 	var empty := bool(_data.get("known", false)) and (_data.get("corp", {}) as Dictionary).is_empty()
 	_create.disabled = _busy or not empty or _name_input.text.strip_edges().is_empty() or _tag_input.text.strip_edges().length() < 2
 	_join.disabled = _busy or not empty or _join_input.text.strip_edges().is_empty()
 	_leave.disabled = _busy or not _details.visible
+	_donate.disabled = _busy or not _details.visible or not _donate_input.text.is_valid_int() or int(_donate_input.text) <= 0
 	_refresh.disabled = _busy
-	for input in [_name_input, _tag_input, _join_input]:
+	for input in [_name_input, _tag_input, _join_input, _donate_input]:
 		input.editable = not _busy
+
+
+func _donate_pressed() -> void:
+	if _donate.disabled or _gateway == null:
+		return
+	_notice.text = "Пополнение казны…"
+	_gateway.corporation_donate(int(_donate_input.text))
+	_donate_input.clear()
 
 
 func _join_pressed() -> void:

@@ -239,6 +239,36 @@
           "name": "Промышленник"
         }
       ]
+    },
+    {
+      "id": "SCT-002",
+      "name": "Скаут «Нимб»",
+      "class_id": "scout",
+      "specializations": [
+        {
+          "id": "SCT-002:explorer",
+          "name": "Исследователь"
+        },
+        {
+          "id": "SCT-002:navigator",
+          "name": "Навигатор"
+        }
+      ]
+    },
+    {
+      "id": "CRU-002",
+      "name": "Крейсер «Предел»",
+      "class_id": "cruiser",
+      "specializations": [
+        {
+          "id": "CRU-002:flagship",
+          "name": "Флагман"
+        },
+        {
+          "id": "CRU-002:bombard",
+          "name": "Бомбардир"
+        }
+      ]
     }
   ]
 }

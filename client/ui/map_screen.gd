@@ -269,6 +269,7 @@ func _draw() -> void:
 	_pickables.clear()
 	_labels.clear()
 	draw_rect(Rect2(Vector2.ZERO, size), Tokens.BG)
+	_draw_event_banner()
 	var grid_step := _nice_step(70.0 / _scale)
 	if grid_step > 0.0:
 		var col := Color(Tokens.ACCENT, 0.07)
@@ -413,6 +414,30 @@ func _draw() -> void:
 	_flush_labels(font)
 	_draw_panel_bg()
 	_refresh_info()
+
+
+func _draw_event_banner() -> void:
+	var raw: Variant = state.get("event", null)
+	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
+		return
+	var ev: Dictionary = raw
+	var title := str(ev.get("title", "Событие"))
+	var left := int(ev.get("left", 0))
+	var time_text := "%d с" % left if left < 60 else "%d мин" % int(left / 60.0)
+	var font := UiTheme.make_font(600)
+	var text := "⚡ %s · %s" % [title, time_text]
+	var width := minf(360.0, maxf(180.0, size.x - _panel_width() - 48.0))
+	var rect := Rect2(Vector2(18, 18), Vector2(width, 34))
+	draw_style_box(_event_style(), rect)
+	draw_string(font, rect.position + Vector2(12, 23), text, HORIZONTAL_ALIGNMENT_LEFT, width - 24, 14, Tokens.RARE)
+
+func _event_style() -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(Tokens.SURFACE, 0.9)
+	box.border_color = Color(Tokens.RARE, 0.75)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(10)
+	return box
 
 
 func _draw_location_ambience() -> void:

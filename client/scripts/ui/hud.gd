@@ -1350,8 +1350,10 @@ func _apply_event(state: Dictionary) -> void:
 		_event_label = Label.new()
 		_event_label.name = "WorldEvent"
 		_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_event_label.custom_minimum_size = Vector2(340, 0)
-		_event_label.add_theme_font_size_override("font_size", 14)
+		_event_label.custom_minimum_size = Vector2(300, 0)
+		_event_label.add_theme_font_size_override("font_size", 15)
+		_event_label.max_lines_visible = 4
+		_event_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		_event_label.add_theme_color_override("font_color", Tokens.RARE)
 		var host := _quests_card.get_parent()
 		host.add_child(_event_label)
@@ -1366,7 +1368,7 @@ func _apply_event(state: Dictionary) -> void:
 	if left >= 60:
 		when = "%d мин" % int(left / 60.0)
 	_event_label.visible = true
-	_event_label.text = "%s · %s\n%s" % [str(e.get("title", "")), when, str(e.get("text", ""))]
+	_event_label.text = "⚡ %s · %s\n%s" % [str(e.get("title", "")), when, str(e.get("text", ""))]
 
 
 func _boot_layout() -> void:

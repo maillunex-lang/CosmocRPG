@@ -35,6 +35,8 @@ const QuestCompass := preload("res://ui/quest_compass.gd")
 const Briefing := preload("res://ui/briefing.gd")
 const WorldDecor := preload("res://scripts/space/world_decor.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
+const AutoQuality := preload("res://ui/graphics/auto_quality.gd")
+const ThermalGuard := preload("res://ui/graphics/thermal_guard.gd")
 const SfxRules := preload("res://audio/sfx.gd")
 
 signal exit_requested
@@ -56,6 +58,9 @@ var _graphics_elapsed := 0.0
 var _full_ship_limit := 20
 var _limit_hidden_model_cache := false
 var _applied_quality := ""
+var _auto_quality: RefCounted
+var _thermal_elapsed := 0.0
+var _thermal_level := "unknown"
 var _priority_target := ""
 
 var _ships: Dictionary = {}       # id -> ShipView
@@ -99,6 +104,8 @@ func _ready() -> void:
 	stats.attach_to(_hud.get_node("%DebugSlot"))
 	stats.configure_diagnostics(_ships_root.get_viewport(), _diagnostic_counts)
 	_apply_graphics()
+	_auto_quality = AutoQuality.new(UiSettings.graphics_preset(), UiSettings.render_scale(), UiSettings.fps_limit())
+	_auto_quality.enabled = UiSettings.get_bool("auto_quality", true)
 	var show_loading := Session.opened_msec >= 0   # только при настоящем входе в мир (в тестах экрана загрузки нет)
 	if Session.opened_msec >= 0:
 		# от нажатия кнопки до начала _ready: загрузка и создание сцены, HUD и текстур
@@ -191,6 +198,7 @@ func _process(delta: float) -> void:
 		if _decor != null:
 			_decor.update(p, delta)
 	_graphics_elapsed += delta
+	_update_auto_quality(delta)
 	if _graphics_elapsed >= 0.25:
 		_graphics_elapsed = 0.0
 		_update_ship_budget()
@@ -204,6 +212,22 @@ func _process(delta: float) -> void:
 
 ## Подписи объектов: экранный слой (ui/nameplates.gd). Показываются цель, свой корабль, ближайшие враги и игроки, станции,
 ## находки рядом; не больше MAX_PLATES, без пересечений; дальние бледнее. Принципы MMO: лимит, приоритет цели, затухание по расстоянию.
+
+func _update_auto_quality(delta: float) -> void:
+	if _auto_quality == null or not _auto_quality.enabled:
+		return
+	_thermal_elapsed += delta
+	if _thermal_elapsed >= 0.5:
+		_thermal_elapsed = 0.0
+		_thermal_level = ThermalGuard.read()
+	_auto_quality.set_target_fps(UiSettings.fps_limit())
+	var change: Dictionary = _auto_quality.update(delta * 1000.0, _thermal_level, delta)
+	if change.is_empty():
+		return
+	UiSettings.override("graphics_preset", change["graphics_preset"])
+	UiSettings.override("render_scale", change["render_scale"])
+	_apply_graphics()
+
 
 func _update_compass() -> void:
 	if _compass == null or gateway == null or _camera == null:

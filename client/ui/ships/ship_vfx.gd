@@ -5,6 +5,8 @@ extends RefCounted
 static var _mats: Dictionary = {}
 const SHIELD_SHADER := preload("res://ui/ships/shaders/shield_fresnel.gdshader")
 const ENGINE_SHADER := preload("res://ui/ships/shaders/engine_glow.gdshader")
+const ShaderCore := preload("res://ui/graphics/shader_core.gd")
+const UiSettings := preload("res://ui/ui_settings.gd")
 
 
 ## Аддитивный светящийся материал без освещения (общий для одинакового цвета).
@@ -98,7 +100,8 @@ static func particles(color: Color, amount: int, lifetime: float, size: float, s
 	var p := CPUParticles3D.new()
 	p.emitting = false
 	p.one_shot = one_shot
-	p.amount = amount
+	var scale := ShaderCore.effect_scale(UiSettings.graphics_preset()) if ResourceLoader.exists("res://ui/ui_settings.gd") else 1.0
+	p.amount = maxi(1, int(round(float(amount) * scale)))
 	p.lifetime = lifetime
 	p.explosiveness = 0.9 if one_shot else 0.0
 	p.direction = Vector3(0, 0, 0)

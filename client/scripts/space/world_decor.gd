@@ -1,4 +1,5 @@
 extends Node3D
+const ShaderCore := preload("res://ui/graphics/shader_core.gd")
 ## Клиентский декор живых локаций: планеты и луны, кольца зон, астероиды и обломки по чанкам (MultiMesh, пулинг),
 ## пыль, кометы, дальние корабли. Сервер декор не хранит и не синхронизирует: он строится по раскладке и seed, одинаково у всех.
 ## Серверные интерактивные объекты (месторождения, враги, станции, точки исследования) рисует ShipView по данным состояния.
@@ -216,7 +217,8 @@ func _add_zone(z: Dictionary) -> void:
 
 func _make_dust() -> void:
 	_dust = CPUParticles3D.new()
-	_dust.amount = int(preset.get("dust_particles", 24)) * 2
+	var effect_scale := ShaderCore.effect_scale(preset_name)
+	_dust.amount = maxi(1, int(round(float(preset.get("dust_particles", 24)) * 2.0 * effect_scale)))
 	_dust.lifetime = 6.0
 	_dust.preprocess = 6.0
 	_dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX

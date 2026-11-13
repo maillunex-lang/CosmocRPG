@@ -422,6 +422,9 @@ func (w *World) tickLiveEvent(dt float64) {
 		w.coast("dyn-runner", ev, 16, dt)
 	}
 	// Участие считается сервером по близости к центру события. Награда выдаётся один раз при завершении.
+	if ev.participants == nil {
+		ev.participants = map[string]bool{}
+	}
 	for id, player := range w.players {
 		if player != nil && dist(player.Pos, ev.center) <= 180 {
 			ev.participants[id] = true

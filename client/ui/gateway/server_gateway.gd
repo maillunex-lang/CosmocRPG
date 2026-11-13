@@ -207,11 +207,15 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			set_option("auto_retaliate", UiSettings.get_bool("auto_retaliate", true))   # сохранённая настройка уходит серверу при каждом входе
 		"market":
 			station_market.emit(payload)
+		"contracts":
+			contracts_updated.emit(payload)
 		"ok":
 			if payload.get("action", "") == "buy":
 				_purchase_intent.acknowledge(str(payload.get("operation_id", "")))
 			if payload.get("action", "") != "":
 				station_done.emit(payload)
+			if payload.get("action", "").begins_with("contract_"):
+				request_contracts()
 		"purchase_status":
 			if payload.get("found", true) == false:
 				_purchase_intent.acknowledge(str(payload.get("operation_id", "")))
@@ -296,6 +300,9 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 func _on_error(payload: Dictionary) -> void:
 	var code := str(payload.get("code", ""))
 	var text := str(payload.get("message", "ошибка"))
+	if code.begins_with("contract_") or code in ["wrong_system", "cargo_required"]:
+		contract_failed.emit(text)
+		return
 	if not str(payload.get("operation_id", "")).is_empty():
 		if code in ["bad_message", "no_credits", "purchase_conflict", "hold_full", "not_at_station", "no_item", "dead", "equipment_busy"]:
 			_purchase_intent.acknowledge(str(payload["operation_id"]))
@@ -660,6 +667,18 @@ func talk(choice: String) -> void:
 
 func request_market() -> void:
 	_client.send_message("market", {})
+
+func request_contracts() -> void:
+	_client.send_message("contracts", {})
+
+func accept_contract(id: String) -> void:
+	_client.send_message("contract_accept", {"id": id})
+
+func deliver_contract() -> void:
+	_client.send_message("contract_deliver", {})
+
+func cancel_contract() -> void:
+	_client.send_message("contract_cancel", {})
 
 func repair() -> void:
 	_client.send_message("repair", {})

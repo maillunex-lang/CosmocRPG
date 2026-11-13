@@ -3,6 +3,7 @@ package world
 import (
 	crand "crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"math/rand"
 	"time"
@@ -59,6 +60,7 @@ type liveEvent struct {
 	angle                 float64
 	dir                   Vec
 	leg                   int
+	participants          map[string]bool
 }
 
 func (w *World) stepEvents(dt float64) {
@@ -174,7 +176,7 @@ func (w *World) startLiveEvent(def eventDef, life float64) {
 	ev := &liveEvent{
 		id: def.id, title: def.title, text: def.text, kind: def.id,
 		until: w.t + life, life: life, center: w.eventCenter(),
-		dir: Vec{math.Cos(ang), math.Sin(ang)},
+		dir: Vec{math.Cos(ang), math.Sin(ang)}, participants: map[string]bool{},
 	}
 	add := func(n *npc) {
 		w.npcs = append(w.npcs, n)
@@ -323,7 +325,28 @@ func (w *World) endLiveEvent() {
 			p.Attacking = false
 		}
 	}
+	if w.live != nil {
+		credits := eventRewardCredits(w.live.id)
+		for player := range w.live.participants {
+			if credits > 0 {
+				w.rewards = append(w.rewards, Reward{Player: player, Key: fmt.Sprintf("event:%s:%d", w.live.id, int64(w.live.until)), Kind: "event", Ref: w.live.id, Credits: credits})
+			}
+		}
+	}
 	w.live = nil
+}
+
+func eventRewardCredits(id string) int64 {
+	switch id {
+	case "raid", "rally":
+		return 180
+	case "bloom", "crystal", "scrap":
+		return 120
+	case "distress", "noise", "debris":
+		return 150
+	default:
+		return 80
+	}
 }
 
 func (w *World) tickLiveEvent(dt float64) {
@@ -397,6 +420,12 @@ func (w *World) tickLiveEvent(dt float64) {
 			return
 		}
 		w.coast("dyn-runner", ev, 16, dt)
+	}
+	// Участие считается сервером по близости к центру события. Награда выдаётся один раз при завершении.
+	for id, player := range w.players {
+		if player != nil && dist(player.Pos, ev.center) <= 180 {
+			ev.participants[id] = true
+		}
 	}
 }
 

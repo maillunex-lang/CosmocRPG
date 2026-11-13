@@ -86,6 +86,10 @@ func _ready() -> void:
 	_corp_title.theme_type_variation = &"SectionLabel"
 	_treasury = _label(_details, "")
 	_treasury.name = "Treasury"
+	_task = _label(_details, "")
+	_task.name = "CorporationTask"
+	_alliance = _label(_details, "")
+	_alliance.name = "CorporationAlliance"
 	_label(_details, "Состав корпорации")
 	_members = VBoxContainer.new()
 	_members.name = "Members"

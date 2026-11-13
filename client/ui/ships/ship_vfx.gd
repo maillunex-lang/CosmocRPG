@@ -6,6 +6,7 @@ static var _mats: Dictionary = {}
 const SHIELD_SHADER := preload("res://ui/ships/shaders/shield_fresnel.gdshader")
 const ENGINE_SHADER := preload("res://ui/ships/shaders/engine_glow.gdshader")
 const SHOT_SHADER := preload("res://ui/ships/shaders/shot_beam.gdshader")
+const ABILITY_SHADER := preload("res://ui/ships/shaders/ability_ring.gdshader")
 const ShaderCore := preload("res://ui/graphics/shader_core.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 
@@ -122,6 +123,24 @@ static func particles(color: Color, amount: int, lifetime: float, size: float, s
 	p.material_override = m
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return p
+
+
+static func ability_ring(color: Color) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var t := TorusMesh.new()
+	t.inner_radius = 0.97
+	t.outer_radius = 1.0
+	t.rings = 24
+	t.ring_segments = 6
+	var sm := ShaderMaterial.new()
+	sm.shader = ABILITY_SHADER
+	sm.set_shader_parameter("ability_color", Color(color, 0.9))
+	sm.set_shader_parameter("intensity", 2.4)
+	mi.mesh = t
+	mi.material_override = sm
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visible = false
+	return mi
 
 
 static func ring(color: Color) -> MeshInstance3D:

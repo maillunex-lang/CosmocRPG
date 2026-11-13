@@ -75,6 +75,8 @@ signal pilot_updated(pilot: Dictionary)
 signal system_changed(info: Dictionary)   # Э-1: гиперпереход завершён {system, layout, spawn...}
 signal station_market(data: Dictionary)   # Э-2: цены станции {prices, repair_cost, upgrade_cost}
 signal station_done(data: Dictionary)     # Э-2: операция станции выполнена {action, credits, spent...}
+signal contracts_updated(data: Dictionary)
+signal contract_failed(reason: String)
 signal dialogue_opened(data: Dictionary)  # реплика NPC: говорящий, текст, ответы
 
 
@@ -102,6 +104,18 @@ func jump(_to: String) -> void:
 
 ## Станция (Э-2): цены, ремонт, покупка, улучшение.
 func request_market() -> void:
+	pass
+
+func request_contracts() -> void:
+	pass
+
+func accept_contract(_id: String) -> void:
+	pass
+
+func deliver_contract() -> void:
+	pass
+
+func cancel_contract() -> void:
 	pass
 
 func repair() -> void:

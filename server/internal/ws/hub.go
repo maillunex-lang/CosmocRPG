@@ -457,12 +457,14 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 		// Э-2: цены покупки ресурсов, стоимость ремонта и улучшения у станции
 		prices := map[string]float64{}
 		trends := map[string]string{}
+		history := map[string][]float64{}
 		cfg := h.opts.World.For(ss.pid)
 		if cfg != nil {
 			for name := range marketResources {
 				if pr, ok := cfg.ResourcePrice(name); ok {
 					prices[name] = pr
 					trends[name] = cfg.MarketTrend(name)
+					history[name] = cfg.MarketHistory(name)
 				}
 			}
 		}
@@ -487,7 +489,7 @@ func (h *Handler) gameShip(ctx context.Context, c *websocket.Conn, ss *session, 
 				upgradeCost = int64(lvl) * 1000
 			}
 		}
-		reply(Message{Type: "market", ID: m.ID, Payload: mustJSON(map[string]any{"prices": prices, "trends": trends, "routes": routes, "repair_cost": repairCost, "upgrade_cost": upgradeCost})})
+		reply(Message{Type: "market", ID: m.ID, Payload: mustJSON(map[string]any{"prices": prices, "trends": trends, "history": history, "routes": routes, "repair_cost": repairCost, "upgrade_cost": upgradeCost})})
 	case "repair":
 		cost, err := h.opts.World.For(ss.pid).RepairCost(ss.pid)
 		if err != nil {

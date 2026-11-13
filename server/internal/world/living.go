@@ -663,6 +663,25 @@ func (w *World) MarketTrend(name string) string {
 	return "стабильно"
 }
 
+// MarketHistory возвращает короткий детерминированный ряд цен для экрана торговли.
+// Ряд не меняет фактическую цену покупки и нужен только для UX/планирования маршрута.
+func (w *World) MarketHistory(name string) []float64 {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	r, ok := w.wcfg.Resources[name]
+	if !ok || r.Price <= 0 {
+		return nil
+	}
+	base := math.Max(r.Price*1.5, 1.0)
+	seed := float64(len(name) + len(w.system.ID)*3)
+	out := make([]float64, 6)
+	for i := range out {
+		phase := (w.t / 900.0) + float64(i)*0.55 + seed
+		out[i] = math.Max(1.0, base*(1.0+0.12*math.Sin(phase)))
+	}
+	return out
+}
+
 // AddCargo добавляет ресурс в трюм с проверкой вместимости (покупка у станции, Э-2).
 func (w *World) AddCargo(id, res string, amt float64) error {
 	w.mu.Lock()

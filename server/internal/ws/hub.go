@@ -172,7 +172,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "corp_donate", "corp_treasury", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "party_fill", "friend_add", "friend_remove", "friend_list", "contracts", "contract_accept", "contract_deliver", "contract_cancel":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "corp_donate", "corp_treasury", "corp_warehouse", "corp_deposit", "corp_withdraw", "corp_task_contribute", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "party_fill", "friend_add", "friend_remove", "friend_list", "contracts", "contract_accept", "contract_deliver", "contract_cancel":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -332,7 +332,7 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.shopMsg(ctx, c, ss, m)
 	case "chat_send", "chat_history":
 		h.chatMsg(ctx, c, ss, m)
-	case "corp_create", "corp_join", "corp_leave", "corp_info", "corp_donate", "corp_treasury", "alliance_found", "alliance_join", "alliance_vote":
+	case "corp_create", "corp_join", "corp_leave", "corp_info", "corp_donate", "corp_treasury", "corp_warehouse", "corp_deposit", "corp_withdraw", "corp_task_contribute", "alliance_found", "alliance_join", "alliance_vote":
 		h.corpMsg(ctx, ss, m)
 	case "pilot", "pilot_spend":
 		h.pilotMsg(ctx, c, ss, m)
@@ -1602,6 +1602,75 @@ func (h *Handler) corpMsg(ctx context.Context, ss *session, m Message) {
 			return
 		}
 		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "treasury_journal": j})})
+	case "corp_warehouse":
+		c, items, logs, err := h.opts.Corp.Warehouse(cctx, ss.pid, 50)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "warehouse": items, "warehouse_log": logs})})
+	case "corp_deposit", "corp_withdraw":
+		var p struct {
+			Resource string  `json:"resource"`
+			Amount   float64 `json:"amount"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil {
+			reply(errMsg(m.ID, "bad_message", "некорректный складской запрос"))
+			return
+		}
+		w := h.opts.World.For(ss.pid)
+		st, ok := h.opts.World.Snapshot(ss.pid)
+		if !ok || w == nil {
+			reply(errMsg(m.ID, "not_joined", "игрок не в мире"))
+			return
+		}
+		if m.Type == "corp_deposit" {
+			if float64(st.Ship.Hold[p.Resource])+1e-6 < p.Amount {
+				reply(errMsg(m.ID, "cargo_required", "в трюме недостаточно ресурса"))
+				return
+			}
+			rec, removed := w.TakeCargo(ss.pid, p.Resource, p.Amount)
+			if !removed {
+				reply(errMsg(m.ID, "cargo_required", "груз не удалось списать"))
+				return
+			}
+			c, err := h.opts.Corp.Deposit(cctx, ss.pid, p.Resource, p.Amount)
+			if err != nil {
+				_, _ = w.GiveCargo(ss.pid, p.Resource, p.Amount)
+				reply(errMsg(m.ID, corpCode(err), corpText(err)))
+				return
+			}
+			h.save(rec)
+			reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "action": "deposit"})})
+		} else {
+			c, err := h.opts.Corp.Withdraw(cctx, ss.pid, p.Resource, p.Amount)
+			if err != nil {
+				reply(errMsg(m.ID, corpCode(err), corpText(err)))
+				return
+			}
+			_, added := w.GiveCargo(ss.pid, p.Resource, p.Amount)
+			if !added {
+				_, _ = h.opts.Corp.Deposit(cctx, ss.pid, p.Resource, p.Amount)
+				reply(errMsg(m.ID, "hold_full", "грузовой отсек не позволяет забрать ресурс"))
+				return
+			}
+			reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"corp": c, "action": "withdraw"})})
+		}
+	case "corp_task_contribute":
+		var p struct {
+			Resource string  `json:"resource"`
+			Amount   float64 `json:"amount"`
+		}
+		if json.Unmarshal(m.Payload, &p) != nil {
+			reply(errMsg(m.ID, "bad_message", "некорректный вклад"))
+			return
+		}
+		task, err := h.opts.Corp.ContributeTask(cctx, ss.pid, p.Resource, p.Amount)
+		if err != nil {
+			reply(errMsg(m.ID, corpCode(err), corpText(err)))
+			return
+		}
+		reply(Message{Type: "corp", ID: m.ID, Payload: mustJSON(map[string]any{"task": task, "action": "task_contribution"})})
 	case "corp_info":
 		c, mem, err := h.opts.Corp.Info(cctx, ss.pid)
 		if err != nil {
@@ -1611,6 +1680,10 @@ func (h *Handler) corpMsg(ctx context.Context, ss *session, m Message) {
 		body := map[string]any{"corp": c, "members": mem}
 		if journal, journalErr := h.opts.Corp.Journal(cctx, ss.pid, 50); journalErr == nil {
 			body["treasury_journal"] = journal
+		}
+		if _, items, logs, warehouseErr := h.opts.Corp.Warehouse(cctx, ss.pid, 50); warehouseErr == nil {
+			body["warehouse"] = items
+			body["warehouse_log"] = logs
 		}
 		if task, ok, al, seats, hasAl, snapErr := h.opts.Corp.Snapshot(cctx, c.ID); snapErr == nil {
 			if ok {
@@ -1683,6 +1756,14 @@ func corpCode(err error) string {
 		return "bad_treasury_amount"
 	case corp.ErrNotEnoughCredits:
 		return "no_credits"
+	case corp.ErrBadWarehouseResource:
+		return "bad_resource"
+	case corp.ErrWarehouseAmount:
+		return "bad_amount"
+	case corp.ErrWarehouseAccess:
+		return "warehouse_access"
+	case corp.ErrWarehouseEmpty:
+		return "warehouse_empty"
 	case corp.ErrNotOwner:
 		return "not_owner"
 	case corp.ErrAllianceFull:
@@ -1717,6 +1798,14 @@ func corpText(err error) string {
 		return "сумма должна быть от 1 до 1 000 000 000 кредитов"
 	case corp.ErrNotEnoughCredits:
 		return "недостаточно личных кредитов для пожертвования"
+	case corp.ErrBadWarehouseResource:
+		return "этот ресурс нельзя хранить на корпоративном складе"
+	case corp.ErrWarehouseAmount:
+		return "некорректное количество ресурса"
+	case corp.ErrWarehouseAccess:
+		return "забирать ресурсы со склада может только основатель"
+	case corp.ErrWarehouseEmpty:
+		return "на складе недостаточно ресурса"
 	case corp.ErrNotOwner:
 		return "это может сделать только основатель клана"
 	case corp.ErrAllianceFull:

@@ -862,6 +862,22 @@ func corporation_treasury() -> void:
 	_send_corporation("corp_treasury", {})
 
 
+func corporation_warehouse() -> void:
+	_send_corporation("corp_warehouse", {})
+
+
+func corporation_deposit(resource: String, amount: float) -> void:
+	_send_corporation("corp_deposit", {"resource": resource, "amount": amount})
+
+
+func corporation_withdraw(resource: String, amount: float) -> void:
+	_send_corporation("corp_withdraw", {"resource": resource, "amount": amount})
+
+
+func corporation_task_contribute(resource: String, amount: float) -> void:
+	_send_corporation("corp_task_contribute", {"resource": resource, "amount": amount})
+
+
 func _send_corporation(action: String, payload: Dictionary) -> void:
 	if corporation_busy():
 		return
@@ -904,5 +920,7 @@ func _on_corporation_reply(type: String, payload: Dictionary) -> void:
 		_corp_data["known"] = true
 	corporation_updated.emit(corporation_snapshot())
 	# Ответ вступления не содержит состав; после создания тоже читаем актуальные имена.
-	if action in ["corp_join", "corp_create"]:
+	if action in ["corp_join", "corp_create", "corp_donate", "corp_deposit", "corp_withdraw", "corp_task_contribute"]:
 		corporation_info()
+	if action in ["corp_deposit", "corp_withdraw", "corp_task_contribute"]:
+		corporation_warehouse()

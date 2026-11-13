@@ -5,6 +5,7 @@ extends RefCounted
 static var _mats: Dictionary = {}
 const SHIELD_SHADER := preload("res://ui/ships/shaders/shield_fresnel.gdshader")
 const ENGINE_SHADER := preload("res://ui/ships/shaders/engine_glow.gdshader")
+const SHOT_SHADER := preload("res://ui/ships/shaders/shot_beam.gdshader")
 const ShaderCore := preload("res://ui/graphics/shader_core.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 
@@ -69,9 +70,13 @@ static func flash(color: Color, radius: float, alpha: float = 0.9, energy: float
 static func bolt(color: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var b := BoxMesh.new()
-	b.size = Vector3(0.03, 0.03, 0.5)
+	b.size = Vector3(0.035, 0.035, 0.5)
 	mi.mesh = b
-	mi.material_override = glow(Color(color, 1.0), 2.5)
+	var sm := ShaderMaterial.new()
+	sm.shader = SHOT_SHADER
+	sm.set_shader_parameter("beam_color", Color(color, 1.0))
+	sm.set_shader_parameter("intensity", 3.4)
+	mi.material_override = sm
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.visible = false
 	return mi

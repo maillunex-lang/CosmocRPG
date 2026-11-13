@@ -60,7 +60,13 @@ func refresh() -> void:
 	var safe: Rect2i
 	if vp == get_tree().root:
 		window_size = DisplayServer.window_get_size()
-		safe = DisplayServer.get_display_safe_area()
+		# get_display_safe_area$6>76@4M05B >>>D48=4BK$4<E??5O,$0$=5$>:=0.
+		#$0 landscape Android$>>=>$<>65B$5KFL E<5M5=>$87-70$2OD570/?4=5?8$65EF>2.
+		var display_safe := DisplayServer.get_display_safe_area()
+		var window_pos := DisplayServer.window_get_position()
+		safe = Rect2i(display_safe.position - window_pos, display_safe.size)
+		var window_rect := Rect2i(Vector2i.ZERO, window_size)
+		safe = safe.intersection(window_rect)
 	else:
 		# вложенный viewport (например, в тестах): масштаба и выреза нет
 		window_size = Vector2i(viewport_size)

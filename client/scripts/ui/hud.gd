@@ -314,9 +314,37 @@ func _ready() -> void:
 		_keep_chat_strip())
 	_set_target_empty()
 	_boot_layout()
+	_adapt_viewport()
+	get_viewport().size_changed.connect(_adapt_viewport)
 
 
 ## Короткая плашка: два последних сообщения на прозрачном фоне и круглая иконка чата сбоку.
+func _adapt_viewport() -> void:
+	var w: float = get_viewport_rect().size.x
+	var h: float = get_viewport_rect().size.y
+	var compact: bool = w < 980.0
+	var narrow: bool = w < 820.0
+	var left_w: float = 214.0 if not compact else 176.0
+	var right_w: float = 248.0 if not compact else 208.0
+	_profile_card.custom_minimum_size.x = left_w
+	_quests_card.custom_minimum_size.x = left_w
+	_chat_card.custom_minimum_size.x = left_w
+	%CreditsCard.custom_minimum_size.x = right_w
+	%TargetCard.custom_minimum_size.x = right_w
+	_attack.custom_minimum_size.x = right_w
+	_autopilot.custom_minimum_size.x = right_w
+	_quests_card.visible = not narrow
+	_chat_card.visible = not narrow
+	_target_info.max_lines_visible = 1 if compact else 2
+	var compact_scale: float = 1.0
+	if w < 720.0 or h < 420.0:
+		compact_scale = 0.88
+	elif compact:
+		compact_scale = 0.94
+	%CombatBlock.scale = Vector2.ONE * compact_scale
+	_reflow_layout()
+
+
 func _build_chat_strip() -> void:
 	var header := _chat_card.find_child("CardHeader", true, false)
 	if header != null:

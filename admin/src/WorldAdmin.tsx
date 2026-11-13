@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+
+type Density = "balanced" | "dense" | "frontier";
 import { ApiError } from "./api";
 import { worldApi, type WorldCheck, type WorldVersion } from "./world";
 
@@ -29,6 +31,21 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
     try { JSON.parse(text); } catch { setError("Это не корректный JSON"); return; }
     setBusy(true);
     try { const r = await worldApi.check(text); setCheck(r); setChecked(text); setMsg(r.ok ? "Конфигурация корректна" : ""); } catch (e) { setError(err(e)); } finally { setBusy(false); }
+  }
+
+  function applyDensity(mode: Density) {
+    let cfg: any;
+    try { cfg = JSON.parse(text); } catch { setError("Сна$7#0#b#0 з#0#3$0$3#7и$2е к#e$0$0#5#a$2н$bй JSON"); return; }
+    const presets: Record<Density, any> = {
+      balanced: { planets: 3, belts: 2, pirate_zones: 2, stations: 2, anomalies: 3, derelicts: 2, caches: 2, debris_fields: 2 },
+      dense: { planets: 5, belts: 4, pirate_zones: 3, stations: 4, anomalies: 5, derelicts: 4, caches: 4, debris_fields: 4 },
+      frontier: { planets: 2, belts: 3, pirate_zones: 1, stations: 1, anomalies: 2, derelicts: 2, caches: 1, debris_fields: 3 },
+    };
+    const values = presets[mode];
+    cfg.systems = (cfg.systems ?? []).map((system: any) => ({ ...system, ...values }));
+    cfg.systems = cfg.systems.map((system: any) => ({ ...system, features: Array.from(new Set([...(system.features ?? []), "busy_lanes", "debris_field", "anomalies"])) }));
+    const next = JSON.stringify(cfg, null, 2);
+    setText(next); setChecked(""); setCheck(null); setMsg("Ша#1л#e#d п#b#e$2но$1ти «" + mode + "» пр#8#cенён. На#6м#8те «Про#2ерить».");
   }
 
   async function publish() {
@@ -64,6 +81,15 @@ export function WorldAdmin({ username, onBack, onLoggedOut }: { username: string
         <h2>Конфигурация (версия {version})</h2>
         <p className="muted">Системы (радиус, seed, число планет, поясов, пиратских зон, станций, аномалий), враги по уровням, ресурсы и цены, графические пресеты low/medium/high. Сначала «Проверить», затем «Опубликовать».</p>
         <textarea className="prompt mono" rows={22} value={text} aria-label="Конфигурация мира (JSON)" spellCheck={false} onChange={(e) => setText(e.target.value)} />
+        <div className="card editor-tools" aria-label="Генератор наполнения локаций">
+          <h3>Генератор локаций</h3>
+          <p className="muted">Быстро заполнить системы процедурными планетами, поясами, станциями, аномалиями и полями обломков. Seed сохраняется, поэтому раскладка детерминированна.а</p>
+          <div className="row wrap">
+            <button className="secondary" onClick={() => applyDensity("frontier")}>Фронтир</button>
+            <button onClick={() => applyDensity("balanced")}>Сбалансированно</button>
+            <button onClick={() => applyDensity("dense")}>Плотная система</button>
+          </div>
+        </div>
         <div className="row wrap">
           <button disabled={busy} onClick={() => void runCheck()}>Проверить</button>
           <input aria-label="Комментарий к версии" placeholder="Комментарий к версии" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />

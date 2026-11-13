@@ -231,3 +231,19 @@ func corporation_donate(_amount: int) -> void:
 
 func corporation_treasury() -> void:
 	pass
+
+
+func corporation_warehouse() -> void:
+	pass
+
+
+func corporation_deposit(_resource: String, _amount: float) -> void:
+	corporation_failed.emit("Склад доступен только при игре на сервере")
+
+
+func corporation_withdraw(_resource: String, _amount: float) -> void:
+	corporation_failed.emit("Склад доступен только при игре на сервере")
+
+
+func corporation_task_contribute(_resource: String, _amount: float) -> void:
+	corporation_failed.emit("Совместные задания доступны только при игре на сервере")

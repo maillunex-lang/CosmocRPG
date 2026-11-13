@@ -336,5 +336,137 @@
     "reward": {
       "credits": 800
     }
+  },
+  {
+    "id": "ch02_q01",
+    "version": 1,
+    "title": "Второй импульс",
+    "text": "Поговорите с Верой Элл на форпосте. Второй импульс появился после прохода данных через контур — нужно проверить его источник.",
+    "kind": "talk",
+    "target": "vera",
+    "system": "redstorm",
+    "marker": "station",
+    "goal": 1,
+    "after": "storm_report",
+    "reward": {
+      "credits": 600
+    }
+  },
+  {
+    "id": "ch02_q02",
+    "version": 1,
+    "title": "Точка отражения",
+    "text": "Осмотрите отмеченную аномалию Красного Шторма. Ищите точку отражения сигнала, не след корабля.",
+    "kind": "visit",
+    "target": "anomaly",
+    "system": "redstorm",
+    "marker": "anomaly",
+    "goal": 1,
+    "after": "ch02_q01",
+    "reward": {
+      "credits": 800
+    }
+  },
+  {
+    "id": "ch02_q03",
+    "version": 1,
+    "title": "Кристаллический шум",
+    "text": "Добудьте 2 единицы кристаллов рядом с аномалией. Сигнал совпадает с частотой месторождения.",
+    "kind": "mine",
+    "target": "crystals",
+    "system": "redstorm",
+    "marker": "deposit",
+    "goal": 2,
+    "after": "ch02_q02",
+    "reward": {
+      "credits": 900
+    }
+  },
+  {
+    "id": "ch02_q04",
+    "version": 1,
+    "title": "Контейнер с частотой",
+    "text": "Доставьте 2 кристалла на форпост «Тихая пристань». Не продавайте груз до передачи.",
+    "kind": "deliver",
+    "target": "crystals",
+    "system": "redstorm",
+    "marker": "station",
+    "goal": 2,
+    "after": "ch02_q03",
+    "reward": {
+      "credits": 1200
+    }
+  },
+  {
+    "id": "ch02_q05",
+    "version": 1,
+    "title": "Перехват",
+    "text": "Уберите пиратский патруль, который вышел на частоту контейнера. После боя вернитесь к безопасному маршруту.",
+    "kind": "kill",
+    "system": "redstorm",
+    "marker": "hostile",
+    "goal": 1,
+    "after": "ch02_q04",
+    "reward": {
+      "credits": 1300
+    }
+  },
+  {
+    "id": "ch02_q06",
+    "version": 1,
+    "title": "Третий голос",
+    "text": "Осмотрите отмеченный сигнал после боя. Он содержит короткую фразу экипажа «Арго».",
+    "kind": "visit",
+    "target": "signal",
+    "system": "redstorm",
+    "marker": "signal",
+    "goal": 1,
+    "after": "ch02_q05",
+    "reward": {
+      "credits": 1000
+    }
+  },
+  {
+    "id": "ch02_q07",
+    "version": 1,
+    "title": "Решение Киры",
+    "text": "Поговорите с Кирой Роан и выберите: передать сигнал Конкордату или сохранить копию в закрытом архиве.",
+    "kind": "talk",
+    "target": "kira",
+    "system": "redstorm",
+    "marker": "station",
+    "goal": 1,
+    "after": "ch02_q06",
+    "reward": {
+      "credits": 700
+    }
+  },
+  {
+    "id": "ch02_q08",
+    "version": 1,
+    "title": "Обратный маршрут",
+    "text": "Совершите переход в Аврору с копией сигнала. Время работает против экипажа «Арго».",
+    "kind": "jump",
+    "target": "aurora",
+    "goal": 1,
+    "after": "ch02_q07",
+    "reward": {
+      "credits": 1500
+    }
+  },
+  {
+    "id": "ch02_q09",
+    "version": 1,
+    "title": "Запечатанный архив",
+    "text": "На станции «Рубеж» поговорите с Ириной Ларс. Решение откроет следующий маршрут расследования.",
+    "kind": "talk",
+    "target": "irina",
+    "system": "aurora",
+    "marker": "station",
+    "goal": 1,
+    "after": "ch02_q08",
+    "reward": {
+      "credits": 2500
+    }
   }
 ]

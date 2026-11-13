@@ -279,6 +279,7 @@ func _draw() -> void:
 			x += grid_step
 	draw_circle(_center, radius() * _scale, Color(Tokens.SURFACE_SUNKEN, 0.9))
 	draw_arc(_center, radius() * _scale, 0, TAU, 128, Color(Tokens.ACCENT, 0.5), 2.0, true)
+	_draw_location_ambience()
 	var font := UiTheme.make_font(600)
 	_queue_regions(font)
 	for z in layout.get("zones", []) if _filters.get("zones", true) else []:
@@ -412,6 +413,35 @@ func _draw() -> void:
 	_flush_labels(font)
 	_draw_panel_bg()
 	_refresh_info()
+
+
+func _draw_location_ambience() -> void:
+	#$U7:<9 ?D>F54GD=O9 E?>9$45?05B ?GAF>5$?@>EBD4=EF2>$G<F05<K<, =5 4>146;OO <=B5D0>F86=KE$>5N5>F>2.
+	var rng := RandomNumberGenerator.new()
+	var decor: Dictionary = layout.get("decor", {})
+	rng.seed = int(decor.get("seed", 1))
+	var count := 72 if _zoom < 2.0 else 110
+	for i in count:
+		var a := rng.randf_range(0.0, TAU)
+		var d := sqrt(rng.randf()) * radius() * 0.92
+		var p := to_screen(Vector2(cos(a) * d, sin(a) * d))
+		var r := rng.randf_range(0.7, 2.2)
+		draw_circle(p, r, Color(Tokens.ACCENT, rng.randf_range(0.06, 0.18)))
+	for lane in layout.get("lanes", []):
+		if typeof(lane) != TYPE_DICTIONARY:
+			continue
+		var a_id := str(lane.get("a", ""))
+		var b_id := str(lane.get("b", ""))
+		var pa: Variant = _layout_point(a_id)
+		var pb: Variant = _layout_point(b_id)
+		if pa != null and pb != null:
+			draw_dashed_line(to_screen(pa as Vector2), to_screen(pb as Vector2), Color(Tokens.ACCENT, 0.16), 1.0, 8.0, true)
+
+func _layout_point(id: String) -> Variant:
+	for station in layout.get("stations", []):
+		if str(station.get("id", "")) == id:
+			return _pos(station)
+	return null
 
 
 func _draw_panel_bg() -> void:

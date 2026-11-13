@@ -150,3 +150,5 @@ td.actions a { color: var(--accent); }
   .ai-top { align-items: flex-start; flex-direction: column; }
 }
 
+.editor-tools { margin: .8rem 0; padding: .8rem 1rem; background: rgba(79,140,255,.08); }
+.editor-tools h3 { margin: 0 0 .35rem; font-size: 1rem; }

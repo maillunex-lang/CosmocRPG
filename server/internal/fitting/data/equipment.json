@@ -2437,6 +2437,342 @@
         "TMP-MINE:geologist",
         "TMP-MINE:industrialist"
       ]
+    },
+    {
+      "id": "SCT-002",
+      "class": "scout",
+      "mass_budget_tons": 10,
+      "reactor_power_mw": 160,
+      "slots": [
+        {
+          "id": "weapon-1",
+          "max_size": "S",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "defense-1",
+          "max_size": "S",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "tech-1",
+          "max_size": "S",
+          "categories": [
+            "engine"
+          ]
+        },
+        {
+          "id": "tech-2",
+          "max_size": "S",
+          "categories": [
+            "reactor"
+          ]
+        },
+        {
+          "id": "tech-3",
+          "max_size": "S",
+          "categories": [
+            "electronics"
+          ]
+        },
+        {
+          "id": "tech-4",
+          "max_size": "S",
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
+        },
+        {
+          "id": "special-1",
+          "max_size": "S",
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
+        },
+        {
+          "id": "special-2",
+          "max_size": "S",
+          "categories": [
+            "drone",
+            "support",
+            "cargo"
+          ]
+        }
+      ],
+      "starter": [
+        {
+          "prototype_id": "LAS-S-START",
+          "slot_id": "weapon-1"
+        },
+        {
+          "prototype_id": "DEF-S-START",
+          "slot_id": "defense-1"
+        },
+        {
+          "prototype_id": "ENG-S-START",
+          "slot_id": "tech-1"
+        },
+        {
+          "prototype_id": "REA-S-START",
+          "slot_id": "tech-2"
+        },
+        {
+          "prototype_id": "ELE-S-START",
+          "slot_id": "tech-3"
+        }
+      ],
+      "abilities": [
+        "C01",
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08",
+        "E09",
+        "E10",
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05",
+        "M06",
+        "M07",
+        "M08",
+        "M09",
+        "M10",
+        "W01",
+        "W14"
+      ],
+      "specializations": [
+        "SCT-002:explorer",
+        "SCT-002:navigator"
+      ]
+    },
+    {
+      "id": "CRU-002",
+      "class": "cruiser",
+      "mass_budget_tons": 800,
+      "reactor_power_mw": 2400,
+      "slots": [
+        {
+          "id": "weapon-1",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "weapon-2",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "weapon-3",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "weapon-4",
+          "max_size": "L",
+          "categories": [
+            "weapon"
+          ]
+        },
+        {
+          "id": "defense-1",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "defense-2",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "defense-3",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "defense-4",
+          "max_size": "L",
+          "categories": [
+            "shield",
+            "armor"
+          ]
+        },
+        {
+          "id": "tech-1",
+          "max_size": "L",
+          "categories": [
+            "engine"
+          ]
+        },
+        {
+          "id": "tech-2",
+          "max_size": "L",
+          "categories": [
+            "reactor"
+          ]
+        },
+        {
+          "id": "tech-3",
+          "max_size": "L",
+          "categories": [
+            "electronics"
+          ]
+        },
+        {
+          "id": "tech-4",
+          "max_size": "L",
+          "categories": [
+            "repair",
+            "support",
+            "electronics"
+          ]
+        },
+        {
+          "id": "tech-5",
+          "max_size": "L",
+          "categories": [
+            "electronics",
+            "support",
+            "cargo"
+          ]
+        },
+        {
+          "id": "special-1",
+          "max_size": "L",
+          "categories": [
+            "support",
+            "drone"
+          ]
+        },
+        {
+          "id": "special-2",
+          "max_size": "L",
+          "categories": [
+            "support",
+            "drone"
+          ]
+        },
+        {
+          "id": "special-3",
+          "max_size": "L",
+          "categories": [
+            "support",
+            "drone"
+          ]
+        }
+      ],
+      "starter": [
+        {
+          "prototype_id": "LAS-L-START",
+          "slot_id": "weapon-1"
+        },
+        {
+          "prototype_id": "DEF-L-START",
+          "slot_id": "defense-1"
+        },
+        {
+          "prototype_id": "ENG-L-START",
+          "slot_id": "tech-1"
+        },
+        {
+          "prototype_id": "REA-L-START",
+          "slot_id": "tech-2"
+        },
+        {
+          "prototype_id": "ELE-L-START",
+          "slot_id": "tech-3"
+        },
+        {
+          "prototype_id": "SUP-L-START",
+          "slot_id": "special-1"
+        }
+      ],
+      "abilities": [
+        "C03",
+        "C05",
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "E01",
+        "E02",
+        "E07",
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05",
+        "M06",
+        "M07",
+        "M08",
+        "M09",
+        "M10",
+        "R02",
+        "R03",
+        "R05",
+        "R06",
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "W01",
+        "W02",
+        "W03",
+        "W04"
+      ],
+      "specializations": [
+        "CRU-002:flagship",
+        "CRU-002:bombard"
+      ]
     }
   ],
   "modules": [

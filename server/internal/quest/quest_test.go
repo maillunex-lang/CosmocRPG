@@ -839,13 +839,13 @@ func TestRedStormReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	end, done, err = s.Talk(ctx, "pilot", "redstorm", "close")
-	if err != nil || !end.Done || len(done) != 1 || done[0].QuestID != "storm_report" || done[0].Credits != 800 || done[0].Total != 12600 || done[0].Next != "" {
+	if err != nil || !end.Done || len(done) != 1 || done[0].QuestID != "storm_report" || done[0].Credits != 800 || done[0].Total != 12600 || done[0].Next != "Второй импульс" {
 		t.Fatalf("отчёт: %+v %+v %v", end, done, err)
 	}
-	if v, _ := s.View("pilot"); len(v.Quests) != 0 || v.Credits != 12600 {
+	if v, _ := s.View("pilot"); len(v.Quests) != 1 || v.Quests[0].ID != "ch02_q01" || v.Credits != 12600 {
 		t.Fatalf("глава не закрыта: %+v", v)
 	}
-	if _, _, err := s.Talk(ctx, "pilot", "redstorm", ""); err != ErrNoDialogue {
-		t.Fatal("после отчёта разговор ещё открыт", err)
+	if reply, _, err := s.Talk(ctx, "pilot", "redstorm", ""); err != nil || reply.QuestID != "ch02_q01" {
+		t.Fatal("новая глава не открылась", reply, err)
 	}
 }

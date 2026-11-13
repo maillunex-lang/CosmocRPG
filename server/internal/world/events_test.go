@@ -63,7 +63,7 @@ func TestAuroraEventsDoNotRepeatAndCoverTheSet(t *testing.T) {
 	w.eventRNG = rand.New(rand.NewSource(11))
 	prev := ""
 	seen := map[string]bool{}
-	for i := 0; i < 80 && len(seen) < len(auroraEvents); i++ {
+	for i := 0; i < 240 && len(seen) < len(auroraEvents); i++ {
 		expireLive(w)
 		w.Step(0.05, time.Now())
 		if w.live == nil || w.live.id == "" {

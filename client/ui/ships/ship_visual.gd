@@ -230,7 +230,24 @@ func play_fire(target: Variant = null) -> void:
 			b.visible = true
 			var tw := _channel("bolt:%d" % i)
 			tw.tween_property(b, "global_position", target, 0.14)
-			tw.tween_callback(func() -> void: b.visible = false)
+			tw.tween_callback(func() -> void:
+				b.visible = false
+				_spawn_shot_impact(target))
+
+
+func _spawn_shot_impact(target: Vector3) -> void:
+	var impact := ShipVfx.flash(_flame_color.lightened(0.5), 0.12, 0.85, 3.0)
+	add_child(impact)
+	impact.top_level = true
+	impact.global_position = target
+	impact.visible = true
+	impact.scale = Vector3.ONE * 0.35
+	var tw := _channel("shot_impact:%d" % impact.get_instance_id())
+	tw.tween_property(impact, "scale", Vector3.ONE * 1.8, 0.12)
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(impact):
+			impact.queue_free())
+
 
 
 ## HitShield: сине-голубая оболочка вокруг корабля на долю секунды.

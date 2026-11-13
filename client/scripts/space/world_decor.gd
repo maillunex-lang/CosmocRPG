@@ -8,6 +8,7 @@ const ShaderCore := preload("res://ui/graphics/shader_core.gd")
 const Tokens := preload("res://ui/theme/tokens.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const PlanetShader := preload("res://scripts/space/planet.gdshader")
+const SunShader := preload("res://scripts/space/sun.gdshader")
 
 const CHUNK := 50.0            # размер чанка декора, ед. мира
 const HUB_FREE := 70.0         # вокруг главной станции декор не ставится: место для полётов и боёв
@@ -46,6 +47,7 @@ func build(lay: Dictionary, vis: Dictionary, preset_id: String) -> void:
 	preset = presets.get(preset_name, {"chunk_radius": 1, "asteroids_per_chunk": 3, "debris_per_chunk": 1, "dust_particles": 0, "comets": false, "ships": 0})
 	_make_assets()
 	_statics = Node3D.new()
+	_add_sun()
 	_statics.name = "Statics"
 	add_child(_statics)
 	var decor: Dictionary = vis.get("decor", {})
@@ -107,6 +109,26 @@ func _make_assets() -> void:
 	_debris_mat.metallic = 0.6
 	_debris_mat.roughness = 0.5
 	_debris_mat.vertex_color_use_as_albedo = true
+
+
+func _add_sun() -> void:
+	var sun := MeshInstance3D.new()
+	sun.name = "SystemSun"
+	var sphere := SphereMesh.new()
+	sphere.radius = 42.0
+	sphere.height = 84.0
+	sphere.radial_segments = 24 if preset_name != "low" else 12
+	sphere.rings = 12 if preset_name != "low" else 6
+	sun.mesh = sphere
+	var mat := ShaderMaterial.new()
+	mat.shader = SunShader
+	mat.set_shader_parameter("sun_color", Vector3(1.0, 0.48, 0.12))
+	mat.set_shader_parameter("corona_color", Vector3(1.0, 0.08, 0.015))
+	mat.set_shader_parameter("intensity", 4.0 if preset_name != "low" else 2.6)
+	sun.material_override = mat
+	sun.position = Vector3(0.0, -34.0, 0.0)
+	sun.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_statics.add_child(sun)
 
 
 func _add_rock(b: Dictionary) -> void:

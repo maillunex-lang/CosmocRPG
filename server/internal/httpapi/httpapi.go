@@ -29,6 +29,17 @@ func NewMux(db Pinger, version string, wsHandler http.Handler) *http.ServeMux {
 			"status": status, "database": dbState, "version": version,
 		})
 	})
+	mux.HandleFunc("GET /diagnostics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status":           "ok",
+			"version":          version,
+			"generated_at":     time.Now().UTC().Format(time.RFC3339),
+			"safe":             true,
+			"secrets_included": false,
+			"routes":           []string{"/health", "/diagnostics", "/ws"},
+		})
+	})
 	mux.Handle("GET /ws", wsHandler)
 	return mux
 }

@@ -11,7 +11,7 @@ const UiSettings := preload("res://ui/ui_settings.gd")
 
 const DEFAULT_VISIBLE := false
 ## Ключ настройки. Сменён с debug_overlay (2026-11-08): в старых тестовых сборках у игроков сохранилось «включено», и новое значение по умолчанию не действовало.
-const SETTING_KEY := "debug_overlay2"
+const SETTING_KEY := "debug_overlay3_beta"
 const RING := 4096                # 10 s up to 409 FPS; overflow is reported
 const WINDOW_SEC := 10.0          # окно, по которому считаются показатели
 const HITCH_MS := 25.0            # кадр дольше этого считается «заиканием»

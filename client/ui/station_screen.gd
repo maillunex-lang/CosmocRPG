@@ -141,6 +141,7 @@ func _on_market(data: Dictionary) -> void:
 	for c in _rows.get_children():
 		c.queue_free()
 	var prices: Dictionary = data.get("prices", {})
+	var trends: Dictionary = data.get("trends", {})
 	for res in prices:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
@@ -150,7 +151,8 @@ func _on_market(data: Dictionary) -> void:
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name)
 		var price := Label.new()
-		price.text = "%d кр." % int(ceil(float(prices[res])))
+		var trend := str(trends.get(res, "стабильно"))
+		price.text = "%d кр. · %s" % [int(ceil(float(prices[res]))), trend]
 		price.custom_minimum_size.x = 110
 		row.add_child(price)
 		var b := ActionButton.new()

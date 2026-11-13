@@ -646,6 +646,23 @@ func (w *World) ResourcePrice(name string) (float64, bool) {
 	return math.Max(r.Price*1.5, 1.0), true
 }
 
+// MarketTrend возвращает направление спроса для интерфейса торговли. Цена не изменяется этим методом.
+func (w *World) MarketTrend(name string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	base := map[string]map[string]string{
+		"aurora":   {"iron_ore": "спрос", "crystals": "стабильно", "gas": "избыток", "scrap": "спрос"},
+		"meridian": {"iron_ore": "избыток", "crystals": "спрос", "gas": "стабильно", "scrap": "спрос"},
+		"redstorm": {"iron_ore": "стабильно", "crystals": "избыток", "gas": "спрос", "scrap": "спрос"},
+	}
+	if row, ok := base[w.system.ID]; ok {
+		if trend, exists := row[name]; exists {
+			return trend
+		}
+	}
+	return "стабильно"
+}
+
 // AddCargo добавляет ресурс в трюм с проверкой вместимости (покупка у станции, Э-2).
 func (w *World) AddCargo(id, res string, amt float64) error {
 	w.mu.Lock()

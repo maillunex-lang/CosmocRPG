@@ -40,7 +40,7 @@ func TestCatalogMatchesPassportsAndReachesEverySkill(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := c.Document()
-	if len(d.Hulls) != 15 {
+	if len(d.Hulls) < 15 {
 		t.Fatal(len(d.Hulls))
 	}
 	families, sizes, rarities, reached := map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}

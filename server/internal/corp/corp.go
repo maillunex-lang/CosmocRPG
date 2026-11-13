@@ -172,6 +172,8 @@ type MemStore struct {
 	clanAlliance map[string]string
 	tasks        map[string]Task
 	audit        map[string][]AuditEntry
+	warehouse    map[string]map[string]float64
+	warehouseLog map[string][]WarehouseAudit
 }
 
 type memAlliance struct {
@@ -182,7 +184,7 @@ type memAlliance struct {
 
 // NewMemStore создаёт пустое хранилище.
 func NewMemStore() *MemStore {
-	return &MemStore{byID: map[string]*memCorp{}, byName: map[string]string{}, byTag: map[string]string{}, player: map[string]string{}, audit: map[string][]AuditEntry{}}
+	return &MemStore{byID: map[string]*memCorp{}, byName: map[string]string{}, byTag: map[string]string{}, player: map[string]string{}, audit: map[string][]AuditEntry{}, warehouse: map[string]map[string]float64{}, warehouseLog: map[string][]WarehouseAudit{}}
 }
 
 func (m *MemStore) CorporationByPlayer(_ context.Context, pid string) (Corporation, bool, error) {

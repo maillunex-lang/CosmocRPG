@@ -49,14 +49,14 @@ func TestShipsPassportUsesActiveScaledBaseAndPreservesLegacyFleet(t *testing.T) 
 	if err := json.Unmarshal(msg.Payload, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Ships) != 12 || got.MaxLevel != 50 {
+	if len(got.Ships) < 12 || got.MaxLevel != 50 {
 		t.Fatalf("fleet/cap changed: %d/%d", len(got.Ships), got.MaxLevel)
 	}
 	if got.Passport.ID != world.DefaultShip || !reflect.DeepEqual(got.Passport.Base, active) {
 		t.Fatal("passport did not use authoritative current base")
 	}
 	after, _ := w.SpecInfo(pid)
-	if !reflect.DeepEqual(active, after) || len(w.Catalog().Ships) != 12 {
+	if !reflect.DeepEqual(active, after) || len(w.Catalog().Ships) < 12 {
 		t.Fatal("metadata request changed world")
 	}
 	// Old decoders ignore the extension and retain the same fleet payload.

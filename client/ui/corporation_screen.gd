@@ -26,6 +26,9 @@ var _treasury: Label
 var _donate_input: LineEdit
 var _donate: Button
 var _journal: Label
+var _warehouse: Label
+var _warehouse_resource: OptionButton
+var _warehouse_amount: LineEdit
 var _task: Label
 var _alliance: Label
 var _members: VBoxContainer
@@ -42,8 +45,10 @@ func _ready() -> void:
 	add_child(bg)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
+	for side in ["left", "right"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
+	for side in ["top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 12)
 	add_child(margin)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -96,6 +101,21 @@ func _ready() -> void:
 	_donate = _button(donate_row, "DonateTreasury", "Пополнить казну", _donate_pressed)
 	_journal = _label(_details, "")
 	_journal.name = "TreasuryJournal"
+	var warehouse_title := _label(_details, "Общий склад корпорации")
+	warehouse_title.theme_type_variation = &"SectionLabel"
+	_warehouse = _label(_details, "Склад пуст")
+	_warehouse.name = "Warehouse"
+	var warehouse_row := VBoxContainer.new()
+	_details.add_child(warehouse_row)
+	_warehouse_resource = OptionButton.new()
+	for resource in ["iron_ore", "crystals", "gas", "scrap"]:
+		_warehouse_resource.add_item({"iron_ore":"Железная руда","crystals":"Кристаллы","gas":"Газ","scrap":"Лом"}[resource])
+	_warehouse_resource.set_meta("resources", ["iron_ore","crystals","gas","scrap"])
+	warehouse_row.add_child(_warehouse_resource)
+	_warehouse_amount = _make_input(warehouse_row, "WarehouseAmount", "Количество", 8)
+	_warehouse_amount.custom_minimum_size.x = 150
+	var deposit := _button(warehouse_row, "WarehouseDeposit", "Положить", _warehouse_deposit)
+	var withdraw := _button(warehouse_row, "WarehouseWithdraw", "Забрать", _warehouse_withdraw)
 	_task = _label(_details, "")
 	_task.name = "CorporationTask"
 	_alliance = _label(_details, "")
@@ -187,6 +207,15 @@ func _on_data(data: Dictionary) -> void:
 				if entry is Dictionary:
 					rows.append("• %s +%d кр. · баланс %d" % [str(entry.get("player_id", "участник")), int(entry.get("amount", 0)), int(entry.get("balance", 0))])
 			_journal.text = "\n".join(rows)
+		var warehouse: Array = data.get("warehouse", []) if data.get("warehouse") is Array else []
+		if warehouse.is_empty():
+			_warehouse.text = "Склад пуст"
+		else:
+			var stock := PackedStringArray(["Склад:"])
+			for item in warehouse:
+				if item is Dictionary:
+					stock.append("• %s: %.1f" % [str(item.get("resource", "")), float(item.get("amount", 0.0))])
+			_warehouse.text = "\n".join(stock)
 		var task: Dictionary = data.get("task", {}) if data.get("task") is Dictionary else {}
 		if task.is_empty():
 			_task.text = ""
@@ -235,6 +264,27 @@ func _update_actions() -> void:
 	_refresh.disabled = _busy
 	for input in [_name_input, _tag_input, _join_input, _donate_input]:
 		input.editable = not _busy
+
+
+func _warehouse_resource_id() -> String:
+	var resources: Array = _warehouse_resource.get_meta("resources", [])
+	return str(resources[_warehouse_resource.selected]) if _warehouse_resource.selected >= 0 and _warehouse_resource.selected < resources.size() else "iron_ore"
+
+
+func _warehouse_amount_value() -> float:
+	return float(_warehouse_amount.text) if _warehouse_amount.text.is_valid_float() else 0.0
+
+
+func _warehouse_deposit() -> void:
+	if _gateway != null and _warehouse_amount_value() > 0:
+		_gateway.corporation_deposit(_warehouse_resource_id(), _warehouse_amount_value())
+		_warehouse_amount.clear()
+
+
+func _warehouse_withdraw() -> void:
+	if _gateway != null and _warehouse_amount_value() > 0:
+		_gateway.corporation_withdraw(_warehouse_resource_id(), _warehouse_amount_value())
+		_warehouse_amount.clear()
 
 
 func _donate_pressed() -> void:

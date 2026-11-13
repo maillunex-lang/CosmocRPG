@@ -80,6 +80,25 @@ func set_quests(quests: Array, state: Dictionary = {}) -> void:
 		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body.theme_type_variation = &"MutedLabel"
 		box.add_child(body)
+		var route := Label.new()
+		var kind := str(q.get("kind", ""))
+		var goal := int(q.get("goal", 1))
+		var ship: Variant = state.get("ship", {})
+		var cargo := int(round(float((ship as Dictionary).get("cargo", 0.0)))) if ship is Dictionary else 0
+		var route_text := "Маршрут: следуйте жёлтой метке на карте."
+		if kind in ["mine", "deliver"]:
+			var target := str(q.get("target", "ресурс"))
+			route_text = "Ресурс: %s · цель: %d ед." % [target, goal]
+			if cargo > 0 and cargo < goal:
+				route_text += " · трюм: %d — по$2ребует$1я не$1колько рейсов и#bи гру#7овой модуль" % cargo
+		elif kind == "kill":
+			route_text = "О#f#0$1#d#0я з#e#d#0: цель появится с$0#5#4и в$0#0#6еских меток."
+		elif kind in ["sell", "reach", "talk", "report"]:
+			route_text = "С$2#0#d$6#8я: з#0#2#5$0$8#8$2#5 д#5#9$1$2#2#8#5 п#e$1#b#5 в$5#e#4а в б#5#7о#f#0$1н$3ю з#e#dу."
+		route.text = route_text
+		route.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		route.theme_type_variation = &"RareLabel"
+		box.add_child(route)
 		var fly := ActionButton.new()
 		fly.text = "Лететь к цели"
 		fly.variant = ActionButton.Variant.PRIMARY

@@ -24,6 +24,7 @@ import (
 	"github.com/maillunex-lang/CosmocRPG/server/internal/corp"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/equipment"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/location"
+	"github.com/maillunex-lang/CosmocRPG/server/internal/observability"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/pilot"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/quest"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/rpg"
@@ -73,6 +74,7 @@ type Options struct {
 	// RequireCharacter: новый игрок сначала создаёт персонажа (ник, пол, направление пилота), и только потом появляется в мире.
 	AIActorGuard     func(context.Context, string, [32]byte) error // проверка lease перед каждой AI-командой
 	RequireCharacter bool
+	Observability    *observability.Log
 }
 
 // Handler обслуживает WebSocket-соединения.
@@ -313,6 +315,9 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 			reply(errMsg(m.ID, "capability_unavailable", "команда не подключена для ИИ"))
 			return true
 		}
+	}
+	if h.opts.Observability != nil && m.Type != "move" {
+		h.opts.Observability.Add("command", ss.pid, m.Type, nil)
 	}
 	pw := h.opts.World.For(ss.pid)
 	if pw == nil {
@@ -1333,6 +1338,9 @@ func (h *Handler) finishJoin(ctx context.Context, ss *session, log *slog.Logger,
 	h.applyCosmetics(ctx, rec.ID)
 	hw := w.For(rec.ID)
 	sys := hw.System()
+	if h.opts.Observability != nil {
+		h.opts.Observability.Add("join", rec.ID, sys.ID, map[string]any{"protocol": ProtocolVersion})
+	}
 	h.mu.Lock()
 	ss.seenSystem = sys.ID
 	h.mu.Unlock()

@@ -22,6 +22,7 @@ var _title: Label
 var _spec: Label
 var _corporation: Label
 var _ship: Label
+var _ship_progress: Label
 var _vip: Label
 var _sub: Label
 var _credits: Label
@@ -112,6 +113,8 @@ func _ready() -> void:
 
 	_ship = _row(box, "rocket", "Корабль")
 	_ship.name = "ShipValue"
+	_ship_progress = _row(box, "gauge", "Развитие")
+	_ship_progress.name = "ShipProgress"
 	_vip = _row(box, "crown", "VIP")
 	_vip.name = "VipValue"
 	_sub = _row(box, "zap", "Пропуск")
@@ -240,6 +243,15 @@ func set_data(state: Dictionary, shop_state: Dictionary = {}) -> void:
 	_title.text = ("«%s»" % title) if title != "" else ""
 	_spec.text = "Направление: %s" % str(ship.get("spec", player.get("pilot_spec", "—"))).capitalize()
 	_ship.text = str(ship.get("name", "—"))
+	var ship_level := int(ship.get("level", 0))
+	var modules: Array = ship.get("modules", []) if ship.get("modules") is Array else []
+	var equipped := 0
+	for module in modules:
+		if module is Dictionary and bool(module.get("equipped", false)):
+			equipped += 1
+	var spec_name := str(ship.get("spec", ""))
+	_ship_progress.text = ("Ур. %d · %s · модулей %d" % [ship_level, spec_name.capitalize() if spec_name != "" else "без специализации", equipped]) if ship_level > 0 else "Сервер ещё не прислал прогресс"
+	_ship_progress.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var vip := int(cos.get("vip", 0))
 	var roman: String = ROMAN[clampi(vip, 0, 7)]
 	_vip.text = ("VIP %s" % roman) if vip > 0 else "нет"

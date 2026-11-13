@@ -40,6 +40,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2")
+min_margin = 28
 
 [node name="Columns" type="HBoxContainer" parent="SafeArea"]
 layout_mode = 2

@@ -152,3 +152,6 @@ td.actions a { color: var(--accent); }
 
 .editor-tools { margin: .8rem 0; padding: .8rem 1rem; background: rgba(79,140,255,.08); }
 .editor-tools h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.system-editor { margin: .8rem 0; padding: .9rem 1rem; background: rgba(79,140,255,.08); border: 1px solid var(--border); border-radius: 10px; }
+.system-editor h3 { margin: 0 0 .6rem; font-size: 1rem; }
+.system-editor input, .system-editor select { width: 100%; }

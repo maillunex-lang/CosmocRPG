@@ -742,16 +742,56 @@ func (h *Handler) pump(ctx context.Context, ss *session) {
 }
 
 // pushState кладёт снимок в очередь; если клиент отстал, старый снимок выбрасывается.
+func firstHourPlan(v quest.View) map[string]any {
+	steps := []map[string]any{
+		{"id": "briefing", "title": "Получить допуск к вылету"},
+		{"id": "route", "title": "Пройти первый маршрут"},
+		{"id": "mine", "title": "Добыть ресурс"},
+		{"id": "sell", "title": "Продать груз"},
+		{"id": "repair", "title": "Проверить ремонт"},
+		{"id": "upgrade", "title": "Сделать первое улучшение"},
+		{"id": "contract", "title": "Взять следующий контракт"},
+	}
+	current := 0
+	if len(v.Quests) > 0 {
+		switch v.Quests[0].ID {
+		case "ch01_q01":
+			current = 0
+		case "ch01_q02", "first_flight":
+			current = 1
+		case "ch01_q03", "first_blood", "first_ore":
+			current = 2
+		case "ch01_q04", "first_deal":
+			current = 3
+		case "ch01_q05", "ch01_q06":
+			current = 4
+		case "ch01_q07", "first_jump", "meridian_delivery":
+			current = 6
+		default:
+			current = 5
+		}
+	}
+	if current < 0 {
+		current = 0
+	}
+	if current >= len(steps) {
+		current = len(steps) - 1
+	}
+	return map[string]any{"current": current, "steps": steps}
+}
+
 func (h *Handler) pushState(ss *session, st world.State) {
 	out := struct {
 		world.State
-		Credits *int64            `json:"credits,omitempty"`
-		Quests  []quest.QuestView `json:"quests,omitempty"`
+		Credits   *int64            `json:"credits,omitempty"`
+		Quests    []quest.QuestView `json:"quests,omitempty"`
+		FirstHour map[string]any    `json:"first_hour,omitempty"`
 	}{State: st}
 	if h.opts.Quests != nil {
 		if v, ok := h.opts.Quests.View(ss.pid); ok {
 			out.Credits = &v.Credits
 			out.Quests = v.Quests
+			out.FirstHour = firstHourPlan(v)
 		}
 	}
 	m := Message{Type: "state", Payload: mustJSON(out)}

@@ -265,6 +265,7 @@ func _graphics_section() -> Control:
 	title.theme_type_variation = &"TitleLabel"
 	box.add_child(title)
 	box.add_child(_row({"key": "limit_hidden_model_cache", "title": "Ограничивать кеш скрытых моделей", "about": "Хранить не больше 5 скрытых моделей. Остальные загружаются при появлении: меньше RAM, возможны паузы. Выключение сохраняет модели при последующих скрытиях.", "default": false}))
+	box.add_child(_row({"key": "auto_quality", "title": "Автоподбор качества", "about": "Снижает качество и разрешение при просадках FPS; неизвестная температура не считается охлаждением.", "default": true}))
 	box.add_child(_graphics_choice("Качество графики", "graphics_preset",
 		["Низкое", "Среднее", "Высокое"], ["low", "medium", "high"], UiSettings.graphics_preset()))
 	box.add_child(_graphics_choice("Разрешение 3D", "render_scale",

@@ -3,17 +3,12 @@ extends RefCounted
 
 
 static func text(state: Dictionary) -> String:
-	var quests: Array = state.get("quests", [])
-	if quests.is_empty() or typeof(quests[0]) != TYPE_DICTIONARY:
-		return ""
-	return str((quests[0] as Dictionary).get("text", ""))
+	var q := guide_quest(state)
+	return str(q.get("text", ""))
 
 
 static func marker(state: Dictionary) -> String:
-	var quests: Array = state.get("quests", [])
-	if quests.is_empty() or typeof(quests[0]) != TYPE_DICTIONARY:
-		return ""
-	return str((quests[0] as Dictionary).get("marker", ""))
+	return str(guide_quest(state).get("marker", ""))
 
 
 ## Жёлтая метка задания: объект или ворота, куда сейчас имеет смысл лететь.
@@ -25,7 +20,7 @@ static func marked(state: Dictionary, id: String, kind: String, extra: String = 
 	for raw in state.get("quests", []):
 		if typeof(raw) != TYPE_DICTIONARY:
 			continue
-		var q: Dictionary = raw
+		var q: Dictionary = delivery_step(raw, state)
 		var sys := str(q.get("system", ""))
 		if sys != "" and cur != "" and sys != cur:
 			continue
@@ -93,8 +88,8 @@ static func guide_quest(state: Dictionary) -> Dictionary:
 			if side.is_empty():
 				side = q
 			continue
-		return q
-	return side
+		return delivery_step(q, state)
+	return delivery_step(side, state)
 
 
 ## Есть ли у ведущего задания точка, к которой можно полететь прямо сейчас.
@@ -130,6 +125,8 @@ static func object_id(state: Dictionary, q: Dictionary) -> String:
 		var okind := str(o.get("kind", ""))
 		if target != "" and id == target:
 			return id
+		if okind == "deposit" and o.has("amount") and float(o["amount"]) < 1.0:
+			continue
 		var hit := false
 		if marker != "" and okind == marker and (target == "" or target == okind or target == id):
 			hit = true
@@ -211,3 +208,30 @@ static func _layout_vec(p: Variant) -> Variant:
 		return Vector2(float(p[0]), float(p[1]))
 	return null
 
+
+
+## Клиент показывает следующий шаг по серверному грузу. Прогресс и награды
+## не меняются: «добыть» здесь является навигационной подсказкой для доставки.
+static func delivery_step(q: Dictionary, state: Dictionary) -> Dictionary:
+	if str(q.get("kind", "")) != "deliver":
+		return q
+	var resource := str(q.get("target", ""))
+	var names := {"iron_ore": "железной руды", "crystals": "кристаллов", "gas": "газа", "scrap": "лома"}
+	if not names.has(resource):
+		return q
+	var ship: Dictionary = state.get("ship", {}) if state.get("ship") is Dictionary else {}
+	var hold: Dictionary = ship.get("hold", {}) if ship.get("hold") is Dictionary else {}
+	var have := maxf(0.0, float(hold.get(resource, 0.0)))
+	var need := maxf(1.0, float(q.get("goal", 1)))
+	var out := q.duplicate(true)
+	if have + 0.00001 < need:
+		out["kind"] = "mine"
+		out["marker"] = "deposit"
+		out["title"] = "Добыть %s" % str(names[resource])
+		out["text"] = "В трюме %d/%d %s. Летите к отмеченному месторождению: выберите его, подлетите ближе и нажмите «Добыть». Затем вернитесь на станцию сдачи. До сдачи не продавайте этот груз." % [int(have), int(need), str(names[resource])]
+		if resource == "iron_ore":
+			out["text"] += " На карте это месторождение «Железная руда» в разделе «Добыча»."
+	else:
+		out["marker"] = "station"
+		out["text"] = "Груз собран: %d/%d %s. Летите на отмеченную станцию в системе задания; груз сдаётся автоматически при входе в безопасную зону." % [int(have), int(need), str(names[resource])]
+	return out

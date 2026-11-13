@@ -351,7 +351,7 @@ func (w *World) depositByID(id string) *deposit {
 }
 
 func mineCfg(p *Player) (AbilityCfg, bool) {
-	if p == nil || p.ai || p.spec.Cargo <= 0 {
+	if p == nil || p.spec.Cargo <= 0 {
 		return AbilityCfg{}, false
 	}
 	if cfg, ok := p.spec.Abilities["mine"]; ok && cfg.Range > 0 && cfg.Damage > 0 {

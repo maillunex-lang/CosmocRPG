@@ -61,6 +61,7 @@ var _mine_button: ActionButton
 var _sell_button: ActionButton
 var _cargo_row: HBoxContainer
 var _cargo_label: Label
+var _flight_status: Label
 var _clear_target: Button
 var _attack_expect: Variant = null  # ожидаемое значение attacking после нажатия (null: не ждём)
 var _peek_a: Label
@@ -531,7 +532,12 @@ func bind(gw: UiGateway) -> void:
 ## Груз и кнопки добычи/продажи: появляются, только если корабль может добывать или везёт груз.
 func _build_cargo_ui() -> void:
 	_cargo_row = HBoxContainer.new()
-	_cargo_row.add_theme_constant_override("separation", 6)
+	_cargo_row.add_theme_constant_override("separation", 8)
+	_flight_status = Label.new()
+	_flight_status.name = "FlightStatus"
+	_flight_status.theme_type_variation = &"SectionLabel"
+	_flight_status.custom_minimum_size.x = 170
+	_cargo_row.add_child(_flight_status)
 	_cargo_row.add_child(Icons.rect("package", 20, Tokens.ACCENT))
 	_cargo_label = Label.new()
 	_cargo_label.name = "CargoLabel"
@@ -543,6 +549,7 @@ func _build_cargo_ui() -> void:
 	hold.pressed.connect(func() -> void: hold_requested.emit())
 	_cargo_row.add_child(hold)
 	_cargo_row.visible = false
+	_flight_status.visible = false
 	%BarsRow.add_child(_cargo_row)
 	var stack := _autopilot.get_parent()
 	_mine_button = ActionButton.new()
@@ -579,6 +586,20 @@ func _apply_cargo(state: Dictionary, target: Dictionary, ship: Dictionary) -> vo
 	var cap := float(ship.get("cargo", 0.0))
 	var used := float(ship.get("cargo_used", 0.0))
 	_cargo_row.visible = cap > 0.0 and state.get("mode", "") == "server"
+	_flight_status.visible = _cargo_row.visible
+	var mining_now := str(ship.get("mining", "")) != ""
+	if mining_now:
+		_flight_status.text = "Добыча"
+		_flight_status.add_theme_color_override("font_color", Tokens.RARE)
+	elif bool(ship.get("in_safe", false)) and used > 0.0:
+		_flight_status.text = "Сдать груз"
+		_flight_status.add_theme_color_override("font_color", Tokens.SUCCESS)
+	elif bool(state.get("autopilot", false)):
+		_flight_status.text = "Маршрут"
+		_flight_status.add_theme_color_override("font_color", Tokens.ACCENT_2)
+	else:
+		_flight_status.text = "Свободный полёт"
+		_flight_status.add_theme_color_override("font_color", Tokens.TEXT_MUTED)
 	var bay_text := ""
 	var bays: Array = ship.get("bays", [])
 	if bays.size() > 0:
@@ -1203,13 +1224,14 @@ func _apply_lists(state: Dictionary) -> void:
 			c.queue_free()
 		if quests.is_empty():
 			_add_muted(_quests_list, "Нет активных заданий")
-		for q in quests:
+		for raw in quests:
+			var q: Dictionary = QuestHints.delivery_step(raw, state)
 			var b := Button.new()
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			b.theme_type_variation = &"FlatButton"
-			b.text = "%s (%d/%d)" % [q["title"], int(q["progress"]), int(q["goal"])]
+			b.text = "%s (%d/%d)" % [q["title"], int(raw.get("progress", 0)), int(raw.get("goal", 1))]
 			b.clip_text = true
-			b.custom_minimum_size = Vector2(0, 48)
+			b.custom_minimum_size = Vector2(0, 56)
 			var tip := str(q.get("text", ""))
 			b.tooltip_text = tip if tip != "" else b.text
 			b.pressed.connect(func() -> void: quest_log_requested.emit())

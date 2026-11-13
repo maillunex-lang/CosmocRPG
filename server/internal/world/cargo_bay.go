@@ -2,6 +2,9 @@ package world
 
 import "math"
 
+// StarterOreCapacity покрывает обязательную стартовую доставку без покупки другого корпуса.
+const StarterOreCapacity = 5.0
+
 // CargoBay — отдельный отсек ресурсов. Модули сюда не кладутся.
 type CargoBay struct {
 	ID   string  `json:"id"`
@@ -51,7 +54,13 @@ func bayCap(cargo float64, shipType, spec, bay string) float64 {
 	if cargo <= 0 {
 		return 0
 	}
-	return cargo * bayFraction(shipType, spec, bay)
+	cap := cargo * bayFraction(shipType, spec, bay)
+	// Стартовая доставка требует 5 руды. Общий трюм остаётся прежним;
+	// меняется только нижний предел рудного отсека «Стрижа».
+	if shipType == DefaultShip && bay == "ore" {
+		cap = math.Min(cargo, math.Max(cap, StarterOreCapacity))
+	}
+	return cap
 }
 
 func bayUsed(hold map[string]float64, bay string) float64 {

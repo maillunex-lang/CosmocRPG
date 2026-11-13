@@ -1,6 +1,8 @@
 extends Control
 ## Журнал заданий: описание и автопилот к месту, где задание выполняется.
 
+const QuestHints := preload("res://ui/quest_hints.gd")
+
 const Tokens := preload("res://ui/theme/tokens.gd")
 const ActionButton := preload("res://ui/components/action_button.gd")
 const TouchScroll := preload("res://ui/touch_scroll.gd")
@@ -50,7 +52,7 @@ func _ready() -> void:
 	scroll.add_child(_list)
 
 
-func set_quests(quests: Array) -> void:
+func set_quests(quests: Array, state: Dictionary = {}) -> void:
 	if _list == null:
 		return
 	for c in _list.get_children():
@@ -63,7 +65,7 @@ func set_quests(quests: Array) -> void:
 	for raw in quests:
 		if typeof(raw) != TYPE_DICTIONARY:
 			continue
-		var q: Dictionary = raw
+		var q: Dictionary = QuestHints.delivery_step(raw, state)
 		var card := PanelContainer.new()
 		_list.add_child(card)
 		var box := VBoxContainer.new()

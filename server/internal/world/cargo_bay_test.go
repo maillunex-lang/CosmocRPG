@@ -12,7 +12,7 @@ func TestCargoBaysFollowTheShip(t *testing.T) {
 	if err := w.AddCargo("f", "iron_ore", 8); err != ErrHoldFull {
 		t.Fatalf("истребитель принял руду сверх рудного отсека: %v", err)
 	}
-	if f.hold["iron_ore"] > 2.01 {
+	if f.hold["iron_ore"] > StarterOreCapacity+0.01 {
 		t.Fatalf("истребитель увёз %.1f руды", f.hold["iron_ore"])
 	}
 	mine := joinAt(w, "m", "TMP-MINE", at)

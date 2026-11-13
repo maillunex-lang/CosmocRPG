@@ -61,6 +61,21 @@ func _run() -> void:
 	_c(not Hints.can_route(no_ore), "без жилы автопилот к добыче не притворяется готовым")
 	var lay := {"points": [{"id": "aur-beacon", "pos": [400, 180]}], "deposits": [{"id": "d1", "resource": "iron_ore", "pos": [20, 30]}]}
 	_c(Hints.layout_destination(lay, {"kind": "visit", "target": "aur-beacon"}) == Vector2(400, 180), "маяк находится в раскладке, если его нет в снимке")
+	var delivery := {"system": {"id": "meridian"}, "ship": {"pos": Vector2.ZERO, "hold": {"iron_ore": 2}}, "quests": [{"id": "meridian_delivery", "title": "Груз для Меридиана", "kind": "deliver", "target": "iron_ore", "system": "meridian", "marker": "station", "goal": 5}], "objects": [
+		{"id": "empty", "kind": "deposit", "resource": "iron_ore", "amount": 0.0, "pos": Vector2(1, 1)},
+		{"id": "iron", "kind": "deposit", "resource": "iron_ore", "amount": 20.0, "pos": Vector2(30, 40)},
+		{"id": "gas", "kind": "deposit", "resource": "gas", "amount": 20.0, "pos": Vector2(2, 2)},
+		{"id": "st1", "kind": "station", "pos": Vector2.ZERO}]}
+	_c(Hints.object_id(delivery, Hints.guide_quest(delivery)) == "iron", "для доставки 2/5 ведём к непустой железной жиле, не к станции или газу")
+	_c(Hints.text(delivery).contains("2/5") and Hints.text(delivery).contains("Добыча"), "подсказка объясняет количество и где взять железо")
+	_c(Hints.marked(delivery, "iron", "deposit", "iron_ore") and not Hints.marked(delivery, "st1", "station"), "до сбора карта отмечает ресурс")
+	_c(delivery.quests[0].kind == "deliver", "подсказка не переписывает серверный контракт")
+	delivery.ship.hold.iron_ore = 5
+	_c(Hints.object_id(delivery, Hints.guide_quest(delivery)) == "st1", "с 5/5 ведём сдавать на станцию")
+	_c(Hints.text(delivery).contains("автоматически") and Hints.marker(delivery) == "station", "после сбора объясняем сдачу и меняем метку")
+	_c(not Hints.marked(delivery, "iron", "deposit", "iron_ore") and Hints.marked(delivery, "st1", "station"), "после сбора карта отмечает станцию")
+	delivery.ship.hold.iron_ore = 2
+	_c(Hints.guide_quest(delivery).kind == "mine", "если груз продан или потерян, снова ведём к добыче")
 	var holder := SubViewport.new()
 	holder.size = Vector2i(1280, 720)
 	root.add_child(holder)

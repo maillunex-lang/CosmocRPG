@@ -73,11 +73,12 @@ func loadData() {
 				loadErr = fmt.Errorf("bad quest def: %+v", r)
 				return
 			}
-			if seen[r.ID] {
-				loadErr = fmt.Errorf("duplicate quest id %s", r.ID)
+			key := fmt.Sprintf("%s@%d", r.ID, r.Version)
+			if r.Version <= 0 || seen[key] {
+				loadErr = fmt.Errorf("duplicate/invalid quest version %s", key)
 				return
 			}
-			seen[r.ID] = true
+			seen[key] = true
 			defs = append(defs, Def{
 				ID: r.ID, Version: r.Version, Title: r.Title, Text: r.Text,
 				Kind: r.Kind, Target: r.Target, System: r.System, Marker: r.Marker,
@@ -134,7 +135,7 @@ func loadData() {
 		loadedScenes = scenes
 		for _, d := range defs {
 			if d.Kind == "talk" {
-				if _, ok := scenes[d.ID]; !ok {
+				if _, ok := scenes[dialogueKey(d.ID, d.Version)]; !ok {
 					loadErr = fmt.Errorf("talk quest %s has no dialogue", d.ID)
 					return
 				}
@@ -163,4 +164,11 @@ func sceneFor(questID string) (Scene, bool) {
 	}
 	s, ok := loadedScenes[questID]
 	return s, ok
+}
+
+func dialogueKey(id string, version int) string {
+	if version <= 1 {
+		return id
+	}
+	return fmt.Sprintf("%s@%d", id, version)
 }

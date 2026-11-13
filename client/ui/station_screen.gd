@@ -22,6 +22,7 @@ var _upgrade_info: Label
 var _sell_btn: ActionButton
 var _rows: VBoxContainer
 var _routes: VBoxContainer
+var _contracts: VBoxContainer
 
 
 func _ready() -> void:
@@ -87,6 +88,13 @@ func _ready() -> void:
 	_sell_btn.pressed.connect(func() -> void: if _gateway != null: _gateway.sell())
 	col.add_child(_sell_btn)
 
+	var contract_title := Label.new()
+	contract_title.text = "Контракты перевозки"
+	contract_title.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
+	col.add_child(contract_title)
+	_contracts = VBoxContainer.new()
+	_contracts.add_theme_constant_override("separation", 6)
+	col.add_child(_contracts)
 	var res_title := Label.new()
 	res_title.text = "Склад ресурсов (цена за единицу)"
 	res_title.add_theme_font_size_override("font_size", Tokens.FONT_BODY + 2)
@@ -109,6 +117,8 @@ func bind(gw: UiGateway) -> void:
 	if not gw.station_market.is_connected(_on_market):
 		gw.station_market.connect(_on_market)
 		gw.station_done.connect(_on_done)
+		gw.contracts_updated.connect(_on_contracts)
+		gw.contract_failed.connect(_on_contract_failed)
 	_reload()
 
 
@@ -116,6 +126,7 @@ func _reload() -> void:
 	_notice.text = "Загрузка…"
 	if _gateway != null:
 		_gateway.request_market()
+		_gateway.request_contracts()
 
 
 func _on_market(data: Dictionary) -> void:
@@ -183,6 +194,56 @@ func _on_market(data: Dictionary) -> void:
 		row.add_child(b)
 	if prices.is_empty():
 		_notice.text = "У станции пустой склад (нужна игра на сервере 0.3.11+)."
+
+
+
+func _on_contract_failed(reason: String) -> void:
+	_notice.text = reason
+
+
+func _on_contracts(data: Dictionary) -> void:
+	if _contracts == null:
+		return
+	for child in _contracts.get_children():
+		child.queue_free()
+	var active: Dictionary = data.get("active", {}) if data.get("active") is Dictionary else {}
+	var has_active := bool(data.get("has_active", false))
+	if has_active:
+		var line := Label.new()
+		line.text = "Активный: %s → %s · %s %.0f ед. · награда %d кр." % [str(active.get("from_system", "")), str(active.get("to_system", "")), RESOURCE_LABELS.get(str(active.get("resource", "")), str(active.get("resource", ""))), float(active.get("amount", 0.0)), int(active.get("reward_credits", 0))]
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_contracts.add_child(line)
+		var actions := HBoxContainer.new()
+		var deliver := ActionButton.new()
+		deliver.text = "Сдать груз"
+		deliver.pressed.connect(func() -> void: if _gateway != null: _gateway.deliver_contract())
+		actions.add_child(deliver)
+		var cancel := ActionButton.new()
+		cancel.text = "Отменить"
+		cancel.pressed.connect(func() -> void: if _gateway != null: _gateway.cancel_contract())
+		actions.add_child(cancel)
+		_contracts.add_child(actions)
+	else:
+		var available: Array = data.get("available", []) if data.get("available") is Array else []
+		for item in available:
+			if item is Dictionary:
+				var row := HBoxContainer.new()
+				var label := Label.new()
+				label.text = "%s → %s · %s %.0f · %d кр. · риск %s" % [str(item.get("from_system", "")), str(item.get("to_system", "")), RESOURCE_LABELS.get(str(item.get("resource", "")), str(item.get("resource", ""))), float(item.get("amount", 0.0)), int(item.get("reward_credits", 0)), str(item.get("risk", ""))]
+				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				row.add_child(label)
+				var id := str(item.get("id", ""))
+				var accept := ActionButton.new()
+				accept.text = "Принять"
+				accept.pressed.connect(func() -> void: if _gateway != null: _gateway.accept_contract(id))
+				row.add_child(accept)
+				_contracts.add_child(row)
+	if _contracts.get_child_count() == 0:
+		var empty := Label.new()
+		empty.text = "В этой системе пока нет доступных перевозок."
+		empty.theme_type_variation = &"MutedLabel"
+		_contracts.add_child(empty)
 
 
 func _on_done(data: Dictionary) -> void:

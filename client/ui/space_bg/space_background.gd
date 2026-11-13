@@ -12,6 +12,7 @@ const LayerConfig := preload("res://ui/space_bg/space_layer_config.gd")
 const UiSettings := preload("res://ui/ui_settings.gd")
 const SHADER_ADD := preload("res://ui/space_bg/space_layer_add.gdshader")
 const SHADER_MIX := preload("res://ui/space_bg/space_layer_mix.gdshader")
+const ShaderCore := preload("res://ui/graphics/shader_core.gd")
 
 const MIN_LEVEL := 0.0
 const MAX_LEVEL := 1.25  # выше нельзя: при большем значении фон выходит из художественного стандарта (art_standard_test)
@@ -88,6 +89,7 @@ func apply_profile(p: Resource) -> void:
 		mat.set_shader_parameter("tint", cfg.tint)
 		mat.set_shader_parameter("mirror_wrap", cfg.wrap == LayerConfig.Wrap.MIRROR)
 		mat.set_shader_parameter("uv_flip", Vector2(cfg.flip.x, cfg.flip.y))
+		mat.set_shader_parameter("vignette_strength", float(ShaderCore.preset(preset).get("vignette", 0.0)))
 		var rect := ColorRect.new()
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

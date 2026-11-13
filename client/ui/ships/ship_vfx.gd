@@ -3,6 +3,8 @@ extends RefCounted
 ## частиц и одноразовым запуском, вспышки и оболочки — меши с аддитивным материалом. Узлы создаются один раз и переиспользуются.
 
 static var _mats: Dictionary = {}
+const SHIELD_SHADER := preload("res://ui/ships/shaders/shield_fresnel.gdshader")
+const ENGINE_SHADER := preload("res://ui/ships/shaders/engine_glow.gdshader")
 
 
 ## Аддитивный светящийся материал без освещения (общий для одинакового цвета).
@@ -19,6 +21,18 @@ static func glow(color: Color, energy: float = 1.0) -> StandardMaterial3D:
 	m.no_depth_test = false
 	_mats[key] = m
 	return m
+
+
+static func engine_glow(color: Color, energy: float = 1.4) -> ShaderMaterial:
+	var key := "engine|%s|%s" % [color.to_html(), energy]
+	if _mats.has(key):
+		return _mats[key]
+	var sm := ShaderMaterial.new()
+	sm.shader = ENGINE_SHADER
+	sm.set_shader_parameter("glow_color", Color(color, 1.0))
+	sm.set_shader_parameter("intensity", energy)
+	_mats[key] = sm
+	return sm
 
 
 static func flame(color: Color) -> MeshInstance3D:
@@ -69,7 +83,11 @@ static func shield_shell(radius: float) -> MeshInstance3D:
 	s.radial_segments = 12
 	s.rings = 6
 	mi.mesh = s
-	mi.material_override = glow(Color(0.3, 0.6, 1.0, 0.14), 1.1)
+	var sm := ShaderMaterial.new()
+	sm.shader = SHIELD_SHADER
+	sm.set_shader_parameter("shield_color", Color(0.3, 0.6, 1.0, 0.18))
+	sm.set_shader_parameter("intensity", 1.1)
+	mi.material_override = sm
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.visible = false
 	return mi

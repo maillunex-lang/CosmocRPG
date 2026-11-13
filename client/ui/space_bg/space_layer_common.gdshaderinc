@@ -7,6 +7,7 @@ uniform bool mirror_wrap = false;       // true: зеркальное повто
 uniform float brightness : hint_range(0.0, 3.0) = 1.0;
 uniform float intensity : hint_range(0.0, 3.0) = 1.0;
 uniform vec4 tint : source_color = vec4(1.0);
+uniform float vignette_strength : hint_range(0.0, 0.35) = 0.0;
 
 vec4 sample_layer(vec2 screen_uv) {
 	vec2 uv = uv_offset + screen_uv * uv_extent;
@@ -23,5 +24,7 @@ vec4 sample_layer(vec2 screen_uv) {
 	}
 	vec4 c = texture(layer_texture, uv);
 	c.rgb *= tint.rgb * brightness;
+	float edge = smoothstep(0.35, 1.2, dot(screen_uv * 2.0 - 1.0, screen_uv * 2.0 - 1.0));
+	c.rgb *= 1.0 - edge * vignette_strength;
 	return c;
 }

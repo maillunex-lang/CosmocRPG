@@ -130,7 +130,7 @@ func set_skin(skin: String) -> void:
 	var fc: Array = sk.get("flame", [0.35, 0.9, 1.0])
 	_flame_color = Color(fc[0], fc[1], fc[2])
 	for f in flames:
-		(f as MeshInstance3D).material_override = ShipVfx.glow(Color(_flame_color, 0.85), 1.4)
+		(f as MeshInstance3D).material_override = ShipVfx.engine_glow(_flame_color, 1.4)
 	_boost_trail = null
 	_move_trail = null
 	_flash.clear()

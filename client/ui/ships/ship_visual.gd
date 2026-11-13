@@ -372,7 +372,7 @@ func _skill_fx() -> bool:
 		return false
 	var center := points["Hit_Center"] as Marker3D
 	if _skill_ring == null:
-		_skill_ring = ShipVfx.ring(Color.WHITE)
+		_skill_ring = ShipVfx.ability_ring(Color.WHITE)
 		_skill_ring.rotation_degrees.x = 90
 		center.add_child(_skill_ring)
 		_skill_flash = ShipVfx.flash(Color.WHITE, 0.45)

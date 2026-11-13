@@ -57,6 +57,25 @@ func set_quests(quests: Array, state: Dictionary = {}) -> void:
 		return
 	for c in _list.get_children():
 		c.queue_free()
+	var first_hour: Dictionary = state.get("first_hour", {}) if state.get("first_hour") is Dictionary else {}
+	var steps: Array = first_hour.get("steps", []) if first_hour.get("steps") is Array else []
+	if not steps.is_empty():
+		var guide := PanelContainer.new()
+		_list.add_child(guide)
+		var guide_box := VBoxContainer.new()
+		guide_box.add_theme_constant_override("separation", 3)
+		guide.add_child(guide_box)
+		var guide_title := Label.new()
+		guide_title.text = "Первый час"
+		guide_title.theme_type_variation = &"TitleLabel"
+		guide_box.add_child(guide_title)
+		var current := int(first_hour.get("current", 0))
+		for i in steps.size():
+			var step: Dictionary = steps[i] if steps[i] is Dictionary else {}
+			var line := Label.new()
+			line.text = "%s %s" % ["✓" if i < current else ("▶" if i == current else "○"), str(step.get("title", ""))]
+			line.theme_type_variation = &"MutedLabel" if i != current else &"RareLabel"
+			guide_box.add_child(line)
 	if quests.is_empty():
 		var empty := Label.new()
 		empty.text = "Нет активных заданий"
@@ -92,9 +111,9 @@ func set_quests(quests: Array, state: Dictionary = {}) -> void:
 			if cargo > 0 and cargo < goal:
 				route_text += " · трюм: %d — по$2ребует$1я не$1колько рейсов и#bи гру#7овой модуль" % cargo
 		elif kind == "kill":
-			route_text = "О#f#0$1#d#0я з#e#d#0: цель появится с$0#5#4и в$0#0#6еских меток."
+			route_text = "Бой: цель появится среди вражеских меток."
 		elif kind in ["sell", "reach", "talk", "report"]:
-			route_text = "С$2#0#d$6#8я: з#0#2#5$0$8#8$2#5 д#5#9$1$2#2#8#5 п#e$1#b#5 в$5#e#4а в б#5#7о#f#0$1н$3ю з#e#dу."
+			route_text = "Станция: следуйте жёлтой метке и войдите в безопасную зону."
 		route.text = route_text
 		route.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		route.theme_type_variation = &"RareLabel"

@@ -744,11 +744,11 @@ func _place_fan() -> void:
 			b.set_meta("fan_side", 64.0)
 			_round_button(b, 64.0)
 			b.visible = false
-	_attack.position = Vector2(188, 152)
+	_attack.position = Vector2(150, 152)
 	_auto_skills.position = Vector2(100, 204)
 	_round_button(_auto_skills, 56)
 	if _cycle_target != null:
-		_cycle_target.position = Vector2(232, 22)
+		_cycle_target.position = Vector2(190, 22)
 		_round_button(_cycle_target, 62, Color(Tokens.SURFACE, 0.82), Color(Tokens.ACCENT, 0.8))
 		Icons.apply(_cycle_target, "maximize-2", Tokens.ACCENT, 32)
 		_cycle_target.text = ""

@@ -4,11 +4,38 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/coder/websocket"
 	"github.com/maillunex-lang/CosmocRPG/server/internal/contract"
 )
+
+func routeDistance(from, to string) float64 {
+	key := from + ":" + to
+	return map[string]float64{
+		"aurora:meridian": 1200, "meridian:aurora": 1200,
+		"meridian:redstorm": 1350, "redstorm:meridian": 1350,
+		"aurora:redstorm": 2200, "redstorm:aurora": 2200,
+		"redstorm:halo": 1500, "halo:redstorm": 1500,
+		"halo:frontier": 1800, "frontier:halo": 1800,
+		"frontier:meridian": 2100, "meridian:frontier": 2100,
+	}[key]
+}
+
+func deliveryReward(resource, risk, from, to string, amount float64) int64 {
+	value := map[string]float64{"iron_ore": 4, "crystals": 18, "gas": 7, "scrap": 2}[resource]
+	riskMul := map[string]float64{"низкий": 1.0, "средний": 1.25, "высокий": 1.6}[risk]
+	distance := routeDistance(from, to)
+	if distance <= 0 {
+		distance = 1000
+	}
+	if riskMul <= 0 {
+		riskMul = 1
+	}
+	reward := 300 + distance/100*value*12*math.Max(amount, 1)*riskMul
+	return int64(math.Round(reward/10) * 10)
+}
 
 func deliveryTemplates(from string, now int64) []contract.Delivery {
 	targets := map[string][]struct {
@@ -21,7 +48,9 @@ func deliveryTemplates(from string, now int64) []contract.Delivery {
 	}
 	out := make([]contract.Delivery, 0, 2)
 	for i, t := range targets[from] {
-		d := contract.Delivery{ID: fmt.Sprintf("delivery_%s_%s_%d", from, t.to, i+1), Resource: t.res, Amount: 2, FromSystem: from, ToSystem: t.to, RewardCredits: t.reward, PenaltyCredits: t.reward / 4, Risk: t.risk, ExpiresAt: now + 30*60}
+		amount := 2.0
+		reward := deliveryReward(t.res, t.risk, from, t.to, amount)
+		d := contract.Delivery{ID: fmt.Sprintf("delivery_%s_%s_%d", from, t.to, i+1), Resource: t.res, Amount: amount, FromSystem: from, ToSystem: t.to, RewardCredits: reward, PenaltyCredits: reward / 4, Risk: t.risk, ExpiresAt: now + 30*60}
 		out = append(out, d)
 	}
 	return out

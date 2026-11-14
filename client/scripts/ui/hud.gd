@@ -361,7 +361,7 @@ func _adapt_viewport() -> void:
 	if skill_fan != null:
 		skill_fan.custom_minimum_size.x = right_w
 		skill_fan.pivot_offset = Vector2.ZERO
-		skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 312.0)
+		skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 324.0)
 	_reflow_layout()
 
 

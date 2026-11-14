@@ -89,6 +89,15 @@ type Handler struct {
 	operations   map[string]*playerOperation
 	contractMu   sync.Mutex
 	contracts    map[string]contract.Delivery
+	dailyMu      sync.Mutex
+	daily        map[string]*dailyState
+}
+
+type dailyState struct {
+	day           string
+	streak        int
+	claimed       map[string]bool
+	returnClaimed bool
 }
 
 // session — игровая сессия: состояние рассылается через очередь, чтобы медленный клиент не тормозил мир.
@@ -109,7 +118,7 @@ type session struct {
 
 // NewHandler создаёт обработчик.
 func NewHandler(log *slog.Logger, opts Options) *Handler {
-	return &Handler{log: log, opts: opts, active: map[string]*session{}, contracts: map[string]contract.Delivery{}}
+	return &Handler{log: log, opts: opts, active: map[string]*session{}, contracts: map[string]contract.Delivery{}, daily: map[string]*dailyState{}}
 }
 
 // Sessions возвращает число активных сессий.
@@ -174,7 +183,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = writeJSON(ctx, c, Message{Type: "pong", ID: m.ID})
 		case "register", "login":
 			h.accountMsg(ctx, c, ss, r.RemoteAddr, m)
-		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "corp_donate", "corp_treasury", "corp_warehouse", "corp_deposit", "corp_withdraw", "corp_task_contribute", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "party_fill", "friend_add", "friend_remove", "friend_list", "contracts", "contract_accept", "contract_deliver", "contract_cancel":
+		case "join", "create_character", "move", "target", "waypoint", "autopilot", "attack", "ability", "set_skin", "set_spec", "mine", "mine_stop", "sell", "ships", "set_ship", "set_option", "shop", "shop_buy", "shop_equip", "chat_send", "chat_history", "pilot", "pilot_spend", "jump", "market", "repair", "buy", "purchase_status", "ship_upgrade", "corp_create", "corp_join", "corp_leave", "corp_info", "corp_donate", "corp_treasury", "corp_warehouse", "corp_deposit", "corp_withdraw", "corp_task_contribute", "alliance_found", "alliance_join", "alliance_vote", "equipment_set", "equipment_get", "fitting_get", "fitting_set", "talk", "party_invite", "party_join", "party_leave", "party_start", "party_arm", "party_ready", "party_follow", "party_fill", "friend_add", "friend_remove", "friend_list", "daily", "contracts", "contract_accept", "contract_deliver", "contract_cancel":
 			if h.opts.World == nil {
 				_ = writeJSON(ctx, c, errMsg(m.ID, "unknown_type", "неизвестный тип сообщения"))
 				continue
@@ -347,6 +356,8 @@ func (h *Handler) game(ctx context.Context, c *websocket.Conn, ss *session, log 
 		h.partyMsg(ctx, c, ss, m)
 	case "friend_add", "friend_remove", "friend_list":
 		h.friendMsg(ctx, c, ss, m)
+	case "daily":
+		h.dailyMsg(ctx, c, ss, m)
 	case "contracts", "contract_accept", "contract_deliver", "contract_cancel":
 		h.contractMsg(ctx, c, ss, m)
 	case "move":

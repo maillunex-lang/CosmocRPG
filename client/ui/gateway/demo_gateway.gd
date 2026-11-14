@@ -38,6 +38,7 @@ var _alerts: Dictionary = {}
 var _respawn_at := -1.0
 var _chat: Array = []
 var _quests: Array = []
+var _daily_claimed: Dictionary = {}
 var _systems: Array = [
 	{"id": "xi", "name": "Система Кси", "background": "xi"},
 	{"id": "omega", "name": "Пояс Омега", "background": "omega"},
@@ -407,3 +408,25 @@ func _set_alert(id: String, text: String, on: bool) -> void:
 	elif not on and _alerts.has(id):
 		_alerts.erase(id)
 		alert_cleared.emit(id)
+
+
+func request_daily() -> void:
+	var day := Time.get_date_string_from_system()
+	daily_updated.emit({
+		"day": day,
+		"streak": 1,
+		"can_claim_return": not _daily_claimed.has("return"),
+		"return_reward": 200,
+		"claimed": _daily_claimed.duplicate(),
+		"activities": [
+			{"id": "daily_mine", "title": "Сбор ресурсов", "goal": 3, "reward": 180},
+			{"id": "daily_trade", "title": "Торговый маршрут", "goal": 1, "reward": 260},
+			{"id": "daily_jump", "title": "Дальний прыжок", "goal": 1, "reward": 220}
+		]
+	})
+
+func claim_daily(id: String) -> void:
+	if id == "" or _daily_claimed.has(id):
+		return
+	_daily_claimed[id] = true
+	daily_rewarded.emit({"id": id, "granted": true, "reward": 200, "credits": _credits})

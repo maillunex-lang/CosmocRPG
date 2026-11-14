@@ -77,6 +77,8 @@ signal station_market(data: Dictionary)   # Э-2: цены станции {price
 signal station_done(data: Dictionary)     # Э-2: операция станции выполнена {action, credits, spent...}
 signal contracts_updated(data: Dictionary)
 signal contract_failed(reason: String)
+signal daily_updated(data: Dictionary)
+signal daily_rewarded(data: Dictionary)
 signal dialogue_opened(data: Dictionary)  # реплика NPC: говорящий, текст, ответы
 
 
@@ -116,6 +118,12 @@ func deliver_contract() -> void:
 	pass
 
 func cancel_contract() -> void:
+	pass
+
+func request_daily() -> void:
+	pass
+
+func claim_daily(_id: String) -> void:
 	pass
 
 func repair() -> void:

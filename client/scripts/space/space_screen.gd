@@ -165,6 +165,17 @@ func _ready() -> void:
 	gateway.state_updated.connect(_on_state_for_overlays)
 	if gateway.has_signal("system_changed"):
 		gateway.system_changed.connect(_on_system_changed)
+	var daily := DailyPanel.new()
+	daily.name = "DailyPanel"
+	var daily_layer := CanvasLayer.new()
+	daily_layer.name = "DailyLayer"
+	daily_layer.layer = 35
+	add_child(daily_layer)
+	daily_layer.add_child(daily)
+	daily.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	daily.position = Vector2(-330, 92)
+	daily.bind(gateway)
+
 	var talk := DialogueCard.new()
 	talk.name = "DialogueCard"
 	add_child(talk)

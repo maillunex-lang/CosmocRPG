@@ -744,7 +744,7 @@ func _place_fan() -> void:
 			b.set_meta("fan_side", 64.0)
 			_round_button(b, 64.0)
 			b.visible = false
-	_attack.position = Vector2(150, 152)
+	_attack.position = Vector2(110, 152)
 	_auto_skills.position = Vector2(100, 204)
 	_round_button(_auto_skills, 56)
 	if _cycle_target != null:

@@ -330,7 +330,7 @@ func _adapt_viewport() -> void:
 	# Правый боевой веер занимает больше обычной карточки: колонка должна быть не уже веера,
 	# иначе последние кнопки физически выходят за край Android viewport.
 	var left_w: float = 220.0 if not compact else 184.0
-	var right_w: float = 318.0 if not compact else 292.0
+	var right_w: float = 252.0 if not compact else 224.0
 	var columns := get_node("SafeArea/Columns") as HBoxContainer
 	var left_stack := columns.get_node("LeftStack") as Control
 	var center_stack := columns.get_node("CenterStack") as Control
@@ -357,6 +357,10 @@ func _adapt_viewport() -> void:
 	elif compact:
 		compact_scale = 0.90
 	%CombatBlock.scale = Vector2.ONE * compact_scale
+	var skill_fan := get_node_or_null("SafeArea/Columns/RightStack/SkillFan") as Control
+	if skill_fan != null:
+		skill_fan.pivot_offset = Vector2.ZERO
+		skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 312.0)
 	_reflow_layout()
 
 

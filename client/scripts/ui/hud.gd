@@ -44,6 +44,7 @@ const SKILL_MIN_SIZE := Vector2(88, 56)
 var gateway: UiGateway
 var _last_state: Dictionary = {}
 var _skill_buttons: Array = []
+var _skill_fan: Control
 var _pref_collapsed := {"quests": false, "chat": false}  # выбор игрока (вне боя)
 var _auto_collapsing := false
 var _was_combat := false
@@ -357,11 +358,10 @@ func _adapt_viewport() -> void:
 	elif compact:
 		compact_scale = 0.90
 	%CombatBlock.scale = Vector2.ONE * compact_scale
-	var skill_fan := get_node_or_null("SafeArea/Columns/RightStack/SkillFan") as Control
-	if skill_fan != null:
-		skill_fan.custom_minimum_size.x = right_w
-		skill_fan.pivot_offset = Vector2.ZERO
-		skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 324.0)
+	if _skill_fan != null:
+		_skill_fan.custom_minimum_size.x = right_w
+		_skill_fan.pivot_offset = Vector2.ZERO
+		_skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 324.0)
 	_reflow_layout()
 
 
@@ -703,6 +703,7 @@ func _dock_target() -> void:
 func _dock_skills() -> void:
 	var right := _attack.get_parent()
 	var fan := Control.new()
+	_skill_fan = fan
 	fan.name = "SkillFan"
 	fan.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fan.custom_minimum_size = Vector2(312, 280)

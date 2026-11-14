@@ -340,7 +340,7 @@ func _adapt_viewport() -> void:
 	left_stack.custom_minimum_size.x = left_w
 	right_stack.custom_minimum_size.x = right_w
 	center_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center_stack.custom_minimum_size.x = maxf(180.0, w - left_w - right_w - 24.0)
+	center_stack.custom_minimum_size.x = 0.0
 	_profile_card.custom_minimum_size.x = left_w
 	_quests_card.custom_minimum_size.x = left_w
 	_chat_card.custom_minimum_size.x = left_w
@@ -359,6 +359,7 @@ func _adapt_viewport() -> void:
 	%CombatBlock.scale = Vector2.ONE * compact_scale
 	var skill_fan := get_node_or_null("SafeArea/Columns/RightStack/SkillFan") as Control
 	if skill_fan != null:
+		skill_fan.custom_minimum_size.x = right_w
 		skill_fan.pivot_offset = Vector2.ZERO
 		skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 312.0)
 	_reflow_layout()

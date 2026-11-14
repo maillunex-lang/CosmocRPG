@@ -44,6 +44,7 @@ const SKILL_MIN_SIZE := Vector2(88, 56)
 var gateway: UiGateway
 var _last_state: Dictionary = {}
 var _skill_buttons: Array = []
+var _skill_fan: Control
 var _pref_collapsed := {"quests": false, "chat": false}  # выбор игрока (вне боя)
 var _auto_collapsing := false
 var _was_combat := false
@@ -320,20 +321,27 @@ func _ready() -> void:
 
 ## Короткая плашка: два последних сообщения на прозрачном фоне и круглая иконка чата сбоку.
 func _adapt_viewport() -> void:
-	var w: float = get_viewport_rect().size.x
-	var h: float = get_viewport_rect().size.y
-	var compact: bool = w < 980.0
-	var narrow: bool = w < 820.0
-	var left_w: float = 214.0 if not compact else 176.0
-	var right_w: float = 248.0 if not compact else 208.0
+	var viewport_size := get_viewport_rect().size
+	var safe_root := get_node("%SafeArea") as Control
+	var safe_size := safe_root.size if safe_root != null and safe_root.size.x > 0.0 else viewport_size
+	var w: float = safe_size.x
+	var h: float = safe_size.y
+	var compact: bool = w < 1040.0
+	var narrow: bool = w < 860.0
+	# Правый боевой веер занимает больше обычной карточки: колонка должна быть не уже веера,
+	# иначе последние кнопки физически выходят за край Android viewport.
+	var left_w: float = 220.0 if not compact else 184.0
+	var right_w: float = 252.0 if not compact else 224.0
 	var columns := get_node("SafeArea/Columns") as HBoxContainer
 	var left_stack := columns.get_node("LeftStack") as Control
 	var center_stack := columns.get_node("CenterStack") as Control
 	var right_stack := columns.get_node("RightStack") as Control
 	columns.add_theme_constant_override("separation", 8)
+	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left_stack.custom_minimum_size.x = left_w
 	right_stack.custom_minimum_size.x = right_w
-	center_stack.custom_minimum_size.x = maxf(220.0, w - left_w - right_w - 56.0)
+	center_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center_stack.custom_minimum_size.x = 0.0
 	_profile_card.custom_minimum_size.x = left_w
 	_quests_card.custom_minimum_size.x = left_w
 	_chat_card.custom_minimum_size.x = left_w
@@ -345,11 +353,15 @@ func _adapt_viewport() -> void:
 	_chat_card.visible = not narrow
 	_target_info.max_lines_visible = 1 if compact else 2
 	var compact_scale: float = 1.0
-	if w < 720.0 or h < 420.0:
-		compact_scale = 0.88
+	if w < 760.0 or h < 420.0:
+		compact_scale = 0.82
 	elif compact:
-		compact_scale = 0.94
+		compact_scale = 0.90
 	%CombatBlock.scale = Vector2.ONE * compact_scale
+	if _skill_fan != null:
+		_skill_fan.custom_minimum_size.x = right_w
+		_skill_fan.pivot_offset = Vector2.ZERO
+		_skill_fan.scale = Vector2.ONE * minf(1.0, right_w / 324.0)
 	_reflow_layout()
 
 
@@ -691,6 +703,7 @@ func _dock_target() -> void:
 func _dock_skills() -> void:
 	var right := _attack.get_parent()
 	var fan := Control.new()
+	_skill_fan = fan
 	fan.name = "SkillFan"
 	fan.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fan.custom_minimum_size = Vector2(312, 280)
@@ -731,11 +744,11 @@ func _place_fan() -> void:
 			b.set_meta("fan_side", 64.0)
 			_round_button(b, 64.0)
 			b.visible = false
-	_attack.position = Vector2(188, 152)
+	_attack.position = Vector2(110, 152)
 	_auto_skills.position = Vector2(100, 204)
 	_round_button(_auto_skills, 56)
 	if _cycle_target != null:
-		_cycle_target.position = Vector2(232, 22)
+		_cycle_target.position = Vector2(190, 22)
 		_round_button(_cycle_target, 62, Color(Tokens.SURFACE, 0.82), Color(Tokens.ACCENT, 0.8))
 		Icons.apply(_cycle_target, "maximize-2", Tokens.ACCENT, 32)
 		_cycle_target.text = ""

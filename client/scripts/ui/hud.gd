@@ -1679,10 +1679,9 @@ func _reflow_layout() -> void:
 			node.z_index = int(item["z"])
 		if item.has("visible"):
 			node.visible = bool(item["visible"])
-	_clamp_skill_fan_to_safe()
 
 
-func _clamp_skill_fan_to_safe()(node: Control, pos: Vector2) -> Vector2:
+func _clamp_layout_pos(node: Control, pos: Vector2) -> Vector2:
 	var safe := hud_editor_safe()
 	var sz := node.size * node.scale.abs()
 	return Vector2(

@@ -209,6 +209,19 @@ func _on_message(type: String, payload: Dictionary, _id: String) -> void:
 			station_market.emit(payload)
 		"contracts":
 			contracts_updated.emit(payload)
+		"daily":
+			daily_updated.emit(payload)
+		"daily_reward":
+			daily_rewarded.emit(payload)
+			if bool(payload.get("granted", false)):
+				notification.emit("Ежедневная награда: +%d кредитов" % int(payload.get("reward", 0)))
+		"daily":
+			daily_updated.emit(payload)
+		"daily_reward":
+			daily_rewarded.emit(payload)
+			var reward := int(payload.get("reward", 0))
+			if bool(payload.get("granted", false)):
+				notification.emit("Ежедневная награда: +%d кредитов" % reward)
 		"ok":
 			if payload.get("action", "") == "buy":
 				_purchase_intent.acknowledge(str(payload.get("operation_id", "")))
@@ -670,6 +683,14 @@ func request_market() -> void:
 
 func request_contracts() -> void:
 	_client.send_message("contracts", {})
+
+func request_daily() -> void:
+	if _joined:
+		_client.send_message("daily", {})
+
+func claim_daily(id: String) -> void:
+	if _joined and id != "":
+		_client.send_message("daily", {"action": "claim", "id": id})
 
 func accept_contract(id: String) -> void:
 	_client.send_message("contract_accept", {"id": id})
